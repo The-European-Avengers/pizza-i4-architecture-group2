@@ -1,0 +1,74 @@
+digraph "EAST-ADL Functional Analysis Level Architecture" {
+    // Subsystems
+    Production [shape=box, style=filled, fillcolor=lightgray];
+    Warehouse [shape=box, style=filled, fillcolor=lightgray];
+    WebInterface [shape=box, style=filled, fillcolor=lightgray];
+    KafkaBus [shape=ellipse, style=filled, fillcolor=lightgreen];
+    APIGateway [shape=ellipse, style=filled, fillcolor=lightgreen];
+    Environment [shape=box, style=filled, fillcolor=lightblue];
+
+    // Abstract functions in Production
+    ToppingApp [label="Topping Application", shape=ellipse];
+    SauceCreator [label="Sauce Creator", shape=ellipse];
+    DoughCreator [label="Dough Creator", shape=ellipse];
+    Cooking [label="Cooking", shape=ellipse];
+    PostProduction [label="Post Production", shape=ellipse];
+
+    // Abstract functions in Warehouse
+    Restocking [label="Restocking", shape=ellipse];
+    InventoryMgmt [label="Inventory Management", shape=ellipse];
+    GoodsProvider [label="Internal Goods Provider", shape=ellipse];
+
+    // Abstract functions in Web Interface
+    CustomerInterface [label="Customer Interface", shape=ellipse];
+    EmployeeInterface [label="Employee Interface", shape=ellipse];
+
+    // Interaction functions
+    OrderProcessing [label="Order Processing Controller", shape=ellipse, style=filled, fillcolor=lightyellow];
+    SupplyCoordination [label="Supply Coordination Function", shape=ellipse, style=filled, fillcolor=lightyellow];
+    QualityControl [label="Quality Control Function", shape=ellipse, style=filled, fillcolor=lightyellow];
+
+    // Connections from subsystems to functions
+    Production -> ToppingApp;
+    Production -> SauceCreator;
+    Production -> DoughCreator;
+    Production -> Cooking;
+    Production -> PostProduction;
+
+    Warehouse -> Restocking;
+    Warehouse -> InventoryMgmt;
+    Warehouse -> GoodsProvider;
+
+    WebInterface -> CustomerInterface;
+    WebInterface -> EmployeeInterface;
+
+    // Environment interactions
+    Environment -> CustomerInterface [label="Customer places order"];
+    Environment -> EmployeeInterface [label="Employee monitors system"];
+
+    // Web interface to API Gateway
+    CustomerInterface -> APIGateway [label="Submit order"];
+    EmployeeInterface -> APIGateway [label="Access dashboard"];
+
+    // API Gateway to Kafka Bus
+    APIGateway -> KafkaBus [label="Dispatch event"];
+
+    // Kafka Bus to interaction functions
+    KafkaBus -> OrderProcessing [label="Order event"];
+    KafkaBus -> SupplyCoordination [label="Inventory event"];
+    KafkaBus -> QualityControl [label="Quality event"];
+
+    // Interaction functions to subsystems
+    OrderProcessing -> ToppingApp [label="Trigger topping logic"];
+    OrderProcessing -> SauceCreator [label="Trigger sauce logic"];
+    OrderProcessing -> DoughCreator [label="Trigger dough logic"];
+    OrderProcessing -> Cooking [label="Trigger cooking logic"];
+    OrderProcessing -> PostProduction [label="Trigger packaging"];
+
+    SupplyCoordination -> Restocking [label="Request restock"];
+    SupplyCoordination -> GoodsProvider [label="Request supply"];
+    SupplyCoordination -> InventoryMgmt [label="Update inventory"];
+
+    QualityControl -> PostProduction [label="Inspect final product"];
+    QualityControl -> InventoryMgmt [label="Check stock quality"];
+}

@@ -1,0 +1,189 @@
+digraph "Digital Pizza Factory - Design Level Architecture" {
+    rankdir=LR;
+    node [shape=record, style=filled, fillcolor=lightgoldenrod1];
+
+    // === Web Interface Layer ===
+    subgraph cluster_web {
+        label = "Web Interface Layer";
+        style=filled;
+        color=lightblue;
+
+        CustomerInterfaceSW [label="{CustomerInterfaceSW|<<REST Controller>>\\lFunction: Accepts customer orders\\lEndpoint: /order\\lSignals: OrderRequest:json\\lTiming: <100ms}"];
+        EmployeeInterfaceSW [label="{EmployeeInterfaceSW|<<REST Controller>>\\lFunction: Provides dashboard access\\lEndpoint: /dashboard\\lSignals: DashboardAccess:boolean\\lTiming: <100ms}"];
+        APIGatewaySW [label="{APIGatewaySW|<<API Gateway>>\\lFunction: Routes requests to Kafka\\lRoutes: /order, /dashboard\\lAdapter: HTTP → Kafka\\lSignals: HTTPRequest:string\\lTiming: <20ms}"];
+    }
+
+    // === Messaging Layer ===
+    subgraph cluster_messaging {
+        label = "Messaging Layer";
+        style=filled;
+        color=lightgreen;
+
+        KafkaBusSW [label="{KafkaBusSW|<<Message Broker>>\\lFunction: Event distribution\\lTopics:\\l- order-events\\l- dough-events\\l- sauce-events\\l- topping-events\\l- cooking-events\\l- packaging-events\\l- inventory-events\\l- quality-events\\lSignals: EventPayload:json\\lTiming: <10ms}"];
+    }
+
+    // === Order Processing Controller ===
+ subgraph cluster_order {
+    label = "Order Processing Controller";
+    style=filled;
+    color=lightyellow;
+
+    OrderProcessingController [label="{OrderProcessingController|<<Service Controller>>\\lFunction: Orchestrates pizza production\\lReceives validated orders\\lSignals:\\l- OrderID:int\\l- Timestamp:datetime\\lTiming: <50ms}"];
+
+    DoughDispatchService [label="{DoughDispatchService|<<Business Logic>>\\lFunction: Dispatch dough preparation event\\lValidates dough type and weight\\lSignals:\\l- DoughType:string\\l- Weight:float\\lTiming: <40ms}"];
+
+    SauceDispatchService [label="{SauceDispatchService|<<Business Logic>>\\lFunction: Dispatch sauce application event\\lValidates sauce type and volume\\lSignals:\\l- SauceType:string\\l- Volume:float\\lTiming: <30ms}"];
+
+    ToppingDispatchService [label="{ToppingDispatchService|<<Business Logic>>\\lFunction: Dispatch topping application event\\lValidates topping selection and quantity\\lSignals:\\l- ToppingType:string\\l- Quantity:int\\lTiming: <30ms}"];
+
+    CookingDispatchService [label="{CookingDispatchService|<<Business Logic>>\\lFunction: Dispatch baking event\\lSets temperature and duration\\lSignals:\\l- Temperature:int\\l- Duration:int\\lTiming: <60ms}"];
+
+    PackagingDispatchService [label="{PackagingDispatchService|<<Business Logic>>\\lFunction: Dispatch packaging event\\lDefines packaging type and freezing\\lSignals:\\l- PackagingType:string\\l- Freeze:boolean\\lTiming: <70ms}"];
+
+    KafkaBusSW [label="{KafkaBusSW|<<Message Broker>>\\lTopics:\\l- dough-events\\l- sauce-events\\l- topping-events\\l- cooking-events\\l- packaging-events\\lSignals: EventPayload:json\\lTiming: <10ms}"];
+
+    // Connections
+    KafkaBusSW -> OrderProcessingController [label="order-events"];
+    OrderProcessingController -> DoughDispatchService [label="Prepare dough"];
+    DoughDispatchService -> KafkaBusSW [label="Publish dough-events"];
+
+    OrderProcessingController -> SauceDispatchService [label="Apply sauce"];
+    SauceDispatchService -> KafkaBusSW [label="Publish sauce-events"];
+
+    OrderProcessingController -> ToppingDispatchService [label="Apply toppings"];
+    ToppingDispatchService -> KafkaBusSW [label="Publish topping-events"];
+
+    OrderProcessingController -> CookingDispatchService [label="Bake pizza"];
+    CookingDispatchService -> KafkaBusSW [label="Publish cooking-events"];
+
+    OrderProcessingController -> PackagingDispatchService [label="Package pizza"];
+    PackagingDispatchService -> KafkaBusSW [label="Publish packaging-events"];
+}
+
+    // === Production Machines ===
+    subgraph cluster_dough {
+        label = "Dough Machine";
+        style=filled;
+        color=lightgray;
+
+        DoughController [label="{DoughController|<<Device Controller>>\\lFunction: Controls dough machine\\lSignals: DoughCommand:string\\lTiming: <40ms}"];
+        DoughService [label="{DoughService|<<Business Logic>>\\lFunction: Prepares dough\\lAdapter: RecipeDB\\lSignals:\\l- DoughType:string\\l- Weight:float\\lTiming: <40ms}"];
+    }
+
+    subgraph cluster_sauce {
+        label = "Sauce Machine";
+        style=filled;
+        color=lightgray;
+
+        SauceController [label="{SauceController|<<Device Controller>>\\lFunction: Controls sauce dispenser\\lSignals: SauceCommand:string\\lTiming: <30ms}"];
+        SauceService [label="{SauceService|<<Business Logic>>\\lFunction: Dispenses sauce\\lAdapter: RecipeDB\\lSignals:\\l- SauceType:string\\l- Volume:float\\lTiming: <30ms}"];
+    }
+
+    subgraph cluster_topping {
+        label = "Topping Machine";
+        style=filled;
+        color=lightgray;
+
+        ToppingController [label="{ToppingController|<<Device Controller>>\\lFunction: Controls topping applicator\\lSignals: ToppingCommand:string\\lTiming: <30ms}"];
+        ToppingService [label="{ToppingService|<<Business Logic>>\\lFunction: Applies toppings\\lAdapter: InventoryDB\\lSignals:\\l- ToppingType:string\\l- Quantity:int\\lTiming: <30ms}"];
+    }
+
+    subgraph cluster_cooking {
+        label = "Cooking Machine";
+        style=filled;
+        color=lightgray;
+
+        CookingController [label="{CookingController|<<Device Controller>>\\lFunction: Controls oven\\lSignals: BakeCommand:string\\lTiming: <60ms}"];
+        CookingService [label="{CookingService|<<Business Logic>>\\lFunction: Bakes pizza\\lController: OvenUnit\\lSignals:\\l- Temperature:int\\l- Duration:int\\lTiming: <60ms}"];
+    }
+
+    subgraph cluster_packaging {
+        label = "Packaging Machine";
+        style=filled;
+        color=lightgray;
+
+        PackagingController [label="{PackagingController|<<Device Controller>>\\lFunction: Controls packaging unit\\lSignals: PackCommand:string\\lTiming: <70ms}"];
+        PackagingService [label="{PackagingService|<<Business Logic>>\\lFunction: Packages and freezes pizza\\lController: PackagingUnit\\lSignals:\\l- PackagingType:string\\l- Freeze:boolean\\lTiming: <70ms}"];
+    }
+
+subgraph cluster_warehouse {
+    label = "Warehouse Services";
+    style=filled;
+    color=lightgoldenrod2;
+
+    // Inventory Monitoring
+    InventoryController [label="{InventoryController|<<Service Controller>>\\lFunction: Monitors stock levels and alerts\\lSignals:\\l- StockLevel:int\\l- Alert:boolean\\lTiming: <100ms}"];
+    InventoryService [label="{InventoryService|<<Business Logic>>\\lFunction: Evaluates inventory thresholds\\lTriggers restock or internal supply\\lSignals:\\l- InventoryStatus:string\\l- Threshold:int\\lTiming: <100ms}"];
+
+    // External Restocking
+    RestockingController [label="{RestockingController|<<Service Controller>>\\lFunction: Interfaces with external suppliers\\lSignals:\\l- RestockRequest:string\\lTiming: <80ms}"];
+    RestockingService [label="{RestockingService|<<Adapter Service>>\\lFunction: Sends restock requests to SupplierAPI\\lAdapter: SupplierAPI\\lSignals:\\l- ItemID:int\\l- Quantity:int\\lTiming: <80ms}"];
+
+    // Internal Goods Supply
+    GoodsProviderController [label="{GoodsProviderController|<<Service Controller>>\\lFunction: Coordinates internal logistics\\lSignals:\\l- SupplyCommand:string\\lTiming: <90ms}"];
+    GoodsProviderService [label="{GoodsProviderService|<<Adapter Service>>\\lFunction: Dispatches goods from internal storage\\lAdapter: InternalLogistics\\lSignals: SupplyRequest:string\\lTiming: <90ms}"];
+
+    // Kafka Communication
+    KafkaBusSW [label="{KafkaBusSW|<<Message Broker>>\\lTopics:\\l- inventory-events\\l- restock-events\\l- supply-events\\lSignals: EventPayload:json\\lTiming: <10ms}"];
+
+    // Connections
+    InventoryController -> InventoryService [label="Evaluate inventory"];
+    InventoryService -> KafkaBusSW [label="Trigger restock-events, supply-events"];
+
+    KafkaBusSW -> RestockingController [label="restock-events"];
+    RestockingController -> RestockingService [label="Send restock request"];
+
+    KafkaBusSW -> GoodsProviderController [label="supply-events"];
+    GoodsProviderController -> GoodsProviderService [label="Dispatch internal goods"];
+}
+
+   subgraph cluster_quality {
+    label = "Quality Control";
+    style=filled;
+    color=lightyellow;
+
+    QualityController [label="{QualityController|<<Service Controller>>\\lFunction: Coordinates inspection process\\lSignals:\\l- InspectionTrigger:string\\lTiming: <200ms}"];
+    QualityInspectionService [label="{QualityInspectionService|<<Business Logic>>\\lFunction: Performs quality checks on final product\\lEvaluates packaging, temperature, and visual defects\\lSignals:\\l- InspectionResult:string\\l- QualityScore:int\\lTiming: <200ms}"];
+    QualityFeedbackService [label="{QualityFeedbackService|<<Business Logic>>\\lFunction: Sends feedback to inventory and production\\lTriggers corrective actions if needed\\lSignals:\\l- FeedbackType:string\\l- Target:string\\lTiming: <150ms}"];
+    KafkaBusSW [label="{KafkaBusSW|<<Message Broker>>\\lTopics:\\l- quality-events\\l- quality-feedback\\lSignals: EventPayload:json\\lTiming: <10ms}"];
+
+    // Connections
+    KafkaBusSW -> QualityController [label="quality-events"];
+    QualityController -> QualityInspectionService [label="Run inspection"];
+    QualityInspectionService -> KafkaBusSW [label="Publish quality-feedback"];
+    KafkaBusSW -> QualityFeedbackService [label="quality-feedback"];
+    QualityFeedbackService -> InventoryController [label="Send inventory feedback"];
+    QualityFeedbackService -> PackagingController [label="Send packaging feedback"];
+}
+
+    // === Connections ===
+    CustomerInterfaceSW -> APIGatewaySW [label="HTTP POST /order"];
+    EmployeeInterfaceSW -> APIGatewaySW [label="HTTP GET /dashboard"];
+    APIGatewaySW -> KafkaBusSW [label="order-events"];
+    APIGatewaySW -> KafkaBusSW [label="quality-events"];
+
+    KafkaBusSW -> OrderProcessingController [label="order-events"];
+    OrderProcessingController -> KafkaBusSW [label="Dispatch: dough-events, sauce-events, topping-events, cooking-events, packaging-events"];
+
+    KafkaBusSW -> DoughController [label="dough-events"];
+    DoughController -> DoughService [label="Execute dough logic"];
+
+    KafkaBusSW -> SauceController [label="sauce-events"];
+    SauceController -> SauceService [label="Execute sauce logic"];
+
+    KafkaBusSW -> ToppingController [label="topping-events"];
+    ToppingController -> ToppingService [label="Execute topping logic"];
+
+    KafkaBusSW -> CookingController [label="cooking-events"];
+    CookingController -> CookingService [label="Execute baking logic"];
+
+    KafkaBusSW -> PackagingController [label="packaging-events"];
+    PackagingController -> PackagingService [label="Execute packaging logic"];
+
+    KafkaBusSW -> InventoryController [label="inventory-events"];
+    InventoryController -> RestockingService [label="Trigger restock"];
+    InventoryController -> GoodsProviderService [label="Trigger supply"];
+
+    QualityController -> PackagingService [label="Inspect packaging"];
+    QualityController -> InventoryController [label="Send quality feedback"];
+}

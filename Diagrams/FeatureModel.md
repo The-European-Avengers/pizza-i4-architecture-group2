@@ -8,39 +8,38 @@ Pizza Manufacturer
 │   │   ├── Vegetables
 │   │   ├── Meats
 │   │   ├── HalfAndHalfMode [FR7]
-│   │   └── CheeseArt [FR9]
 │   ├── SauceCreator [FR3]
 │   │   └── MultipleSauces [FR8]
 │   ├── DoughCreator [FR2]
 │   │   └── DoughShaper [FR2]
 │   ├── Cooking
 │   │   ├── Baking [FR5]
-│   │   └── CalzoneFolding [FR10]
+│   │   └── CalzoneFolding [FR9]
 │   └── PostProduction
 │       ├── Freezing [FR6]
-│       ├── QualityInspection [FR11]
+│       ├── QualityInspection [FR10]
 │       └── Packaging
 ├── Warehouse
-│   ├── Restocking [FR20]
+│   ├── Restocking [FR19]
 │   │   ├── AutomaticReordering
 │   │   └── SupplierIntegration
-│   ├── InventoryManagement [FR19]
+│   ├── InventoryManagement [FR18]
 │   │   ├── UsageTracking
 │   │   └── StockMonitoring
-│   └── InternalGoodsProvider [FR18]
+│   └── InternalGoodsProvider [FR17]
 │       └── ProductionSupply
 └── WebInterface
     ├── CustomerInterface
     │   ├── Ordering
-    │   │   ├── MenuSelection [FR12]
-    │   │   ├── Customization [FR13]
+    │   │   ├── MenuSelection [FR11]
+    │   │   ├── Customisation [FR12]
     │   │   │   ├── IngredientSelection
     │   │   │   ├── ShapeSelection
     │   │   │   └── SizeSelection
-    │   │   ├── QuantitySelection [FR14]
-    │   │   └── PriorityQueue [FR16]
-    │   ├── Payment [FR15]
-    │   ├── OrderTracking [FR17]
+    │   │   ├── QuantitySelection [FR13]
+    │   │   └── PriorityQueue [FR15]
+    │   ├── Payment [FR14]
+    │   ├── OrderTracking [FR16]
     │   └── Authentication
     └── EmployeeInterface
         ├── AnalyticalDashboard
@@ -49,5 +48,8 @@ Pizza Manufacturer
         ├── SystemManagement
         └── UserManagement
 ```
+
+
+![Feature Model](diagram-images/feature-model.png)
 
 
