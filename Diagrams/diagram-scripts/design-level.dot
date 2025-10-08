@@ -66,7 +66,7 @@ digraph "Digital Pizza Factory - Design Level Architecture" {
     }
 
     subgraph cluster_topping {
-        label = "Topping Machine (Meat & Vegetables)";
+        label = "Topping Machine (Meat/Cheese/Vegetables)";
         style=filled;
         color=lightgray;
 

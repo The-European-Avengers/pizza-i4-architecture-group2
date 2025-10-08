@@ -14,7 +14,7 @@
 | **FR7** | Half-and-Half Mode | System shall support different toppings on each half of pizza | Medium | UI validation for split configuration |
 | **FR8** | Multiple Sauce Types | System shall support a variety of sauce options (tomato, white, pesto, BBQ) | Medium | ≥4 sauce types available |
 | **FR9** | Calzone Production | System shall optionally fold and seal pizza into calzone format | Low | Fold completeness check |
-| **FR10** | Quality Inspection | System shall perform quality checks at key production stages | High | Defect rate <0.1% |
+| **FR10** |Packaging | System shall pack pizza in a box | High | Defect rate 5% |
 
 ### Web Interface Requirements
 | ID | Requirement | Description | Priority | Measurable Criteria |
@@ -54,25 +54,25 @@
 
 | Req ID | Requirement | Priority | Feature Model Elements | Analysis Architecture | Design Components |
 |--------|------------|----------|----------------------|---------------------|------------------|
-| **FR1** | Core Production | High | Production (root) | Production Subsystem, OrderProcessing | OrderProcessingController, All Machine Controllers |
-| **FR2** | Dough Preparation | High | DoughCreator, DoughShaper | DoughCreator function | DoughController, DoughService, DoughDispatchService |
-| **FR3** | Sauce Application | High | SauceCreator | SauceCreator function | SauceController, SauceService, SauceDispatchService |
-| **FR4** | Topping Application | High | ToppingApplication, Cheese/Vegetables/Meats | ToppingApp function | ToppingController, ToppingService, ToppingDispatchService |
-| **FR5** | Pizza Baking | High | Cooking, Baking | Cooking function | CookingController, CookingService, CookingDispatchService |
-| **FR6** | Freezing | Medium | PostProduction, Freezing | PostProduction function | PackagingController, PackagingService (Freeze:boolean) |
-| **FR7** | Half-and-Half | Medium | HalfAndHalfMode | ToppingApp function | ToppingDispatchService, ToppingService |
-| **FR8** | Multiple Sauces | Medium | MultipleSauces | SauceCreator function | SauceService (sauce types) |
-| **FR9** | Calzone Production | Low | CalzoneFolding | Cooking function | CookingService (fold mode) |
-| **FR10** | Quality Inspection | High | QualityInspection | QualityControl function | QualityController, QualityInspectionService, QualityFeedbackService |
-| **FR11** | Menu Selection | High | CustomerInterface, MenuSelection | CustomerInterface function | CustomerInterfaceSW (/menu endpoint) |
-| **FR12** | Customisation | High | Customisation, IngredientSelection, ShapeSelection, SizeSelection | CustomerInterface function | CustomerInterfaceSW, OrderProcessingController |
-| **FR13** | Quantity Selection | High | QuantitySelection | CustomerInterface function | CustomerInterfaceSW (validation) |
-| **FR14** | Payment | High | Payment | CustomerInterface function, APIGateway | CustomerInterfaceSW, APIGatewaySW |
-| **FR15** | Priority Queue | Medium | PriorityQueue | OrderProcessing function | OrderProcessingController (queue logic) |
-| **FR16** | Order Tracking | High | OrderTracking | CustomerInterface, KafkaBus | CustomerInterfaceSW, KafkaBusSW (events) |
-| **FR17** | Inventory Storage | High | InternalGoodsProvider, ProductionSupply | Warehouse subsystem, GoodsProvider | GoodsProviderController, GoodsProviderService |
-| **FR18** | Inventory Monitoring | High | InventoryManagement, UsageTracking, StockMonitoring | InventoryMgmt function, SupplyCoordination | InventoryController, InventoryService |
-| **FR19** | Auto Restocking | High | Restocking, AutomaticReordering, SupplierIntegration | Restocking function, SupplyCoordination | RestockingController, RestockingService |
+| **FR1** | Core Production | High | Production (root) | Production Component | OrderProcessingController, All Machine Controllers |
+| **FR2** | Dough Preparation | High | DoughCreator, DoughShaper | DoughCreator Component | DoughCreatorController, DoughCreatorService, DoughDispatchService, DoughShaperController, DoughShaperService |
+| **FR3** | Sauce Application | High | SauceCreator | SauceCreator Component | SauceController, SauceService, SauceDispatchService |
+| **FR4** | Topping Application | High | ToppingApplication, Cheese/Vegetables/Meats | Cheese Component, Vegetables Component, Meat Component | ToppingController, ToppingService, ToppingDispatchService |
+| **FR5** | Pizza Baking | High | Cooking, Oven | Oven Component | OvenController, OvenService, OvenDispatchService |
+| **FR6** | Freezing | High | Cooking, Freezing | Freezer Component | FreezerController, FreezerService, FreezerispatchService |
+| **FR7** | Half-and-Half | Medium | HalfAndHalfMode | ToppingApp Component | ToppingDispatchService, ToppingService |
+| **FR8** | Multiple Sauces | Medium | MultipleSauces | SauceCreator Component | SauceService (sauce types) |
+| **FR9** | Calzone Production | Low | Cooking, CalzoneFolding | Cooking Component | CookingService (fold mode) |
+| **FR10** | Packaging | High | PostProduction | Packaging Component | PackagingController, PackagingService |
+| **FR11** | Menu Selection | High | CustomerInterface, MenuSelection | UI Component | CustomerInterfaceSW (/menu endpoint) |
+| **FR12** | Customisation | High | Customisation, IngredientSelection, ShapeSelection, SizeSelection | UI Component | CustomerInterfaceSW, OrderProcessingController |
+| **FR13** | Quantity Selection | High | QuantitySelection | UI Component | CustomerInterfaceSW (validation) |
+| **FR14** | Payment | High | Payment | UI Component | CustomerInterfaceSW, APIGatewaySW |
+| **FR15** | Priority Queue | Medium | PriorityQueue | Ordering Component | OrderProcessingController (queue logic) |
+| **FR16** | Order Tracking | High | OrderTracking | UI Component | CustomerInterfaceSW, KafkaBusSW (events) |
+| **FR17** | Inventory Storage | High | InternalGoodsProvider, ProductionSupply | Warehouse subsystem, Internal Goods Provider | GoodsProviderController, GoodsProviderService |
+| **FR18** | Inventory Monitoring | High | InventoryManagement, UsageTracking, StockMonitoring | Inventory Management Component | InventoryController, InventoryService |
+| **FR19** | Auto Restocking | High | Restocking, AutomaticReordering, SupplierIntegration | Restocking Handler Component | RestockingController, RestockingService |
 
 ### Non-Functional Requirements Traceability
 
