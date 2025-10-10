@@ -6,8 +6,8 @@
     {
       "id": "sIGKxqVKYW3qKD4ocD06d",
       "type": "rectangle",
-      "x": 742.5081583578623,
-      "y": 429.93523692107016,
+      "x": 742.8856820280931,
+      "y": 430.33792883598295,
       "width": 780.5067503540052,
       "height": 272.09722749801045,
       "angle": 0,
@@ -25,11 +25,11 @@
         "type": 3
       },
       "seed": 34881344,
-      "version": 1030,
-      "versionNonce": 1276045120,
+      "version": 1031,
+      "versionNonce": 497797268,
       "isDeleted": false,
       "boundElements": [],
-      "updated": 1760010463427,
+      "updated": 1760085994052,
       "link": null,
       "locked": false
     },
@@ -403,7 +403,7 @@
       "type": "rectangle",
       "x": -318.1088529450658,
       "y": 384.69062168339264,
-      "width": 1800.4608484474563,
+      "width": 1831.8796660216765,
       "height": 35,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -420,8 +420,8 @@
         "type": 3
       },
       "seed": 187313984,
-      "version": 693,
-      "versionNonce": 1771462464,
+      "version": 716,
+      "versionNonce": 1926476436,
       "isDeleted": false,
       "boundElements": [
         {
@@ -449,16 +449,16 @@
           "type": "arrow"
         }
       ],
-      "updated": 1760010463427,
+      "updated": 1760085993565,
       "link": null,
       "locked": false
     },
     {
       "id": "iqq4IU0JwxNI5FidPO92k",
       "type": "text",
-      "x": 519.0600478411624,
+      "x": 533.2810227903818,
       "y": 389.69062168339264,
-      "width": 126.123046875,
+      "width": 129.09991455078125,
       "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -473,11 +473,11 @@
       "index": "aB",
       "roundness": null,
       "seed": 1554138944,
-      "version": 619,
-      "versionNonce": 918026048,
+      "version": 643,
+      "versionNonce": 1863261588,
       "isDeleted": false,
       "boundElements": [],
-      "updated": 1760010463557,
+      "updated": 1760085993566,
       "link": null,
       "locked": false,
       "text": "BUS (KAFKA)",
@@ -4402,10 +4402,10 @@
     {
       "id": "nxn-MbpW_FxTlV8vSlHI7",
       "type": "arrow",
-      "x": 55.65243279900301,
-      "y": 458.4510820684945,
-      "width": 16.4155069924808,
-      "height": 35.13012375823365,
+      "x": 55.738491530587076,
+      "y": 460.7545331485248,
+      "width": 22.688134335441795,
+      "height": 40.98051381521492,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -4421,11 +4421,11 @@
         "type": 2
       },
       "seed": 1173806912,
-      "version": 432,
-      "versionNonce": 1673541440,
+      "version": 455,
+      "versionNonce": 1281900564,
       "isDeleted": false,
       "boundElements": [],
-      "updated": 1760010463428,
+      "updated": 1760085993566,
       "link": null,
       "locked": false,
       "points": [
@@ -4434,8 +4434,8 @@
           0
         ],
         [
-          16.4155069924808,
-          -35.13012375823365
+          22.688134335441795,
+          -40.98051381521492
         ]
       ],
       "lastCommittedPoint": null,
