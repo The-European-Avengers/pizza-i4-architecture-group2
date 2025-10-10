@@ -57,10 +57,10 @@
 | **FR1** | Core Production | High | Production (root) | Production Component | OrderProcessingController, All Machine Controllers |
 | **FR2** | Dough Preparation | High | DoughCreator, DoughShaper | DoughCreator Component | DoughCreatorController, DoughCreatorService, DoughDispatchService, DoughShaperController, DoughShaperService |
 | **FR3** | Sauce Application | High | SauceCreator | SauceCreator Component | SauceController, SauceService, SauceDispatchService |
-| **FR4** | Topping Application | High | ToppingApplication, Cheese/Vegetables/Meats | Cheese Component, Vegetables Component, Meat Component | ToppingController, ToppingService, ToppingDispatchService |
+| **FR4** | Topping Application | High | ToppingApplication, Cheese/Vegetables/Meats | Cheese Component, Vegetables Component, Meat Component | CheeseController, CheeseService, CheeseDispatchService, MeatController, MeatService, MeatDispatchService, VegetableController, VegetableService, VegetableDispatchService |
 | **FR5** | Pizza Baking | High | Cooking, Oven | Oven Component | OvenController, OvenService, OvenDispatchService |
 | **FR6** | Freezing | High | Cooking, Freezing | Freezer Component | FreezerController, FreezerService, FreezerispatchService |
-| **FR7** | Half-and-Half | Medium | HalfAndHalfMode | ToppingApp Component | ToppingDispatchService, ToppingService |
+| **FR7** | Half-and-Half | Medium | HalfAndHalfMode | ToppingApplication, Cheese/Vegetables/Meats | Cheese Component, Vegetables Component, Meat Component | CheeseController, CheeseService, CheeseDispatchService, MeatController, MeatService, MeatDispatchService, VegetableController, VegetableService, VegetableDispatchService |
 | **FR8** | Multiple Sauces | Medium | MultipleSauces | SauceCreator Component | SauceService (sauce types) |
 | **FR9** | Calzone Production | Low | Cooking, CalzoneFolding | Cooking Component | CookingService (fold mode) |
 | **FR10** | Packaging | High | PostProduction | Packaging Component | PackagingController, PackagingService |
