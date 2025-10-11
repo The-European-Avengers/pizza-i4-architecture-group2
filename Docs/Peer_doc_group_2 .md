@@ -306,7 +306,7 @@ For our production line, we composed all the main hardware machines, which are g
 * Dough shaper (UC06)  
   * It shapes the dough into a desired shape based on the order for production.  
 * Sauces machine (UC07)  
-  * It creates the necessary sauce for a specific pizza and adds it to the dough.  
+  * It applies the necessary sauce on the dough.  
 * Vegetable slicer (UC13)  
   * It cuts the vegetables into smaller pieces to apply to the pizza.
 
