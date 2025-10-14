@@ -6,7 +6,7 @@ process.loadEnvFile()
 
 interface EnvVars {
   PORT: number;
-  //DATABASE_URL:string;
+  DATABASE_URL:string;
 }
 
 
@@ -14,7 +14,7 @@ interface EnvVars {
 const envsSchema = joi
   .object({
     PORT: joi.number().required(),
-    //DATABASE_URL: joi.string().required()
+    DATABASE_URL: joi.string().required()
   })
   .unknown(true);
 
@@ -32,7 +32,7 @@ const envVars:EnvVars = value; //casteo
 
 export const envs={
     port:envVars.PORT,
-    //databaseUrl:envVars.DATABASE_URL
+    databaseUrl:envVars.DATABASE_URL
 }
 
 

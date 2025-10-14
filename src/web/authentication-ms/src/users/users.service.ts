@@ -1,11 +1,51 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { PrismaClient } from 'generated/prisma';
+import * as bcrypt from 'bcrypt';
+
 
 @Injectable()
-export class UsersService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+export class UsersService extends PrismaClient implements OnModuleInit {
+
+ private readonly logger = new Logger('UsersService');
+
+  onModuleInit() {
+    this.$connect();
+    this.logger.log('Database connected');
+  }
+
+  async create(createUserDto: CreateUserDto) {
+
+    const { name,lastname,email,password, is_active, role} = createUserDto;
+
+    try {
+
+      const user = await this.user.findUnique({
+        where: {
+          email
+        }
+      });
+      if (user) {
+        throw new Error('User already exists');
+      }
+      
+    } catch (error) {
+      throw new Error(error.message);
+    }
+
+
+
+    return this.user.create({
+      data: {
+        name,
+        lastname,
+        email,
+        password: bcrypt.hashSync(password, 10),
+        is_active,
+        role
+      }
+    });
   }
 
   findAll() {
