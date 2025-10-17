@@ -48,8 +48,11 @@ export class UsersService extends PrismaClient implements OnModuleInit {
     });
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async findAll() {
+
+    const users= await this.user.findMany();
+    return users;
+
   }
 
   findOne(id: number) {

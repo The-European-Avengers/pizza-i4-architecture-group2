@@ -1,23 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Inject } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { AUTHENTICATION_SERVICE } from 'src/config';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(@Inject(AUTHENTICATION_SERVICE) private readonly usersClient: ClientProxy) {}
 
-  //@Post() @Body()
-  @MessagePattern({ cmd: 'create_user' })
-  create(@Payload() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  @Post()
+  create(@Body() createUserDto: CreateUserDto) {
+    return this.usersClient.send(
+      { cmd: 'create_user' },
+      createUserDto,
+    );
   }
 
-  //@Get()
-  @MessagePattern({ cmd: 'get_all_users' })
+  @Get()
   findAll() {
-    return this.usersService.findAll();
+    return this.usersClient.send({ cmd: 'get_all_users' },{});
   }
 
   // @Get(':id')

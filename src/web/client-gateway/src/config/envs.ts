@@ -26,6 +26,6 @@ const envVars: EnvVars = value;
 
 export const envs = {
   port: envVars.PORT,
-  productsMicroserviceHost: envVars.AUTH_MICROSERVICE_HOST,
-  productsMicroservicePort: envVars.AUTH_MICROSERVICE_PORT,
+  authMicroserviceHost: envVars.AUTH_MICROSERVICE_HOST,
+  authMicroservicePort: envVars.AUTH_MICROSERVICE_PORT,
 };
