@@ -11,7 +11,20 @@ const int LOW_STOCK_THRESHOLD = 20;
 broadcast chan turn_on;
 broadcast chan ovenMachine, freezerMachine;
 chan turn_off, oven_ready, pizza_ready;
-chan dough_shaper, sauceMachine;
+
+const int MAX_ORDERS_IN_SYSTEM = 3; // Or any total number you want
+int pizzas_in_production = 0;
+
+const int MAX_PIZZA_BUFFER = 3; // Max pizzas in any buffer
+int raw_dough_buffer_count = 0; // DoughMachine -&gt; DoughShaper
+int dough_buffer_count = 0;     // DoughShaper -&gt; Sauce
+int sauce_buffer_count = 0;     // Sauce -&gt; Cheese
+int cheese_buffer_count = 0;    // Cheese -&gt; Meat
+int meat_buffer_count = 0;      // Meat -&gt; Veg
+int oven_buffer_count = 0;      // Veg -&gt; Oven
+int freezer_buffer_count = 0;   // Veg -&gt; Freezer
+
+
 chan pizza_in, pizza_out;
 chan packaging_event, supply_event;
 chan door_open, door_closed, pizza_positioned;
@@ -22,46 +35,50 @@ chan restock_events_need, message_received, create_order;
 chan pizza_request;
 bool order_done = false;
 
-chan vegetablesSlicer, requestVegetable, sentVegetable;
-chan suaceMachine, requestSauce, sentSauce;
-chan sentMeat, requestMeat, meatSlicer;
-chan grateCheese, requestCheese, cheeseGrater, sentCheese;
+chan requestVegetable, sentVegetable;
+chan requestSauce, sentSauce;
+chan sentMeat, requestMeat;
+chan grateCheese, requestCheese, sentCheese;
+
 
 
 </declaration>
 	<template>
 		<name>Customer</name>
 		<declaration>clock t;</declaration>
-		<location id="id0" x="-119" y="-24225">
-			<name x="-144" y="-24259">idle</name>
+		<location id="id0" x="162" y="-24072">
+			<name x="137" y="-24106">idle</name>
 		</location>
-		<location id="id1" x="93" y="-24403">
-			<name x="85" y="-24437">turnOnMachines</name>
+		<location id="id1" x="374" y="-24250">
+			<name x="366" y="-24284">turnOnMachines</name>
 		</location>
 		<init ref="id0"/>
 		<transition id="id2">
 			<source ref="id0"/>
 			<target ref="id0"/>
-			<label kind="guard" x="-179" y="-24106">isOn</label>
-			<label kind="synchronisation" x="-179" y="-24123">pizza_request!</label>
-			<nail x="-77" y="-24132"/>
-			<nail x="-204" y="-24132"/>
+			<label kind="guard" x="102" y="-23961">isOn &amp;&amp; pizzas_in_production &lt; MAX_ORDERS_IN_SYSTEM</label>
+			<label kind="synchronisation" x="102" y="-23944">pizza_request!</label>
+			<label kind="assignment" x="102" y="-23927">pizzas_in_production++</label>
+			<nail x="204" y="-23979"/>
+			<nail x="93" y="-23978"/>
 		</transition>
 		<transition id="id3">
 			<source ref="id1"/>
 			<target ref="id0"/>
-			<label kind="synchronisation" x="110" y="-24259">pizza_request!</label>
-			<nail x="108" y="-24274"/>
-			<nail x="57" y="-24231"/>
+			<label kind="guard" x="180" y="-24109">pizzas_in_production &lt; MAX_ORDERS_IN_SYSTEM</label>
+			<label kind="synchronisation" x="391" y="-24106">pizza_request!</label>
+			<label kind="assignment" x="180" y="-24075">pizzas_in_production++</label>
+			<nail x="389" y="-24121"/>
+			<nail x="338" y="-24078"/>
 		</transition>
 		<transition id="id4">
 			<source ref="id0"/>
 			<target ref="id1"/>
-			<label kind="guard" x="-170" y="-24446">!isOn</label>
-			<label kind="synchronisation" x="-170" y="-24412">turn_on!</label>
-			<label kind="assignment" x="-170" y="-24429">isOn=true</label>
-			<nail x="-136" y="-24352"/>
-			<nail x="-51" y="-24429"/>
+			<label kind="guard" x="111" y="-24293">!isOn</label>
+			<label kind="synchronisation" x="111" y="-24259">turn_on!</label>
+			<label kind="assignment" x="111" y="-24276">isOn=true</label>
+			<nail x="145" y="-24199"/>
+			<nail x="230" y="-24276"/>
 		</transition>
 	</template>
 	<template>
@@ -171,7 +188,7 @@ clock t;</declaration>
 			<label kind="invariant" x="-841" y="17">t&lt;=5</label>
 		</location>
 		<location id="id20" x="-510" y="0">
-			<name x="-493" y="-34">waiting</name>
+			<name x="-501" y="-34">waiting</name>
 		</location>
 		<location id="id21" x="-144" y="0">
 			<name x="-161" y="-34">freeze</name>
@@ -204,9 +221,9 @@ t=0</label>
 		<transition id="id25">
 			<source ref="id20"/>
 			<target ref="id21"/>
-			<label kind="guard" x="-416" y="8">freezer_temp&gt;=FREEZE_TEMP</label>
-			<label kind="synchronisation" x="-416" y="25">freezerMachine?</label>
-			<label kind="assignment" x="-416" y="42">t=0</label>
+			<label kind="guard" x="-416" y="-68">freezer_temp&gt;=FREEZE_TEMP &amp;&amp;
+freezer_buffer_count &gt; 0</label>
+			<label kind="assignment" x="-416" y="-34">t=0, freezer_buffer_count--</label>
 		</transition>
 		<transition id="id26">
 			<source ref="id20"/>
@@ -229,14 +246,14 @@ clock t;</declaration>
 		</location>
 		<location id="id29" x="-280" y="-85">
 			<name x="-297" y="-119">operatePizza</name>
-			<label kind="invariant" x="-323" y="-68">t&lt;=10</label>
 		</location>
 		<init ref="id27"/>
 		<transition id="id30">
 			<source ref="id29"/>
 			<target ref="id28"/>
-			<label kind="guard" x="-391" y="-34">t&gt;=10</label>
-			<label kind="synchronisation" x="-382" y="-8">goods_events_pickup!</label>
+			<label kind="guard" x="-391" y="-34">t&gt;=2</label>
+			<label kind="synchronisation" x="-450" y="8">goods_events_pickup!</label>
+			<label kind="assignment" x="-450" y="25">pizzas_in_production--</label>
 			<nail x="-280" y="-8"/>
 			<nail x="-459" y="-8"/>
 		</transition>
@@ -277,7 +294,6 @@ clock t;</declaration>
 		</location>
 		<location id="id37" x="68" y="68">
 			<name x="51" y="85">baking</name>
-			<label kind="invariant" x="51" y="102">t&lt;=30</label>
 		</location>
 		<init ref="id34"/>
 		<transition id="id38">
@@ -315,9 +331,9 @@ t=0</label>
 		<transition id="id42">
 			<source ref="id36"/>
 			<target ref="id37"/>
-			<label kind="guard" x="127" y="-59">temp&gt;=TARGET_TEMP</label>
-			<label kind="synchronisation" x="127" y="-42">ovenMachine?</label>
-			<label kind="assignment" x="127" y="-25">t=0</label>
+			<label kind="guard" x="127" y="-59">temp&gt;=TARGET_TEMP &amp;&amp; 
+oven_buffer_count &gt; 0</label>
+			<label kind="assignment" x="127" y="-17">t=0, oven_buffer_count--</label>
 			<nail x="110" y="-42"/>
 		</transition>
 		<transition id="id43">
@@ -338,15 +354,14 @@ clock t;</declaration>
 		</location>
 		<location id="id45" x="238" y="34">
 			<name x="228" y="0">kneading</name>
-			<label kind="invariant" x="229" y="51">t&lt;=10</label>
 		</location>
 		<init ref="id44"/>
 		<transition id="id46">
 			<source ref="id45"/>
 			<target ref="id44"/>
-			<label kind="guard" x="110" y="76">t&gt;=10</label>
-			<label kind="synchronisation" x="110" y="93">dough_shaper!</label>
-			<nail x="127" y="76"/>
+			<label kind="guard" x="59" y="102">t &gt;= 2 &amp;&amp; raw_dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
+			<label kind="assignment" x="59" y="127">raw_dough_buffer_count++</label>
+			<nail x="102" y="93"/>
 		</transition>
 		<transition id="id47">
 			<source ref="id44"/>
@@ -360,162 +375,143 @@ clock t;</declaration>
 		<name>SauceMachine</name>
 		<declaration>clock t;
 bool sauceStock = true;</declaration>
-		<location id="id48" x="-553" y="-169">
-			<name x="-578" y="-203">idle</name>
+		<location id="id48" x="-544" y="-187">
+			<name x="-569" y="-221">idle</name>
 		</location>
-		<location id="id49" x="-400" y="-280">
-			<name x="-459" y="-314">choosingSauce</name>
-			<label kind="invariant" x="-410" y="-263">t&lt;=2</label>
-		</location>
-		<location id="id50" x="-187" y="-288">
+		<location id="id49" x="-187" y="-288">
 			<name x="-238" y="-322">checkStock</name>
 		</location>
-		<location id="id51" x="-400" y="-59">
-			<name x="-434" y="-42">dispatch</name>
-			<label kind="invariant" x="-408" y="-25">t&lt;=2</label>
-		</location>
-		<location id="id52" x="-171" y="-59">
+		<location id="id50" x="-171" y="-59">
 			<name x="-187" y="-51">addToPizza</name>
-			<label kind="invariant" x="-187" y="-34">t&lt;=5</label>
 		</location>
 		<init ref="id48"/>
-		<transition id="id53">
+		<transition id="id51">
 			<source ref="id50"/>
-			<target ref="id52"/>
-			<label kind="guard" x="-179" y="-207">sauceStock</label>
-			<label kind="assignment" x="-179" y="-173">t=0</label>
-		</transition>
-		<transition id="id54">
-			<source ref="id51"/>
 			<target ref="id48"/>
-			<label kind="guard" x="-527" y="-85">t&gt;=2</label>
-			<label kind="synchronisation" x="-578" y="-119">cheeseGrater!</label>
+			<label kind="guard" x="-527" y="-85">t&gt;=2 &amp;&amp; 
+sauce_buffer_count &lt; MAX_PIZZA_BUFFER</label>
+			<label kind="assignment" x="-527" y="-110">sauce_buffer_count++</label>
 		</transition>
-		<transition id="id55">
-			<source ref="id52"/>
-			<target ref="id51"/>
-			<label kind="guard" x="-323" y="-93">t&gt;=5</label>
-			<label kind="assignment" x="-315" y="-59">t=0</label>
-		</transition>
-		<transition id="id56">
-			<source ref="id49"/>
-			<target ref="id50"/>
-			<label kind="guard" x="-315" y="-322">t&gt;=2</label>
-		</transition>
-		<transition id="id57">
+		<transition id="id52">
 			<source ref="id48"/>
 			<target ref="id49"/>
-			<label kind="synchronisation" x="-570" y="-254">sauceMachine?</label>
-			<label kind="assignment" x="-535" y="-224">t=0</label>
+			<label kind="guard" x="-493" y="-340">dough_buffer_count &gt; 0</label>
+			<label kind="assignment" x="-493" y="-306">t=0,
+dough_buffer_count--</label>
+		</transition>
+		<transition id="id53">
+			<source ref="id49"/>
+			<target ref="id50"/>
+			<label kind="guard" x="-170" y="-212">sauceStock</label>
+			<label kind="assignment" x="-170" y="-187">t=0</label>
 		</transition>
 	</template>
 	<template>
 		<name x="5" y="5">DoughShaper</name>
 		<declaration>// Place local declarations here.
 clock t;</declaration>
-		<location id="id58" x="0" y="-34">
+		<location id="id54" x="0" y="-34">
 			<name x="-10" y="-68">idle</name>
 		</location>
-		<location id="id59" x="222" y="-34">
+		<location id="id55" x="222" y="-34">
 			<name x="212" y="-68">shapingDough</name>
-			<label kind="invariant" x="238" y="-42">t&lt;=10</label>
 		</location>
-		<init ref="id58"/>
-		<transition id="id60">
-			<source ref="id59"/>
-			<target ref="id58"/>
-			<label kind="guard" x="59" y="42">t&gt;=10</label>
-			<label kind="synchronisation" x="59" y="25">sauceMachine!</label>
-			<nail x="170" y="25"/>
-			<nail x="51" y="25"/>
+		<init ref="id54"/>
+		<transition id="id56">
+			<source ref="id55"/>
+			<target ref="id54"/>
+			<label kind="guard" x="51" y="68">t&gt;=2 &amp;&amp;
+dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
+			<label kind="assignment" x="51" y="110">dough_buffer_count++</label>
+			<nail x="162" y="51"/>
+			<nail x="43" y="51"/>
 		</transition>
-		<transition id="id61">
-			<source ref="id58"/>
-			<target ref="id59"/>
-			<label kind="synchronisation" x="68" y="-76">dough_shaper?</label>
-			<label kind="assignment" x="68" y="-59">t=0</label>
+		<transition id="id57">
+			<source ref="id54"/>
+			<target ref="id55"/>
+			<label kind="guard" x="25" y="-110">raw_dough_buffer_count &gt; 0</label>
+			<label kind="assignment" x="25" y="-93">t=0, raw_dough_buffer_count--</label>
 		</transition>
 	</template>
 	<template>
 		<name>MeatSlicer</name>
 		<declaration>clock t;
 bool meatStock=true, noMeatPizza=false;</declaration>
-		<location id="id62" x="-416" y="-85">
+		<location id="id58" x="-416" y="-85">
 			<name x="-442" y="-119">idle</name>
 		</location>
-		<location id="id63" x="-280" y="-204">
+		<location id="id59" x="-280" y="-204">
 			<name x="-323" y="-246">choosingMeat</name>
-			<label kind="invariant" x="-289" y="-187">t&lt;=2</label>
 		</location>
-		<location id="id64" x="-51" y="-204">
+		<location id="id60" x="-51" y="-204">
 			<name x="-93" y="-246">checkStock</name>
 		</location>
-		<location id="id65" x="-272" y="59">
+		<location id="id61" x="-272" y="59">
 			<name x="-306" y="68">dispatch</name>
-			<label kind="invariant" x="-289" y="102">t&lt;=2</label>
 		</location>
-		<init ref="id62"/>
-		<transition id="id66">
-			<source ref="id64"/>
-			<target ref="id65"/>
+		<init ref="id58"/>
+		<transition id="id62">
+			<source ref="id60"/>
+			<target ref="id61"/>
 			<label kind="guard" x="-170" y="-59">meatStock</label>
 			<label kind="assignment" x="-170" y="-42">t=0</label>
 		</transition>
-		<transition id="id67">
-			<source ref="id63"/>
-			<target ref="id65"/>
+		<transition id="id63">
+			<source ref="id59"/>
+			<target ref="id61"/>
 			<label kind="guard" x="-263" y="-93">noMeatPizza</label>
 			<label kind="assignment" x="-263" y="-76">t=0</label>
 		</transition>
-		<transition id="id68">
-			<source ref="id65"/>
-			<target ref="id62"/>
-			<label kind="guard" x="-408" y="17">t&gt;=2</label>
-			<label kind="synchronisation" x="-476" y="0">vegetablesSlicer!</label>
+		<transition id="id64">
+			<source ref="id61"/>
+			<target ref="id58"/>
+			<label kind="guard" x="-620" y="-8">t&gt;=2 &amp;&amp; 
+meat_buffer_count &lt; MAX_PIZZA_BUFFER</label>
+			<label kind="assignment" x="-620" y="35">meat_buffer_count++</label>
 		</transition>
-		<transition id="id69">
-			<source ref="id63"/>
-			<target ref="id64"/>
+		<transition id="id65">
+			<source ref="id59"/>
+			<target ref="id60"/>
 			<label kind="guard" x="-238" y="-272">t&gt;=2 &amp;&amp; !noMeatPizza</label>
 		</transition>
-		<transition id="id70">
-			<source ref="id62"/>
-			<target ref="id63"/>
-			<label kind="synchronisation" x="-433" y="-170">meatSlicer?</label>
-			<label kind="assignment" x="-398" y="-144">t=0</label>
+		<transition id="id66">
+			<source ref="id58"/>
+			<target ref="id59"/>
+			<label kind="guard" x="-561" y="-195">cheese_buffer_count &gt; 0</label>
+			<label kind="assignment" x="-561" y="-170">t=0, cheese_buffer_count--</label>
 		</transition>
 	</template>
 	<template>
 		<name>CheeseGrater</name>
 		<declaration>clock t;
 bool cheeseStock=true;</declaration>
-		<location id="id71" x="-374" y="-42">
+		<location id="id67" x="-374" y="-42">
 			<name x="-399" y="-76">idle</name>
 		</location>
-		<location id="id72" x="-8" y="-161">
+		<location id="id68" x="-8" y="-161">
 			<name x="-59" y="-195">checkStock</name>
-			<label kind="invariant" x="-25" y="-144">t&lt;=5</label>
 		</location>
-		<location id="id73" x="204" y="68">
+		<location id="id69" x="204" y="68">
 			<name x="187" y="85">dispatch</name>
-			<label kind="invariant" x="195" y="102">t&lt;=10</label>
 		</location>
-		<init ref="id71"/>
-		<transition id="id74">
-			<source ref="id71"/>
-			<target ref="id72"/>
-			<label kind="synchronisation" x="-212" y="-93">cheeseGrater?</label>
-			<label kind="assignment" x="-212" y="-76">t=0</label>
+		<init ref="id67"/>
+		<transition id="id70">
+			<source ref="id67"/>
+			<target ref="id68"/>
+			<label kind="guard" x="-330" y="-177">sauce_buffer_count &gt; 0</label>
+			<label kind="assignment" x="-331" y="-153">t=0, 
+sauce_buffer_count--</label>
 		</transition>
-		<transition id="id75">
-			<source ref="id73"/>
-			<target ref="id71"/>
-			<label kind="guard" x="-178" y="34">t&gt;=10</label>
-			<label kind="synchronisation" x="-178" y="17">meatSlicer!</label>
+		<transition id="id71">
+			<source ref="id69"/>
+			<target ref="id67"/>
+			<label kind="guard" x="-340" y="42">t&gt;=2 &amp;&amp; 
+cheese_buffer_count &lt; MAX_PIZZA_BUFFER</label>
+			<label kind="assignment" x="-340" y="76">cheese_buffer_count++</label>
 		</transition>
-		<transition id="id76">
-			<source ref="id72"/>
-			<target ref="id73"/>
+		<transition id="id72">
+			<source ref="id68"/>
+			<target ref="id69"/>
 			<label kind="guard" x="85" y="-85">cheeseStock &amp;&amp; t&gt;=5</label>
 			<label kind="assignment" x="59" y="-51">t=0</label>
 		</transition>
@@ -524,76 +520,75 @@ bool cheeseStock=true;</declaration>
 		<name>VegetablesSlicer</name>
 		<declaration>clock t;
 bool vegetableStock=true, noVegetablePizza=false, isOven=true;</declaration>
-		<location id="id77" x="-527" y="-510">
+		<location id="id73" x="-527" y="-510">
 			<name x="-552" y="-544">idle</name>
 		</location>
-		<location id="id78" x="-204" y="-246">
+		<location id="id74" x="-204" y="-246">
 			<name x="-178" y="-263">choosingVegetable</name>
-			<label kind="invariant" x="-221" y="-229">t&lt;=2</label>
 		</location>
-		<location id="id79" x="68" y="-501">
+		<location id="id75" x="68" y="-501">
 			<name x="85" y="-501">dispatchToOven</name>
-			<label kind="invariant" x="85" y="-484">t&lt;=2</label>
 		</location>
-		<location id="id80" x="85" y="-8">
+		<location id="id76" x="85" y="-8">
 			<name x="69" y="0">addToPizza</name>
-			<label kind="invariant" x="69" y="17">t&lt;=3</label>
 		</location>
-		<location id="id81" x="-527" y="-17">
+		<location id="id77" x="-527" y="-17">
 			<name x="-595" y="25">dispatchToFreezer</name>
-			<label kind="invariant" x="-537" y="0">t&lt;=2</label>
 		</location>
-		<init ref="id77"/>
-		<transition id="id82">
-			<source ref="id78"/>
-			<target ref="id80"/>
+		<init ref="id73"/>
+		<transition id="id78">
+			<source ref="id74"/>
+			<target ref="id76"/>
 			<label kind="guard" x="-187" y="-136">t&gt;=2 &amp;&amp; 
 !noVegetablePizza</label>
 			<label kind="assignment" x="-187" y="-102">t=0</label>
 		</transition>
-		<transition id="id83">
-			<source ref="id81"/>
-			<target ref="id77"/>
-			<label kind="guard" x="-629" y="-229">t&gt;=2</label>
-			<label kind="synchronisation" x="-662" y="-216">freezerMachine!</label>
+		<transition id="id79">
+			<source ref="id77"/>
+			<target ref="id73"/>
+			<label kind="guard" x="-867" y="-246">t&gt;=2 &amp;&amp; 
+freezer_buffer_count &lt; MAX_PIZZA_BUFFER</label>
+			<label kind="assignment" x="-867" y="-263">freezer_buffer_count++</label>
 		</transition>
-		<transition id="id84">
-			<source ref="id79"/>
-			<target ref="id77"/>
-			<label kind="guard" x="-255" y="-552">t&gt;=2</label>
-			<label kind="synchronisation" x="-255" y="-535">ovenMachine!</label>
+		<transition id="id80">
+			<source ref="id75"/>
+			<target ref="id73"/>
+			<label kind="guard" x="-255" y="-552">t&gt;=2 &amp;&amp; 
+oven_buffer_count &lt; MAX_PIZZA_BUFFER</label>
+			<label kind="assignment" x="-509" y="-505">oven_buffer_count++</label>
 		</transition>
-		<transition id="id85">
-			<source ref="id78"/>
-			<target ref="id81"/>
+		<transition id="id81">
+			<source ref="id74"/>
+			<target ref="id77"/>
 			<label kind="guard" x="-467" y="-204">noVegetablePizza &amp;&amp; 
 !isOven</label>
 			<label kind="assignment" x="-467" y="-170">t=0</label>
 		</transition>
-		<transition id="id86">
-			<source ref="id80"/>
-			<target ref="id81"/>
+		<transition id="id82">
+			<source ref="id76"/>
+			<target ref="id77"/>
 			<label kind="guard" x="-263" y="0">t&gt;=3 &amp;&amp; !isOven</label>
 			<label kind="assignment" x="-263" y="25">t=0</label>
 		</transition>
-		<transition id="id87">
-			<source ref="id78"/>
-			<target ref="id79"/>
+		<transition id="id83">
+			<source ref="id74"/>
+			<target ref="id75"/>
 			<label kind="guard" x="-178" y="-382">noVegetablePizza &amp;&amp; 
 isOven</label>
 			<label kind="assignment" x="-178" y="-340">t=0</label>
 		</transition>
-		<transition id="id88">
-			<source ref="id80"/>
-			<target ref="id79"/>
-			<label kind="guard" x="93" y="-323">t&gt;=3 &amp;&amp; isOven</label>
-			<label kind="assignment" x="93" y="-306">t=0</label>
+		<transition id="id84">
+			<source ref="id76"/>
+			<target ref="id75"/>
+			<label kind="guard" x="85" y="-365">t&gt;=3 &amp;&amp; 
+isOven</label>
+			<label kind="assignment" x="85" y="-323">t=0</label>
 		</transition>
-		<transition id="id89">
-			<source ref="id77"/>
-			<target ref="id78"/>
-			<label kind="synchronisation" x="-357" y="-408">vegetablesSlicer?</label>
-			<label kind="assignment" x="-357" y="-391">t=0</label>
+		<transition id="id85">
+			<source ref="id73"/>
+			<target ref="id74"/>
+			<label kind="guard" x="-408" y="-459">meat_buffer_count &gt; 0</label>
+			<label kind="assignment" x="-408" y="-433">t=0, meat_buffer_count--</label>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
@@ -609,20 +604,16 @@ doughMachine = DoughMachine();
 system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, SauceMachine, CheeseGrater, VegetablesSlicer, MeatSlicer, InternalGoodsProvider, RestockingHandler;
 </system>
 	<queries>
+		<option key="--exploration" value="0"/>
+		<option key="--backwards-order" value="0"/>
 		<option key="--diagnostic" value="0"/>
 		<query>
 			<formula>A[] not deadlock</formula>
 			<comment>Check that the system never deadlocks</comment>
-			<result outcome="failure" type="quality" timestamp="2025-11-04 20:49:31 +0100">
-				<option key="--diagnostic" value="0"/>
-			</result>
 		</query>
 		<query>
 			<formula>E&lt;&gt; deadlock</formula>
 			<comment/>
-			<result outcome="success" type="quality" timestamp="2025-11-03 10:49:42 +0100">
-				<option key="--diagnostic" value="0"/>
-			</result>
 		</query>
 		<query>
 			<formula>E&lt;&gt; oven.baking</formula>
