@@ -37,14 +37,16 @@ chan turn_off, oven_ready, pizza_ready;
 const int MAX_ORDERS_IN_SYSTEM = 3; // Or any total number you want
 int[0,3] pizzas_in_production = 0;
 
-const int MAX_PIZZA_BUFFER = 2; // Max pizzas in any buffer
-int[0,2] raw_dough_buffer_count = 0; // DoughMachine -&gt; DoughShaper
-int[0,2] dough_buffer_count = 0;     // DoughShaper -&gt; Sauce
-int[0,2] sauce_buffer_count = 0;     // Sauce -&gt; Cheese
-int[0,2] cheese_buffer_count = 0;    // Cheese -&gt; Meat
-int[0,2] meat_buffer_count = 0;      // Meat -&gt; Veg
-int[0,2] oven_buffer_count = 0;      // Veg -&gt; Oven
-int[0,2] freezer_buffer_count = 0;   // Veg -&gt; Freezer
+const int MAX_PIZZA_BUFFER = 3; // Max pizzas in any buffer
+int[0,3] raw_dough_buffer_count = 0; // DoughMachine -&gt; DoughShaper
+int[0,3] dough_buffer_count = 0;     // DoughShaper -&gt; Sauce
+int[0,3] sauce_buffer_count = 0;     // Sauce -&gt; Cheese
+int[0,3] cheese_buffer_count = 0;    // Cheese -&gt; Meat
+int[0,3] meat_buffer_count = 0;      // Meat -&gt; Veg
+int[0,3] oven_buffer_count = 0;      // Veg -&gt; Oven
+int[0,3] freezer_buffer_count = 0;   // Veg -&gt; Freezer
+
+bool isRestocking = false;
 
 chan pizza_in, pizza_out;
 chan packaging_event, supply_event;
@@ -69,6 +71,31 @@ chan get_veg, provide_veg, veg_from_warehouse, restock_veg, order_veg, veg_arriv
 
 </declaration>
 	<template>
+		<name>PizzaReciever</name>
+		<declaration>clock t;</declaration>
+		<location id="id0" x="0" y="0">
+			<name x="-17" y="17">idle</name>
+		</location>
+		<location id="id1" x="204" y="0">
+			<name x="195" y="17">pickupPizza</name>
+			<label kind="invariant" x="187" y="34">t&lt;=2</label>
+		</location>
+		<init ref="id0"/>
+		<transition id="id2">
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="guard" x="85" y="51">t&gt;=2</label>
+			<nail x="102" y="42"/>
+		</transition>
+		<transition id="id3">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="synchronisation" x="17" y="-76">goods_events_pickup?</label>
+			<label kind="assignment" x="144" y="-51">t=0</label>
+			<nail x="102" y="-51"/>
+		</transition>
+	</template>
+	<template>
 		<name>Customer</name>
 		<declaration>clock t;
 void ovenOrFreezer(){
@@ -80,18 +107,18 @@ void ovenOrFreezer(){
     }
 }
 </declaration>
-		<location id="id0" x="162" y="-24072">
+		<location id="id4" x="162" y="-24072">
 			<name x="161" y="-24106">idle</name>
 		</location>
-		<location id="id1" x="374" y="-24250">
+		<location id="id5" x="374" y="-24250">
 			<name x="366" y="-24284">turnOnMachines</name>
 		</location>
-		<init ref="id0"/>
-		<transition id="id2">
-			<source ref="id0"/>
-			<target ref="id0"/>
+		<init ref="id4"/>
+		<transition id="id6">
+			<source ref="id4"/>
+			<target ref="id4"/>
 			<label kind="guard" x="102" y="-23893">isOn &amp;&amp; 
-t&gt;=10 &amp;&amp; 
+t&gt;=10 &amp;&amp;
 pizzas_in_production &lt; MAX_ORDERS_IN_SYSTEM</label>
 			<label kind="synchronisation" x="102" y="-23961">pizza_request!</label>
 			<label kind="assignment" x="102" y="-23936">t=0, ovenOrFreezer(),
@@ -99,18 +126,18 @@ pizzas_in_production++</label>
 			<nail x="229" y="-23978"/>
 			<nail x="102" y="-23978"/>
 		</transition>
-		<transition id="id3">
-			<source ref="id1"/>
-			<target ref="id0"/>
+		<transition id="id7">
+			<source ref="id5"/>
+			<target ref="id4"/>
 			<label kind="guard" x="297" y="-24063">pizzas_in_production &lt; MAX_ORDERS_IN_SYSTEM</label>
 			<label kind="synchronisation" x="391" y="-24174">pizza_request!</label>
 			<label kind="assignment" x="297" y="-24046">t=0, pizzas_in_production++</label>
 			<nail x="389" y="-24121"/>
 			<nail x="338" y="-24078"/>
 		</transition>
-		<transition id="id4">
-			<source ref="id0"/>
-			<target ref="id1"/>
+		<transition id="id8">
+			<source ref="id4"/>
+			<target ref="id5"/>
 			<label kind="guard" x="111" y="-24293">!isOn</label>
 			<label kind="synchronisation" x="111" y="-24259">turn_on!</label>
 			<label kind="assignment" x="111" y="-24276">isOn=true</label>
@@ -122,170 +149,153 @@ pizzas_in_production++</label>
 		<name>InternalGoodsProvider</name>
 		<declaration>// Place local declarations here.
 clock t;</declaration>
-		<location id="id5" x="-416" y="0">
+		<location id="id9" x="-416" y="0">
 			<name x="-433" y="-34">idle</name>
 		</location>
-		<location id="id6" x="-799" y="195">
-			<name x="-850" y="212">pickupPizza</name>
-			<label kind="invariant" x="-850" y="229">t&lt;=2</label>
-		</location>
-		<location id="id7" x="-586" y="-76">
+		<location id="id10" x="-586" y="-76">
 			<name x="-629" y="-110">requestDough</name>
 		</location>
-		<location id="id8" x="-748" y="-42">
+		<location id="id11" x="-748" y="-42">
 			<name x="-926" y="-76">requestWarehouse4Dough</name>
 		</location>
-		<location id="id9" x="-595" y="34">
-			<name x="-671" y="42">provideDough</name>
+		<location id="id12" x="-595" y="25">
+			<name x="-671" y="33">provideDough</name>
 		</location>
-		<location id="id10" x="-450" y="-144">
+		<location id="id13" x="-450" y="-144">
 			<name x="-544" y="-178">requestSauce</name>
 		</location>
-		<location id="id11" x="-357" y="-263">
+		<location id="id14" x="-357" y="-263">
 			<name x="-365" y="-297">requestWareHouse4Sauce</name>
 		</location>
-		<location id="id12" x="-297" y="-127">
+		<location id="id15" x="-297" y="-127">
 			<name x="-280" y="-136">provideSauce</name>
 		</location>
-		<location id="id13" x="-25" y="-51">
+		<location id="id16" x="-25" y="-51">
 			<name x="-35" y="-85">requestWareHouse4Meat</name>
 		</location>
-		<location id="id14" x="-178" y="25">
+		<location id="id17" x="-178" y="25">
 			<name x="-170" y="34">provideMeat</name>
 		</location>
-		<location id="id15" x="-221" y="-85">
+		<location id="id18" x="-221" y="-85">
 			<name x="-272" y="-68">requestMeat</name>
 		</location>
-		<location id="id16" x="-178" y="212">
+		<location id="id19" x="-178" y="212">
 			<name x="-229" y="229">requestWarehouse4Cheese</name>
 		</location>
-		<location id="id17" x="-331" y="136">
+		<location id="id20" x="-331" y="136">
 			<name x="-382" y="153">provideCheese</name>
 		</location>
-		<location id="id18" x="-204" y="85">
+		<location id="id21" x="-204" y="85">
 			<name x="-179" y="93">requestCheese</name>
 		</location>
-		<location id="id19" x="-408" y="144">
+		<location id="id22" x="-408" y="144">
 			<name x="-476" y="153">requestVeg</name>
 		</location>
-		<location id="id20" x="-527" y="110">
+		<location id="id23" x="-527" y="110">
 			<name x="-586" y="127">provideVeg</name>
 		</location>
-		<location id="id21" x="-518" y="221">
+		<location id="id24" x="-518" y="221">
 			<name x="-569" y="229">requestWarehouse4Veg</name>
 		</location>
-		<init ref="id5"/>
-		<transition id="id22">
-			<source ref="id20"/>
-			<target ref="id5"/>
+		<init ref="id9"/>
+		<transition id="id25">
+			<source ref="id23"/>
+			<target ref="id9"/>
 			<label kind="synchronisation" x="-535" y="68">provide_veg!</label>
 		</transition>
-		<transition id="id23">
-			<source ref="id21"/>
-			<target ref="id20"/>
+		<transition id="id26">
+			<source ref="id24"/>
+			<target ref="id23"/>
 			<label kind="synchronisation" x="-629" y="161">restock_veg?</label>
 		</transition>
-		<transition id="id24">
-			<source ref="id19"/>
-			<target ref="id21"/>
+		<transition id="id27">
+			<source ref="id22"/>
+			<target ref="id24"/>
 			<label kind="synchronisation" x="-510" y="178">veg_from_warehouse!</label>
 		</transition>
-		<transition id="id25">
-			<source ref="id5"/>
-			<target ref="id19"/>
+		<transition id="id28">
+			<source ref="id9"/>
+			<target ref="id22"/>
 			<label kind="synchronisation" x="-459" y="51">get_veg?</label>
 		</transition>
-		<transition id="id26">
-			<source ref="id14"/>
-			<target ref="id5"/>
+		<transition id="id29">
+			<source ref="id17"/>
+			<target ref="id9"/>
 			<label kind="synchronisation" x="-323" y="-8">provide_meat!</label>
 		</transition>
-		<transition id="id27">
-			<source ref="id17"/>
-			<target ref="id5"/>
+		<transition id="id30">
+			<source ref="id20"/>
+			<target ref="id9"/>
 			<label kind="synchronisation" x="-399" y="76">provide_cheese!</label>
 		</transition>
-		<transition id="id28">
-			<source ref="id5"/>
-			<target ref="id18"/>
+		<transition id="id31">
+			<source ref="id9"/>
+			<target ref="id21"/>
 			<label kind="synchronisation" x="-340" y="34">get_cheese?</label>
 		</transition>
-		<transition id="id29">
-			<source ref="id5"/>
-			<target ref="id15"/>
+		<transition id="id32">
+			<source ref="id9"/>
+			<target ref="id18"/>
 			<label kind="synchronisation" x="-340" y="-51">get_meat?</label>
 		</transition>
-		<transition id="id30">
-			<source ref="id12"/>
-			<target ref="id5"/>
+		<transition id="id33">
+			<source ref="id15"/>
+			<target ref="id9"/>
 			<label kind="synchronisation" x="-382" y="-93">provide_sauce!</label>
 		</transition>
-		<transition id="id31">
-			<source ref="id11"/>
-			<target ref="id12"/>
+		<transition id="id34">
+			<source ref="id14"/>
+			<target ref="id15"/>
 			<label kind="synchronisation" x="-327" y="-212">restock_sauce?</label>
 		</transition>
-		<transition id="id32">
-			<source ref="id10"/>
-			<target ref="id11"/>
-			<label kind="synchronisation" x="-535" y="-221">sauce_from_warehouse!</label>
-		</transition>
-		<transition id="id33">
-			<source ref="id5"/>
-			<target ref="id10"/>
-			<label kind="synchronisation" x="-467" y="-110">get_sauce?</label>
-		</transition>
-		<transition id="id34">
-			<source ref="id9"/>
-			<target ref="id5"/>
-			<label kind="synchronisation" x="-586" y="-8">provide_dough!</label>
-		</transition>
 		<transition id="id35">
-			<source ref="id8"/>
-			<target ref="id9"/>
-			<label kind="synchronisation" x="-782" y="0">restock_dough?</label>
-		</transition>
-		<transition id="id36">
-			<source ref="id7"/>
-			<target ref="id8"/>
-			<label kind="synchronisation" x="-790" y="-93">dough_from_warehouse!</label>
-		</transition>
-		<transition id="id37">
-			<source ref="id5"/>
-			<target ref="id7"/>
-			<label kind="synchronisation" x="-535" y="-76">get_dough?</label>
-		</transition>
-		<transition id="id38">
-			<source ref="id5"/>
-			<target ref="id6"/>
-			<label kind="synchronisation" x="-756" y="195">goods_events_pickup?</label>
-			<label kind="assignment" x="-722" y="178">t=0</label>
-			<nail x="-671" y="170"/>
-		</transition>
-		<transition id="id39">
-			<source ref="id6"/>
-			<target ref="id5"/>
-			<label kind="guard" x="-790" y="110">t&gt;=2</label>
-			<nail x="-722" y="110"/>
-		</transition>
-		<transition id="id40">
 			<source ref="id13"/>
 			<target ref="id14"/>
-			<label kind="synchronisation" x="-93" y="-17">restock_meat?</label>
+			<label kind="synchronisation" x="-535" y="-221">sauce_from_warehouse!</label>
+		</transition>
+		<transition id="id36">
+			<source ref="id9"/>
+			<target ref="id13"/>
+			<label kind="synchronisation" x="-467" y="-110">get_sauce?</label>
+		</transition>
+		<transition id="id37">
+			<source ref="id12"/>
+			<target ref="id9"/>
+			<label kind="synchronisation" x="-586" y="-8">provide_dough!</label>
+		</transition>
+		<transition id="id38">
+			<source ref="id11"/>
+			<target ref="id12"/>
+			<label kind="synchronisation" x="-782" y="0">restock_dough?</label>
+		</transition>
+		<transition id="id39">
+			<source ref="id10"/>
+			<target ref="id11"/>
+			<label kind="synchronisation" x="-790" y="-93">dough_from_warehouse!</label>
+		</transition>
+		<transition id="id40">
+			<source ref="id9"/>
+			<target ref="id10"/>
+			<label kind="synchronisation" x="-535" y="-76">get_dough?</label>
 		</transition>
 		<transition id="id41">
-			<source ref="id15"/>
-			<target ref="id13"/>
-			<label kind="synchronisation" x="-187" y="-102">meat_from_warehouse!</label>
-		</transition>
-		<transition id="id42">
 			<source ref="id16"/>
 			<target ref="id17"/>
-			<label kind="synchronisation" x="-348" y="187">restock_cheese?</label>
+			<label kind="synchronisation" x="-93" y="-17">restock_meat?</label>
 		</transition>
-		<transition id="id43">
+		<transition id="id42">
 			<source ref="id18"/>
 			<target ref="id16"/>
+			<label kind="synchronisation" x="-187" y="-102">meat_from_warehouse!</label>
+		</transition>
+		<transition id="id43">
+			<source ref="id19"/>
+			<target ref="id20"/>
+			<label kind="synchronisation" x="-348" y="187">restock_cheese?</label>
+		</transition>
+		<transition id="id44">
+			<source ref="id21"/>
+			<target ref="id19"/>
 			<label kind="synchronisation" x="-229" y="119">cheese_from_warehouse!</label>
 		</transition>
 	</template>
@@ -293,198 +303,198 @@ clock t;</declaration>
 		<name>InventoryManager</name>
 		<declaration>// Place local declarations here.
 clock t;</declaration>
-		<location id="id44" x="-340" y="0">
+		<location id="id45" x="-340" y="0">
 			<name x="-391" y="25">monitoring</name>
 		</location>
-		<location id="id45" x="17" y="68">
+		<location id="id46" x="17" y="68">
 			<name x="7" y="34">dough</name>
 		</location>
-		<location id="id46" x="-501" y="-238">
+		<location id="id47" x="-501" y="-238">
 			<name x="-560" y="-272">sauce</name>
 		</location>
-		<location id="id47" x="-501" y="-442">
+		<location id="id48" x="-501" y="-442">
 			<name x="-552" y="-485">requestSauce</name>
 		</location>
-		<location id="id48" x="-170" y="-442">
+		<location id="id49" x="-170" y="-442">
 			<name x="-154" y="-442">restockSauce</name>
 		</location>
-		<location id="id49" x="136" y="170">
+		<location id="id50" x="136" y="170">
 			<name x="144" y="178">requestDough</name>
 		</location>
-		<location id="id50" x="-51" y="331">
+		<location id="id51" x="-51" y="331">
 			<name x="-67" y="340">restockDough</name>
 		</location>
-		<location id="id51" x="-841" y="110">
+		<location id="id52" x="-841" y="110">
 			<name x="-841" y="118">meat</name>
 		</location>
-		<location id="id52" x="-637" y="-127">
+		<location id="id53" x="-637" y="-127">
 			<name x="-739" y="-119">restockMeat</name>
 		</location>
-		<location id="id53" x="-884" y="-136">
+		<location id="id54" x="-884" y="-136">
 			<name x="-943" y="-119">requestMeat</name>
 		</location>
-		<location id="id54" x="-357" y="416">
+		<location id="id55" x="-357" y="416">
 			<name x="-367" y="382">cheese</name>
 		</location>
-		<location id="id55" x="-561" y="204">
+		<location id="id56" x="-561" y="204">
 			<name x="-671" y="213">restockCheese</name>
 		</location>
-		<location id="id56" x="-697" y="348">
+		<location id="id57" x="-697" y="348">
 			<name x="-689" y="356">requestCheese</name>
 		</location>
-		<location id="id57" x="-136" y="-204">
+		<location id="id58" x="-136" y="-204">
 			<name x="-146" y="-238">veg</name>
 		</location>
-		<location id="id58" x="195" y="-93">
+		<location id="id59" x="195" y="-93">
 			<name x="178" y="-84">restockVeg</name>
 		</location>
-		<location id="id59" x="153" y="-323">
+		<location id="id60" x="153" y="-323">
 			<name x="161" y="-315">requestVeg</name>
 		</location>
-		<init ref="id44"/>
-		<transition id="id60">
-			<source ref="id58"/>
-			<target ref="id44"/>
+		<init ref="id45"/>
+		<transition id="id61">
+			<source ref="id59"/>
+			<target ref="id45"/>
 			<label kind="synchronisation" x="-68" y="-76">restock_veg!</label>
 			<label kind="assignment" x="-68" y="-59">veg_stock=STOCK_VOLUME,
 veg_warehouse-=STOCK_VOLUME</label>
 		</transition>
-		<transition id="id61">
-			<source ref="id44"/>
-			<target ref="id57"/>
+		<transition id="id62">
+			<source ref="id45"/>
+			<target ref="id58"/>
 			<label kind="synchronisation" x="-280" y="-93">veg_from_warehouse?</label>
 		</transition>
-		<transition id="id62">
-			<source ref="id55"/>
-			<target ref="id44"/>
+		<transition id="id63">
+			<source ref="id56"/>
+			<target ref="id45"/>
 			<label kind="synchronisation" x="-518" y="119">restock_cheese!</label>
 			<label kind="assignment" x="-518" y="136">cheese_stock=STOCK_VOLUME,
 cheese_warehouse-=STOCK_VOLUME</label>
 		</transition>
-		<transition id="id63">
-			<source ref="id44"/>
-			<target ref="id54"/>
+		<transition id="id64">
+			<source ref="id45"/>
+			<target ref="id55"/>
 			<label kind="synchronisation" x="-374" y="187">cheese_from_warehouse?</label>
 		</transition>
-		<transition id="id64">
-			<source ref="id52"/>
-			<target ref="id44"/>
+		<transition id="id65">
+			<source ref="id53"/>
+			<target ref="id45"/>
 			<label kind="synchronisation" x="-595" y="-119">restock_meat!</label>
 			<label kind="assignment" x="-595" y="-102">meat_stock=STOCK_VOLUME,
 meat_warehouse-=STOCK_VOLUME</label>
 		</transition>
-		<transition id="id65">
-			<source ref="id44"/>
-			<target ref="id51"/>
-			<label kind="synchronisation" x="-543" y="55">meat_from_warehouse?</label>
-		</transition>
 		<transition id="id66">
 			<source ref="id45"/>
-			<target ref="id50"/>
-			<label kind="guard" x="-102" y="119">dough_warehouse &gt; WAREHOUSE_LIMIT</label>
+			<target ref="id52"/>
+			<label kind="synchronisation" x="-543" y="55">meat_from_warehouse?</label>
 		</transition>
 		<transition id="id67">
-			<source ref="id50"/>
-			<target ref="id44"/>
+			<source ref="id46"/>
+			<target ref="id51"/>
+			<label kind="guard" x="-102" y="119">dough_warehouse &gt; WAREHOUSE_LIMIT</label>
+		</transition>
+		<transition id="id68">
+			<source ref="id51"/>
+			<target ref="id45"/>
 			<label kind="synchronisation" x="-280" y="59">restock_dough!</label>
 			<label kind="assignment" x="-280" y="76">dough_stock=STOCK_VOLUME,
 dough_warehouse-=STOCK_VOLUME</label>
 		</transition>
-		<transition id="id68">
-			<source ref="id49"/>
-			<target ref="id50"/>
+		<transition id="id69">
+			<source ref="id50"/>
+			<target ref="id51"/>
 			<label kind="synchronisation" x="26" y="182">dough_arrived?</label>
 			<label kind="assignment" x="26" y="199">dough_warehouse=WAREHOUSE_VOLUME</label>
 		</transition>
-		<transition id="id69">
-			<source ref="id45"/>
-			<target ref="id49"/>
+		<transition id="id70">
+			<source ref="id46"/>
+			<target ref="id50"/>
 			<label kind="guard" x="35" y="85">dough_warehouse&lt;=WAREHOUSE_LIMIT</label>
 			<label kind="synchronisation" x="35" y="102">order_dough!</label>
 		</transition>
-		<transition id="id70">
-			<source ref="id46"/>
-			<target ref="id48"/>
+		<transition id="id71">
+			<source ref="id47"/>
+			<target ref="id49"/>
 			<label kind="guard" x="-476" y="-391">sauce_warehouse &gt; WAREHOUSE_LIMIT</label>
 		</transition>
-		<transition id="id71">
-			<source ref="id48"/>
-			<target ref="id44"/>
+		<transition id="id72">
+			<source ref="id49"/>
+			<target ref="id45"/>
 			<label kind="synchronisation" x="-365" y="-289">restock_sauce!</label>
 			<label kind="assignment" x="-365" y="-272">sauce_stock=STOCK_VOLUME,
 sauce_warehouse-=STOCK_VOLUME</label>
 		</transition>
-		<transition id="id72">
-			<source ref="id47"/>
-			<target ref="id48"/>
+		<transition id="id73">
+			<source ref="id48"/>
+			<target ref="id49"/>
 			<label kind="synchronisation" x="-442" y="-493">sauce_arrived?</label>
 			<label kind="assignment" x="-442" y="-476">sauce_warehouse=WAREHOUSE_VOLUME</label>
 		</transition>
-		<transition id="id73">
-			<source ref="id46"/>
-			<target ref="id47"/>
+		<transition id="id74">
+			<source ref="id47"/>
+			<target ref="id48"/>
 			<label kind="guard" x="-705" y="-357">sauce_warehouse&lt;=WAREHOUSE_LIMIT</label>
 			<label kind="synchronisation" x="-705" y="-340">order_sauce!</label>
 		</transition>
-		<transition id="id74">
-			<source ref="id44"/>
-			<target ref="id46"/>
+		<transition id="id75">
+			<source ref="id45"/>
+			<target ref="id47"/>
 			<label kind="synchronisation" x="-586" y="-178">sauce_from_warehouse?</label>
 		</transition>
-		<transition id="id75">
-			<source ref="id44"/>
-			<target ref="id45"/>
+		<transition id="id76">
+			<source ref="id45"/>
+			<target ref="id46"/>
 			<label kind="synchronisation" x="-204" y="8">dough_from_warehouse?</label>
 		</transition>
-		<transition id="id76">
-			<source ref="id51"/>
-			<target ref="id52"/>
+		<transition id="id77">
+			<source ref="id52"/>
+			<target ref="id53"/>
 			<label kind="guard" x="-680" y="-25">meat_warehouse &gt; WAREHOUSE_LIMIT</label>
 		</transition>
-		<transition id="id77">
-			<source ref="id53"/>
-			<target ref="id52"/>
+		<transition id="id78">
+			<source ref="id54"/>
+			<target ref="id53"/>
 			<label kind="synchronisation" x="-909" y="-85">meat_arrived?</label>
 			<label kind="assignment" x="-977" y="-68">meat_warehouse=WAREHOUSE_VOLUME</label>
 		</transition>
-		<transition id="id78">
-			<source ref="id51"/>
-			<target ref="id53"/>
+		<transition id="id79">
+			<source ref="id52"/>
+			<target ref="id54"/>
 			<label kind="guard" x="-841" y="93">meat_warehouse&lt;=WAREHOUSE_LIMIT</label>
 			<label kind="synchronisation" x="-841" y="110">order_meat!</label>
 		</transition>
-		<transition id="id79">
-			<source ref="id54"/>
-			<target ref="id55"/>
+		<transition id="id80">
+			<source ref="id55"/>
+			<target ref="id56"/>
 			<label kind="guard" x="-510" y="221">cheese_warehouse &gt; 
 WAREHOUSE_LIMIT</label>
 		</transition>
-		<transition id="id80">
-			<source ref="id56"/>
-			<target ref="id55"/>
+		<transition id="id81">
+			<source ref="id57"/>
+			<target ref="id56"/>
 			<label kind="synchronisation" x="-731" y="263">cheese_arrived?</label>
 			<label kind="assignment" x="-731" y="280">cheese_warehouse=WAREHOUSE_VOLUME</label>
 		</transition>
-		<transition id="id81">
-			<source ref="id54"/>
-			<target ref="id56"/>
+		<transition id="id82">
+			<source ref="id55"/>
+			<target ref="id57"/>
 			<label kind="guard" x="-501" y="331">cheese_warehouse&lt;=WAREHOUSE_LIMIT</label>
 			<label kind="synchronisation" x="-501" y="348">order_cheese!</label>
 		</transition>
-		<transition id="id82">
-			<source ref="id57"/>
-			<target ref="id58"/>
+		<transition id="id83">
+			<source ref="id58"/>
+			<target ref="id59"/>
 			<label kind="guard" x="-76" y="-153">veg_warehouse &gt; WAREHOUSE_LIMIT</label>
 		</transition>
-		<transition id="id83">
-			<source ref="id59"/>
-			<target ref="id58"/>
+		<transition id="id84">
+			<source ref="id60"/>
+			<target ref="id59"/>
 			<label kind="synchronisation" x="238" y="-229">veg_arrived?</label>
 			<label kind="assignment" x="238" y="-212">veg_warehouse=WAREHOUSE_VOLUME</label>
 		</transition>
-		<transition id="id84">
-			<source ref="id57"/>
-			<target ref="id59"/>
+		<transition id="id85">
+			<source ref="id58"/>
+			<target ref="id60"/>
 			<label kind="guard" x="-68" y="-272">veg_warehouse&lt;=WAREHOUSE_LIMIT</label>
 			<label kind="synchronisation" x="-68" y="-255">order_veg!</label>
 		</transition>
@@ -493,100 +503,89 @@ WAREHOUSE_LIMIT</label>
 		<name>RestockingHandler</name>
 		<declaration>// Place local declarations here.
 clock t;</declaration>
-		<location id="id85" x="-365" y="0">
+		<location id="id86" x="-365" y="0">
 			<name x="-348" y="-25">idle</name>
-		</location>
-		<location id="id86" x="-93" y="-76">
-			<name x="-110" y="-110">ordering</name>
 		</location>
 		<location id="id87" x="-348" y="-178">
 			<name x="-358" y="-212">dough</name>
+			<committed/>
 		</location>
 		<location id="id88" x="-586" y="-68">
 			<name x="-620" y="-51">sauce</name>
+			<committed/>
 		</location>
 		<location id="id89" x="-586" y="68">
 			<name x="-603" y="85">meat</name>
+			<committed/>
 		</location>
 		<location id="id90" x="-408" y="161">
 			<name x="-425" y="178">cheese</name>
+			<committed/>
 		</location>
 		<location id="id91" x="-195" y="85">
 			<name x="-195" y="93">veg</name>
+			<committed/>
 		</location>
-		<init ref="id85"/>
+		<init ref="id86"/>
 		<transition id="id92">
 			<source ref="id91"/>
-			<target ref="id85"/>
+			<target ref="id86"/>
 			<label kind="synchronisation" x="-340" y="34">veg_arrived!</label>
 			<nail x="-289" y="59"/>
 		</transition>
 		<transition id="id93">
-			<source ref="id85"/>
+			<source ref="id86"/>
 			<target ref="id91"/>
 			<label kind="synchronisation" x="-238" y="8">order_veg?</label>
 			<nail x="-263" y="8"/>
 		</transition>
 		<transition id="id94">
 			<source ref="id90"/>
-			<target ref="id85"/>
+			<target ref="id86"/>
 			<label kind="synchronisation" x="-391" y="76">cheese_arrived!</label>
 			<nail x="-348" y="76"/>
 		</transition>
 		<transition id="id95">
-			<source ref="id85"/>
+			<source ref="id86"/>
 			<target ref="id90"/>
 			<label kind="synchronisation" x="-493" y="102">order_cheese?</label>
 			<nail x="-408" y="59"/>
 		</transition>
 		<transition id="id96">
 			<source ref="id89"/>
-			<target ref="id85"/>
+			<target ref="id86"/>
 			<label kind="synchronisation" x="-544" y="76">meat_arrived!</label>
 			<nail x="-467" y="76"/>
 		</transition>
 		<transition id="id97">
-			<source ref="id85"/>
+			<source ref="id86"/>
 			<target ref="id89"/>
 			<label kind="synchronisation" x="-612" y="17">order_meat?</label>
 			<nail x="-493" y="17"/>
 		</transition>
 		<transition id="id98">
 			<source ref="id88"/>
-			<target ref="id85"/>
+			<target ref="id86"/>
 			<label kind="synchronisation" x="-569" y="-34">sauce_arrived!</label>
 			<nail x="-484" y="-8"/>
 		</transition>
 		<transition id="id99">
-			<source ref="id85"/>
+			<source ref="id86"/>
 			<target ref="id88"/>
 			<label kind="synchronisation" x="-552" y="-93">order_sauce?</label>
 			<nail x="-467" y="-68"/>
 		</transition>
 		<transition id="id100">
 			<source ref="id87"/>
-			<target ref="id85"/>
+			<target ref="id86"/>
 			<label kind="synchronisation" x="-349" y="-102">dough_arrived!</label>
 			<nail x="-323" y="-102"/>
 		</transition>
 		<transition id="id101">
-			<source ref="id85"/>
+			<source ref="id86"/>
 			<target ref="id87"/>
 			<label kind="synchronisation" x="-442" y="-127">order_dough?</label>
 			<nail x="-391" y="-102"/>
-		</transition>
-		<transition id="id102">
-			<source ref="id85"/>
-			<target ref="id86"/>
-			<label kind="assignment" x="-195" y="-102">t=0</label>
-			<nail x="-221" y="-85"/>
-		</transition>
-		<transition id="id103">
-			<source ref="id86"/>
-			<target ref="id85"/>
-			<label kind="guard" x="-144" y="-42">t&gt;=2</label>
-			<label kind="assignment" x="-144" y="-25">t=0</label>
-			<nail x="-187" y="-25"/>
 		</transition>
 	</template>
 	<template>
@@ -594,53 +593,53 @@ clock t;</declaration>
 		<declaration>// Place local declarations here.
 
 clock t;</declaration>
-		<location id="id104" x="-1037" y="0">
+		<location id="id102" x="-1037" y="0">
 			<name x="-1071" y="-34">idle</name>
 		</location>
-		<location id="id105" x="-816" y="0">
+		<location id="id103" x="-816" y="0">
 			<name x="-859" y="-34">precooling</name>
 			<label kind="invariant" x="-841" y="17">t&lt;=5</label>
 		</location>
-		<location id="id106" x="-510" y="0">
+		<location id="id104" x="-510" y="0">
 			<name x="-501" y="-34">waiting</name>
 		</location>
-		<location id="id107" x="-144" y="0">
+		<location id="id105" x="-144" y="0">
 			<name x="-161" y="-34">freeze</name>
 		</location>
-		<init ref="id104"/>
-		<transition id="id108">
-			<source ref="id107"/>
-			<target ref="id106"/>
-			<label kind="guard" x="-374" y="102">t&gt;=10</label>
+		<init ref="id102"/>
+		<transition id="id106">
+			<source ref="id105"/>
+			<target ref="id104"/>
+			<label kind="guard" x="-374" y="153">t&gt;=10</label>
 			<label kind="synchronisation" x="-374" y="119">pizza_out!</label>
 			<label kind="assignment" x="-374" y="136">t=0</label>
 			<nail x="-246" y="93"/>
 			<nail x="-442" y="93"/>
 		</transition>
-		<transition id="id109">
-			<source ref="id104"/>
-			<target ref="id105"/>
+		<transition id="id107">
+			<source ref="id102"/>
+			<target ref="id103"/>
 			<label kind="synchronisation" x="-994" y="-59">turn_on?</label>
 			<label kind="assignment" x="-994" y="-42">t=0,
 freezer_temp=0</label>
 		</transition>
-		<transition id="id110">
-			<source ref="id105"/>
-			<target ref="id106"/>
+		<transition id="id108">
+			<source ref="id103"/>
+			<target ref="id104"/>
 			<label kind="guard" x="-756" y="-59">t&gt;=5</label>
 			<label kind="assignment" x="-756" y="-42">freezer_temp=FREEZE_TEMP,
 t=0</label>
 		</transition>
-		<transition id="id111">
-			<source ref="id106"/>
-			<target ref="id107"/>
+		<transition id="id109">
+			<source ref="id104"/>
+			<target ref="id105"/>
 			<label kind="guard" x="-416" y="-68">freezer_temp&gt;=FREEZE_TEMP &amp;&amp;
 freezer_buffer_count &gt; 0</label>
 			<label kind="assignment" x="-416" y="-34">t=0, freezer_buffer_count--</label>
 		</transition>
-		<transition id="id112">
-			<source ref="id106"/>
-			<target ref="id104"/>
+		<transition id="id110">
+			<source ref="id104"/>
+			<target ref="id102"/>
 			<label kind="synchronisation" x="-833" y="-204">turn_off?</label>
 			<label kind="assignment" x="-833" y="-187">freezer_temp=0</label>
 			<nail x="-510" y="-161"/>
@@ -651,42 +650,41 @@ freezer_buffer_count &gt; 0</label>
 		<name>PackagingRobot</name>
 		<declaration>// Place local declarations here.
 clock t;</declaration>
-		<location id="id113" x="-680" y="-85">
+		<location id="id111" x="-680" y="-85">
 			<name x="-722" y="-119">idle</name>
 		</location>
-		<location id="id114" x="-510" y="-85">
+		<location id="id112" x="-510" y="-85">
 			<name x="-501" y="-119">waiting</name>
 		</location>
-		<location id="id115" x="-280" y="-85">
+		<location id="id113" x="-280" y="-85">
 			<name x="-297" y="-119">operatePizza</name>
 		</location>
-		<init ref="id113"/>
-		<transition id="id116">
-			<source ref="id115"/>
-			<target ref="id114"/>
-			<label kind="guard" x="-391" y="-34">t&gt;=2</label>
+		<init ref="id111"/>
+		<transition id="id114">
+			<source ref="id113"/>
+			<target ref="id112"/>
 			<label kind="synchronisation" x="-450" y="8">goods_events_pickup!</label>
 			<label kind="assignment" x="-450" y="25">pizzas_in_production--</label>
 			<nail x="-280" y="-8"/>
 			<nail x="-459" y="-8"/>
 		</transition>
-		<transition id="id117">
-			<source ref="id113"/>
-			<target ref="id114"/>
+		<transition id="id115">
+			<source ref="id111"/>
+			<target ref="id112"/>
 			<label kind="synchronisation" x="-637" y="-127">turn_on?</label>
 			<label kind="assignment" x="-637" y="-110">t=0</label>
 		</transition>
-		<transition id="id118">
-			<source ref="id114"/>
-			<target ref="id113"/>
+		<transition id="id116">
+			<source ref="id112"/>
+			<target ref="id111"/>
 			<label kind="synchronisation" x="-654" y="-212">turn_off?</label>
 			<label kind="assignment" x="-654" y="-195">t=0</label>
 			<nail x="-510" y="-178"/>
 			<nail x="-680" y="-178"/>
 		</transition>
-		<transition id="id119">
-			<source ref="id114"/>
-			<target ref="id115"/>
+		<transition id="id117">
+			<source ref="id112"/>
+			<target ref="id113"/>
 			<label kind="synchronisation" x="-391" y="-119">pizza_out?</label>
 			<label kind="assignment" x="-391" y="-102">t=0</label>
 		</transition>
@@ -695,45 +693,45 @@ clock t;</declaration>
 		<name>Oven</name>
 		<declaration>// Place local declarations here.
 clock t;</declaration>
-		<location id="id120" x="-595" y="-153">
+		<location id="id118" x="-595" y="-153">
 			<name x="-612" y="-187">idle</name>
 		</location>
-		<location id="id121" x="-255" y="-153">
+		<location id="id119" x="-255" y="-153">
 			<name x="-289" y="-186">preheating</name>
 			<label kind="invariant" x="-306" y="-144">t&lt;=2</label>
 		</location>
-		<location id="id122" x="59" y="-153">
+		<location id="id120" x="59" y="-153">
 			<name x="-8" y="-187">waiting</name>
 		</location>
-		<location id="id123" x="68" y="68">
-			<name x="51" y="85">baking</name>
+		<location id="id121" x="68" y="68">
+			<name x="42" y="85">baking</name>
 		</location>
-		<init ref="id120"/>
-		<transition id="id124">
-			<source ref="id120"/>
-			<target ref="id121"/>
+		<init ref="id118"/>
+		<transition id="id122">
+			<source ref="id118"/>
+			<target ref="id119"/>
 			<label kind="synchronisation" x="-467" y="-212">turn_on?</label>
 			<label kind="assignment" x="-467" y="-195">t=0,
 temp=0</label>
 		</transition>
-		<transition id="id125">
-			<source ref="id121"/>
-			<target ref="id122"/>
+		<transition id="id123">
+			<source ref="id119"/>
+			<target ref="id120"/>
 			<label kind="guard" x="-161" y="-229">t&gt;=2</label>
 			<label kind="assignment" x="-161" y="-195">temp=TARGET_TEMP,
 t=0</label>
 		</transition>
-		<transition id="id126">
-			<source ref="id121"/>
-			<target ref="id120"/>
+		<transition id="id124">
+			<source ref="id119"/>
+			<target ref="id118"/>
 			<label kind="synchronisation" x="-425" y="-331">turn_off?</label>
 			<label kind="assignment" x="-425" y="-314">temp=0, t=0</label>
 			<nail x="-255" y="-280"/>
 			<nail x="-459" y="-280"/>
 		</transition>
-		<transition id="id127">
-			<source ref="id122"/>
-			<target ref="id120"/>
+		<transition id="id125">
+			<source ref="id120"/>
+			<target ref="id118"/>
 			<label kind="synchronisation" x="-459" y="-59">turn_off?</label>
 			<label kind="assignment" x="-459" y="-42">t=0, temp=0</label>
 			<nail x="-77" y="-68"/>
@@ -741,20 +739,20 @@ t=0</label>
 			<nail x="-520" y="-9"/>
 			<nail x="-579" y="-119"/>
 		</transition>
-		<transition id="id128">
-			<source ref="id122"/>
-			<target ref="id123"/>
+		<transition id="id126">
+			<source ref="id120"/>
+			<target ref="id121"/>
 			<label kind="guard" x="127" y="-59">temp&gt;=TARGET_TEMP &amp;&amp; 
 oven_buffer_count &gt; 0</label>
 			<label kind="assignment" x="127" y="-17">t=0, oven_buffer_count--</label>
 			<nail x="110" y="-42"/>
 		</transition>
-		<transition id="id129">
-			<source ref="id123"/>
-			<target ref="id122"/>
-			<label kind="guard" x="-51" y="-17">t&gt;=3</label>
-			<label kind="synchronisation" x="-51" y="0">pizza_out!</label>
-			<label kind="assignment" x="-51" y="17">t=0</label>
+		<transition id="id127">
+			<source ref="id121"/>
+			<target ref="id120"/>
+			<label kind="guard" x="-68" y="17">t&gt;=10</label>
+			<label kind="synchronisation" x="-68" y="-8">pizza_out!</label>
+			<label kind="assignment" x="-68" y="-25">t=0</label>
 			<nail x="17" y="-42"/>
 		</transition>
 	</template>
@@ -762,59 +760,65 @@ oven_buffer_count &gt; 0</label>
 		<name x="5" y="5">DoughMachine</name>
 		<declaration>// Place local declarations here.
 clock t;</declaration>
-		<location id="id130" x="0" y="-42">
+		<location id="id128" x="0" y="-42">
 			<name x="-17" y="-76">idle</name>
 		</location>
-		<location id="id131" x="170" y="34">
+		<location id="id129" x="170" y="34">
 			<name x="153" y="51">dispatch</name>
+			<label kind="invariant" x="160" y="51">t&lt;=2</label>
 		</location>
-		<location id="id132" x="170" y="-127">
+		<location id="id130" x="170" y="-127">
 			<name x="85" y="-161">checkStock</name>
+			<committed/>
 		</location>
-		<location id="id133" x="535" y="-127">
+		<location id="id131" x="535" y="-127">
 			<name x="525" y="-161">restock</name>
+			<committed/>
 		</location>
-		<location id="id134" x="544" y="34">
+		<location id="id132" x="544" y="34">
 			<name x="544" y="51">restocked</name>
 		</location>
-		<location id="id135" x="374" y="34">
+		<location id="id133" x="374" y="34">
 			<name x="357" y="51">kneading</name>
 		</location>
-		<init ref="id130"/>
-		<transition id="id136">
-			<source ref="id134"/>
-			<target ref="id135"/>
+		<init ref="id128"/>
+		<transition id="id134">
+			<source ref="id132"/>
+			<target ref="id133"/>
 			<label kind="synchronisation" x="408" y="8">provide_dough?</label>
+			<label kind="assignment" x="391" y="76">isRestocking=false</label>
 		</transition>
-		<transition id="id137">
-			<source ref="id135"/>
-			<target ref="id131"/>
+		<transition id="id135">
+			<source ref="id133"/>
+			<target ref="id129"/>
 			<label kind="assignment" x="212" y="-8">t=0, 
 dough_stock--</label>
 		</transition>
-		<transition id="id138">
-			<source ref="id132"/>
-			<target ref="id135"/>
+		<transition id="id136">
+			<source ref="id130"/>
+			<target ref="id133"/>
 			<label kind="guard" x="289" y="-68">dough_stock&gt;0</label>
 		</transition>
-		<transition id="id139">
-			<source ref="id133"/>
-			<target ref="id134"/>
+		<transition id="id137">
+			<source ref="id131"/>
+			<target ref="id132"/>
+			<label kind="guard" x="539" y="-80">!isRestocking</label>
 			<label kind="synchronisation" x="544" y="-59">get_dough!</label>
+			<label kind="assignment" x="544" y="-42">isRestocking=true</label>
 		</transition>
-		<transition id="id140">
-			<source ref="id132"/>
-			<target ref="id133"/>
+		<transition id="id138">
+			<source ref="id130"/>
+			<target ref="id131"/>
 			<label kind="guard" x="238" y="-153">dough_stock&lt;=0</label>
 		</transition>
-		<transition id="id141">
-			<source ref="id130"/>
-			<target ref="id132"/>
+		<transition id="id139">
+			<source ref="id128"/>
+			<target ref="id130"/>
 			<label kind="synchronisation" x="-25" y="-119">pizza_request?</label>
 		</transition>
-		<transition id="id142">
-			<source ref="id131"/>
-			<target ref="id130"/>
+		<transition id="id140">
+			<source ref="id129"/>
+			<target ref="id128"/>
 			<label kind="guard" x="-221" y="0">t &gt;= 2 &amp;&amp; 
 raw_dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<label kind="assignment" x="-221" y="42">raw_dough_buffer_count++</label>
@@ -824,61 +828,65 @@ raw_dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 		<name>SauceMachine</name>
 		<declaration>clock t;
 </declaration>
-		<location id="id143" x="-510" y="-178">
+		<location id="id141" x="-510" y="-178">
 			<name x="-535" y="-212">idle</name>
 		</location>
-		<location id="id144" x="-195" y="-289">
+		<location id="id142" x="-195" y="-289">
 			<name x="-246" y="-323">checkStock</name>
+			<committed/>
 		</location>
-		<location id="id145" x="-195" y="-59">
+		<location id="id143" x="-195" y="-59">
 			<name x="-229" y="-42">dispatch</name>
 		</location>
-		<location id="id146" x="136" y="-289">
+		<location id="id144" x="136" y="-289">
 			<name x="126" y="-323">restock</name>
+			<committed/>
 		</location>
-		<location id="id147" x="136" y="-59">
+		<location id="id145" x="136" y="-59">
 			<name x="111" y="-42">restocked</name>
 		</location>
-		<location id="id148" x="-25" y="-59">
+		<location id="id146" x="-25" y="-59">
 			<name x="-51" y="-42">addToPizza</name>
 		</location>
-		<init ref="id143"/>
-		<transition id="id149">
-			<source ref="id144"/>
-			<target ref="id148"/>
+		<init ref="id141"/>
+		<transition id="id147">
+			<source ref="id142"/>
+			<target ref="id146"/>
 			<label kind="guard" x="-110" y="-195">sauce_stock &gt; 0</label>
 		</transition>
-		<transition id="id150">
-			<source ref="id148"/>
-			<target ref="id145"/>
+		<transition id="id148">
+			<source ref="id146"/>
+			<target ref="id143"/>
 			<label kind="assignment" x="-170" y="-102">t=0, 
 sauce_stock--</label>
 		</transition>
-		<transition id="id151">
-			<source ref="id147"/>
-			<target ref="id148"/>
-			<label kind="synchronisation" x="0" y="-85">provide_sauce?</label>
-		</transition>
-		<transition id="id152">
-			<source ref="id146"/>
-			<target ref="id147"/>
-			<label kind="synchronisation" x="153" y="-187">get_sauce!</label>
-		</transition>
-		<transition id="id153">
-			<source ref="id144"/>
+		<transition id="id149">
+			<source ref="id145"/>
 			<target ref="id146"/>
+			<label kind="synchronisation" x="-8" y="-25">provide_sauce?</label>
+			<label kind="assignment" x="-8" y="-8">isRestocking=false</label>
+		</transition>
+		<transition id="id150">
+			<source ref="id144"/>
+			<target ref="id145"/>
+			<label kind="guard" x="136" y="-208">!isRestocking</label>
+			<label kind="synchronisation" x="153" y="-187">get_sauce!</label>
+			<label kind="assignment" x="136" y="-170">isRestocking=true</label>
+		</transition>
+		<transition id="id151">
+			<source ref="id142"/>
+			<target ref="id144"/>
 			<label kind="guard" x="-136" y="-323">sauce_stock &lt;= 0</label>
 		</transition>
-		<transition id="id154">
-			<source ref="id145"/>
-			<target ref="id143"/>
-			<label kind="guard" x="-552" y="-93">t&gt;=2 &amp;&amp; 
-sauce_buffer_count &lt; MAX_PIZZA_BUFFER</label>
+		<transition id="id152">
+			<source ref="id143"/>
+			<target ref="id141"/>
+			<label kind="guard" x="-552" y="-93">sauce_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<label kind="assignment" x="-552" y="-110">sauce_buffer_count++</label>
 		</transition>
-		<transition id="id155">
-			<source ref="id143"/>
-			<target ref="id144"/>
+		<transition id="id153">
+			<source ref="id141"/>
+			<target ref="id142"/>
 			<label kind="guard" x="-493" y="-306">dough_buffer_count &gt; 0</label>
 			<label kind="assignment" x="-493" y="-289">t=0,
 dough_buffer_count--</label>
@@ -888,24 +896,24 @@ dough_buffer_count--</label>
 		<name x="5" y="5">DoughShaper</name>
 		<declaration>// Place local declarations here.
 clock t;</declaration>
-		<location id="id156" x="-68" y="-34">
+		<location id="id154" x="-68" y="-34">
 			<name x="-78" y="-68">idle</name>
 		</location>
-		<location id="id157" x="222" y="-34">
+		<location id="id155" x="222" y="-34">
 			<name x="212" y="-68">shapingDough</name>
 		</location>
-		<init ref="id156"/>
-		<transition id="id158">
-			<source ref="id157"/>
-			<target ref="id156"/>
+		<init ref="id154"/>
+		<transition id="id156">
+			<source ref="id155"/>
+			<target ref="id154"/>
 			<label kind="guard" x="-25" y="8">t&gt;=2 &amp;&amp;
 dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<label kind="assignment" x="-25" y="50">dough_buffer_count++</label>
 			<nail x="76" y="17"/>
 		</transition>
-		<transition id="id159">
-			<source ref="id156"/>
-			<target ref="id157"/>
+		<transition id="id157">
+			<source ref="id154"/>
+			<target ref="id155"/>
 			<label kind="guard" x="-34" y="-136">raw_dough_buffer_count &gt; 0</label>
 			<label kind="assignment" x="-34" y="-119">t=0, raw_dough_buffer_count--</label>
 			<nail x="76" y="-85"/>
@@ -915,74 +923,80 @@ dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 		<name>MeatSlicer</name>
 		<declaration>clock t;
 </declaration>
-		<location id="id160" x="-416" y="-76">
+		<location id="id158" x="-416" y="-76">
 			<name x="-442" y="-110">idle</name>
 		</location>
-		<location id="id161" x="-272" y="-204">
+		<location id="id159" x="-272" y="-204">
 			<name x="-315" y="-246">choosingMeat</name>
 		</location>
-		<location id="id162" x="-51" y="-204">
+		<location id="id160" x="-51" y="-204">
 			<name x="-93" y="-246">checkStock</name>
+			<committed/>
 		</location>
-		<location id="id163" x="-272" y="59">
+		<location id="id161" x="-272" y="59">
 			<name x="-374" y="76">dispatch</name>
+			<label kind="invariant" x="-282" y="76">t&lt;=2</label>
 		</location>
-		<location id="id164" x="153" y="-204">
+		<location id="id162" x="153" y="-204">
 			<name x="143" y="-238">restock</name>
+			<committed/>
 		</location>
-		<location id="id165" x="153" y="59">
+		<location id="id163" x="153" y="59">
 			<name x="144" y="76">restocked</name>
 		</location>
-		<location id="id166" x="-51" y="59">
+		<location id="id164" x="-51" y="59">
 			<name x="-77" y="76">addToPizza</name>
 		</location>
-		<init ref="id160"/>
-		<transition id="id167">
-			<source ref="id166"/>
-			<target ref="id163"/>
+		<init ref="id158"/>
+		<transition id="id165">
+			<source ref="id164"/>
+			<target ref="id161"/>
 			<label kind="assignment" x="-229" y="34">t=0, meat_stock--</label>
+		</transition>
+		<transition id="id166">
+			<source ref="id160"/>
+			<target ref="id164"/>
+			<label kind="guard" x="-42" y="-93">meat_stock &gt; 0</label>
+		</transition>
+		<transition id="id167">
+			<source ref="id163"/>
+			<target ref="id164"/>
+			<label kind="synchronisation" x="8" y="34">provide_meat?</label>
+			<label kind="assignment" x="-17" y="59">isRestocking=false</label>
 		</transition>
 		<transition id="id168">
 			<source ref="id162"/>
-			<target ref="id166"/>
-			<label kind="guard" x="-42" y="-93">meat_stock &gt; 0</label>
+			<target ref="id163"/>
+			<label kind="guard" x="153" y="-106">!isRestocking</label>
+			<label kind="synchronisation" x="157" y="-89">get_meat!</label>
+			<label kind="assignment" x="153" y="-72">isRestocking=true</label>
 		</transition>
 		<transition id="id169">
-			<source ref="id165"/>
-			<target ref="id166"/>
-			<label kind="synchronisation" x="8" y="34">provide_meat?</label>
-		</transition>
-		<transition id="id170">
-			<source ref="id164"/>
-			<target ref="id165"/>
-			<label kind="synchronisation" x="157" y="-89">get_meat!</label>
-		</transition>
-		<transition id="id171">
-			<source ref="id162"/>
-			<target ref="id164"/>
+			<source ref="id160"/>
+			<target ref="id162"/>
 			<label kind="guard" x="0" y="-238">meat_stock&lt;=0</label>
 		</transition>
-		<transition id="id172">
-			<source ref="id161"/>
-			<target ref="id163"/>
+		<transition id="id170">
+			<source ref="id159"/>
+			<target ref="id161"/>
 			<label kind="guard" x="-263" y="-93">noMeatPizza</label>
 			<label kind="assignment" x="-263" y="-76">t=0</label>
 		</transition>
-		<transition id="id173">
-			<source ref="id163"/>
-			<target ref="id160"/>
+		<transition id="id171">
+			<source ref="id161"/>
+			<target ref="id158"/>
 			<label kind="guard" x="-620" y="-8">t&gt;=2 &amp;&amp; 
 meat_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<label kind="assignment" x="-620" y="35">meat_buffer_count++</label>
 		</transition>
-		<transition id="id174">
-			<source ref="id161"/>
-			<target ref="id162"/>
+		<transition id="id172">
+			<source ref="id159"/>
+			<target ref="id160"/>
 			<label kind="guard" x="-212" y="-238">!noMeatPizza</label>
 		</transition>
-		<transition id="id175">
-			<source ref="id160"/>
-			<target ref="id161"/>
+		<transition id="id173">
+			<source ref="id158"/>
+			<target ref="id159"/>
 			<label kind="guard" x="-561" y="-195">cheese_buffer_count &gt; 0</label>
 			<label kind="assignment" x="-561" y="-170">t=0, cheese_buffer_count--</label>
 		</transition>
@@ -991,61 +1005,67 @@ meat_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 		<name>CheeseGrater</name>
 		<declaration>clock t;
 </declaration>
-		<location id="id176" x="-374" y="-42">
+		<location id="id174" x="-374" y="-42">
 			<name x="-399" y="-76">idle</name>
 		</location>
-		<location id="id177" x="-8" y="-170">
+		<location id="id175" x="-8" y="-170">
 			<name x="-59" y="-204">checkStock</name>
+			<committed/>
 		</location>
-		<location id="id178" x="0" y="34">
+		<location id="id176" x="0" y="34">
 			<name x="-17" y="51">dispatch</name>
+			<label kind="invariant" x="-17" y="76">t&lt;=2</label>
 		</location>
-		<location id="id179" x="433" y="-170">
+		<location id="id177" x="433" y="-170">
 			<name x="423" y="-204">restock</name>
+			<committed/>
 		</location>
-		<location id="id180" x="442" y="34">
+		<location id="id178" x="442" y="34">
 			<name x="425" y="51">restocked</name>
 		</location>
-		<location id="id181" x="255" y="34">
+		<location id="id179" x="255" y="34">
 			<name x="229" y="51">addToPizza</name>
 		</location>
-		<init ref="id176"/>
-		<transition id="id182">
-			<source ref="id177"/>
-			<target ref="id181"/>
+		<init ref="id174"/>
+		<transition id="id180">
+			<source ref="id175"/>
+			<target ref="id179"/>
 			<label kind="guard" x="119" y="-93">cheese_stock &gt; 0</label>
 		</transition>
-		<transition id="id183">
-			<source ref="id181"/>
-			<target ref="id178"/>
+		<transition id="id181">
+			<source ref="id179"/>
+			<target ref="id176"/>
 			<label kind="assignment" x="59" y="-8">t=0, 
 cheese_stock--</label>
 		</transition>
-		<transition id="id184">
-			<source ref="id180"/>
-			<target ref="id181"/>
-			<label kind="synchronisation" x="297" y="8">provide_cheese?</label>
-		</transition>
-		<transition id="id185">
-			<source ref="id179"/>
-			<target ref="id180"/>
-			<label kind="synchronisation" x="450" y="-85">get_cheese!</label>
-		</transition>
-		<transition id="id186">
-			<source ref="id177"/>
+		<transition id="id182">
+			<source ref="id178"/>
 			<target ref="id179"/>
+			<label kind="synchronisation" x="297" y="8">provide_cheese?</label>
+			<label kind="assignment" x="273" y="34">isRestocking=false</label>
+		</transition>
+		<transition id="id183">
+			<source ref="id177"/>
+			<target ref="id178"/>
+			<label kind="guard" x="437" y="-102">!isRestocking</label>
+			<label kind="synchronisation" x="450" y="-85">get_cheese!</label>
+			<label kind="assignment" x="437" y="-68">isRestocking=true</label>
+		</transition>
+		<transition id="id184">
+			<source ref="id175"/>
+			<target ref="id177"/>
 			<label kind="guard" x="144" y="-195">cheese_stock&lt;=0</label>
 		</transition>
-		<transition id="id187">
-			<source ref="id176"/>
-			<target ref="id177"/>
+		<transition id="id185">
+			<source ref="id174"/>
+			<target ref="id175"/>
 			<label kind="guard" x="-330" y="-177">sauce_buffer_count &gt; 0</label>
 			<label kind="assignment" x="-331" y="-153">t=0, 
 sauce_buffer_count--</label>
 		</transition>
-		<transition id="id188">
-			<source ref="id178"/>
-			<target ref="id176"/>
+		<transition id="id186">
+			<source ref="id176"/>
+			<target ref="id174"/>
 			<label kind="guard" x="-374" y="8">t&gt;=2 &amp;&amp; 
 cheese_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<label kind="assignment" x="-374" y="51">cheese_buffer_count++</label>
@@ -1055,106 +1075,113 @@ cheese_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 		<name>VegetablesSlicer</name>
 		<declaration>clock t;
 </declaration>
-		<location id="id189" x="-629" y="-170">
+		<location id="id187" x="-629" y="-170">
 			<name x="-654" y="-204">idle</name>
 		</location>
-		<location id="id190" x="-212" y="-161">
+		<location id="id188" x="-212" y="-161">
 			<name x="-331" y="-144">choosingVegetable</name>
 		</location>
-		<location id="id191" x="-212" y="-425">
+		<location id="id189" x="-212" y="-425">
 			<name x="-280" y="-459">dispatchToOven</name>
+			<label kind="invariant" x="-222" y="-408">t&lt;=2</label>
 		</location>
-		<location id="id192" x="119" y="-161">
+		<location id="id190" x="119" y="-161">
 			<name x="127" y="-153">checkStock</name>
+			<committed/>
 		</location>
-		<location id="id193" x="-212" y="76">
+		<location id="id191" x="-212" y="76">
 			<name x="-280" y="118">dispatchToFreezer</name>
+			<label kind="invariant" x="-222" y="93">t&lt;=2</label>
 		</location>
-		<location id="id194" x="119" y="-42">
+		<location id="id192" x="119" y="-42">
 			<name x="93" y="-34">restock</name>
+			<committed/>
 		</location>
-		<location id="id195" x="314" y="-42">
+		<location id="id193" x="314" y="-42">
 			<name x="288" y="-34">restocked</name>
 		</location>
-		<location id="id196" x="314" y="-161">
+		<location id="id194" x="314" y="-161">
 			<name x="323" y="-144">addToPizza</name>
 		</location>
-		<init ref="id189"/>
-		<transition id="id197">
-			<source ref="id196"/>
-			<target ref="id193"/>
+		<init ref="id187"/>
+		<transition id="id195">
+			<source ref="id194"/>
+			<target ref="id191"/>
 			<label kind="guard" x="59" y="93">t&gt;=2 &amp;&amp; !isOven</label>
 			<label kind="assignment" x="59" y="110">t=0,
 veg_stock--</label>
 			<nail x="467" y="-161"/>
 			<nail x="467" y="76"/>
 		</transition>
-		<transition id="id198">
-			<source ref="id196"/>
-			<target ref="id191"/>
+		<transition id="id196">
+			<source ref="id194"/>
+			<target ref="id189"/>
 			<label kind="guard" x="323" y="-357">t&gt;=2 &amp;&amp; isOven</label>
 			<label kind="assignment" x="323" y="-340">t=0,
 veg_stock--</label>
 			<nail x="314" y="-425"/>
 		</transition>
-		<transition id="id199">
-			<source ref="id192"/>
-			<target ref="id194"/>
+		<transition id="id197">
+			<source ref="id190"/>
+			<target ref="id192"/>
 			<label kind="guard" x="85" y="-110">veg_stock&lt;=0</label>
+		</transition>
+		<transition id="id198">
+			<source ref="id190"/>
+			<target ref="id194"/>
+			<label kind="guard" x="161" y="-187">veg_stock &gt; 0</label>
+		</transition>
+		<transition id="id199">
+			<source ref="id193"/>
+			<target ref="id194"/>
+			<label kind="synchronisation" x="323" y="-102">provide_veg?</label>
+			<label kind="assignment" x="323" y="-76">isRestocking=false</label>
 		</transition>
 		<transition id="id200">
 			<source ref="id192"/>
-			<target ref="id196"/>
-			<label kind="guard" x="161" y="-187">veg_stock &gt; 0</label>
+			<target ref="id193"/>
+			<label kind="guard" x="136" y="-17">!isRestocking</label>
+			<label kind="synchronisation" x="187" y="-34">get_veg!</label>
+			<label kind="assignment" x="136" y="0">isRestocking=true</label>
 		</transition>
 		<transition id="id201">
-			<source ref="id195"/>
-			<target ref="id196"/>
-			<label kind="synchronisation" x="323" y="-102">provide_veg?</label>
-		</transition>
-		<transition id="id202">
-			<source ref="id194"/>
-			<target ref="id195"/>
-			<label kind="synchronisation" x="187" y="-34">get_veg!</label>
-		</transition>
-		<transition id="id203">
-			<source ref="id190"/>
-			<target ref="id192"/>
+			<source ref="id188"/>
+			<target ref="id190"/>
 			<label kind="guard" x="-110" y="-221">t&gt;=2 &amp;&amp; 
 !noVegetablePizza</label>
 			<label kind="assignment" x="-110" y="-187">t=0</label>
 		</transition>
-		<transition id="id204">
-			<source ref="id193"/>
-			<target ref="id189"/>
+		<transition id="id202">
+			<source ref="id191"/>
+			<target ref="id187"/>
 			<label kind="guard" x="-722" y="-59">t&gt;=2 &amp;&amp; 
 freezer_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<label kind="assignment" x="-722" y="-76">freezer_buffer_count++</label>
 		</transition>
-		<transition id="id205">
-			<source ref="id191"/>
-			<target ref="id189"/>
+		<transition id="id203">
+			<source ref="id189"/>
+			<target ref="id187"/>
 			<label kind="guard" x="-663" y="-374">t&gt;=2 &amp;&amp; 
 oven_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<label kind="assignment" x="-663" y="-331">oven_buffer_count++</label>
 		</transition>
-		<transition id="id206">
-			<source ref="id190"/>
-			<target ref="id193"/>
+		<transition id="id204">
+			<source ref="id188"/>
+			<target ref="id191"/>
 			<label kind="guard" x="-204" y="-93">noVegetablePizza &amp;&amp; 
 !isOven</label>
 			<label kind="assignment" x="-204" y="-59">t=0</label>
 		</transition>
-		<transition id="id207">
-			<source ref="id190"/>
-			<target ref="id191"/>
+		<transition id="id205">
+			<source ref="id188"/>
+			<target ref="id189"/>
 			<label kind="guard" x="-204" y="-306">noVegetablePizza &amp;&amp; 
 isOven</label>
 			<label kind="assignment" x="-204" y="-264">t=0</label>
 		</transition>
-		<transition id="id208">
-			<source ref="id189"/>
-			<target ref="id190"/>
+		<transition id="id206">
+			<source ref="id187"/>
+			<target ref="id188"/>
 			<label kind="guard" x="-501" y="-221">meat_buffer_count &gt; 0</label>
 			<label kind="assignment" x="-501" y="-195">t=0, meat_buffer_count--</label>
 		</transition>
@@ -1169,7 +1196,7 @@ oven = Oven();
 doughMachine = DoughMachine();
 
 // List one or more processes to be composed into a system.
-system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, SauceMachine, CheeseGrater, VegetablesSlicer, MeatSlicer, InternalGoodsProvider, InventoryManager, RestockingHandler;
+system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, SauceMachine, CheeseGrater, VegetablesSlicer, MeatSlicer, InternalGoodsProvider, InventoryManager, RestockingHandler, PizzaReciever;
 </system>
 	<queries>
 		<option key="--exploration" value="0"/>
@@ -1178,16 +1205,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>A[] not deadlock</formula>
 			<comment>Check that the system never deadlocks</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-07 16:16:05 +0100">
-				<option key="--exploration" value="0"/>
-				<option key="--backwards-order" value="0"/>
-				<option key="--diagnostic" value="0"/>
-			</result>
-		</query>
-		<query>
-			<formula>E&lt;&gt; deadlock</formula>
-			<comment/>
-			<result outcome="failure" type="quality" timestamp="2025-11-06 23:52:12 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:29:10 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1196,7 +1214,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>E&lt;&gt; oven.baking</formula>
 			<comment>Check that it's possible to reach the baking state</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-06 21:06:51 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:29:15 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1205,7 +1223,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>A[] (oven.baking imply temp == TARGET_TEMP)</formula>
 			<comment>Check that baking only happens at target temperature</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-06 23:59:16 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:29:17 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1214,7 +1232,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>E&lt;&gt; packagingRobot.operatePizza</formula>
 			<comment>Check that packaging robot can reach dispatching state</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-06 23:59:08 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:29:21 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1223,7 +1241,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>E&lt;&gt; freezer.freeze</formula>
 			<comment>Check that freezer can reach frozen state</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-06 23:59:11 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:29:24 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1232,16 +1250,151 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>A[] (stock_level &lt; 0 imply false)</formula>
 			<comment>Verify stock never goes negative</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-07 17:05:51 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:29:28 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
 			</result>
 		</query>
 		<query>
-			<formula>E&lt;&gt; InternalGoodsProvider.dough_provide</formula>
+			<formula>E&lt;&gt; InternalGoodsProvider.provideDough</formula>
 			<comment>Check that goods can be provided</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-07 00:03:49 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:00 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A&lt;&gt; (doughMachine.kneading imply pizzas_in_production == 3)</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:02 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>E&lt;&gt; doughMachine.restock</formula>
+			<comment>Is it possible for the DoughMachine to run out of local stock and try to restock?</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:06 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>E&lt;&gt; InventoryManager.requestDough</formula>
+			<comment>Is it possible to use enough dough to trigger the main warehouse to re-order?</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:10 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>E[] doughMachine.restock imply doughMachine.dispatch</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:13 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>(pizzas_in_production &gt; 0) --&gt; (packagingRobot.operatePizza)</formula>
+			<comment/>
+			<result outcome="failure" type="quality" timestamp="2025-11-11 23:23:54 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>E&lt;&gt; Customer.turnOnMachines imply packagingRobot.operatePizza</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:17 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (pizzas_in_production == MAX_ORDERS_IN_SYSTEM)</formula>
+			<comment>Verify that the system can actually reach its maximum production capacity.</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:20 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (oven.baking and freezer.freeze)</formula>
+			<comment>Is it possible for the oven to be baking one pizza while the freezer is freezing another simultaneously?</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:23 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (dough_buffer_count == MAX_PIZZA_BUFFER)</formula>
+			<comment>Check if any buffer can actually become full (e.g., the dough buffer). This helps find bottlenecks.</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:27 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (pizzas_in_production &lt;= MAX_ORDERS_IN_SYSTEM)</formula>
+			<comment>Safety: Verify that the number of pizzas in production *never* exceeds the defined maximum limit.</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:31 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (dough_stock &gt;= 0 and sauce_stock &gt;= 0 and cheese_stock &gt;= 0 and meat_stock &gt;= 0 and veg_stock &gt;= 0)</formula>
+			<comment>Safety: Check that no machine's local stock ever becomes negative.</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:34 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (dough_warehouse &gt;= 0 and sauce_warehouse &gt;= 0 and cheese_warehouse &gt;= 0 and meat_warehouse &gt;= 0 and veg_warehouse &gt;= 0)</formula>
+			<comment>Safety: Check that the main warehouse stock never becomes negative (due to restocks).</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:37 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (freezer.freeze imply freezer_temp == FREEZE_TEMP)</formula>
+			<comment>Safety: Verify that the freezer only enters the 'freeze' state when it's at the correct target temperature.</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:40 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>doughMachine.restock --&gt; doughMachine.restocked</formula>
+			<comment>Liveness: If the dough machine needs to restock, will it *eventually* be restocked? (Checks internal supply chain liveness).</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:44 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>InventoryManager.requestDough --&gt; InventoryManager.restockDough</formula>
+			<comment>Liveness: If the main warehouse orders dough, will it *eventually* arrive, allowing the manager to restock machines? (Checks external supply chain liveness).</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:48 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
