@@ -18,7 +18,7 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 
 # Initialize Kafka producer
 producer = KafkaProducer(
-    bootstrap_servers='localhost:9092',
+    bootstrap_servers='127.0.0.1:9092',
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
