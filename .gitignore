@@ -426,7 +426,7 @@ replay_pid*
 
 # End of https://www.toptal.com/developers/gitignore/api/csharp,java
 
-/.idea/
 **/venv/**
 /.venv/
 /src/kafka/venv/
+/.idea
