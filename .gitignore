@@ -430,3 +430,4 @@ replay_pid*
 /.venv/
 /src/kafka/venv/
 /.idea
+postgres/

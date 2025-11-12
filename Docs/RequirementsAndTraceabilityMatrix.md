@@ -3,35 +3,38 @@
 ## 1. Consolidated Functional Requirements
 
 ### Production Requirements
-| ID | Requirement | Description | Priority | Measurable Criteria |
-|----|------------|-------------|----------|-------------------|
-| **FR1** | Core Production Capability | System shall produce pizzas from raw ingredients through an automated production line | High | ≤100 pizzas/hour capacity |
-| **FR2** | Dough Preparation | System shall prepare and shape dough according to recipes | High | Complete within 5 minutes, Timer verification |
-| **FR3** | Sauce Application | System shall apply selected sauce type on prepared dough base | High | ±10ml accuracy, Volume measurement |
-| **FR4** | Topping Application | System shall add toppings (cheese, vegetables, meats) per order specifications | High | Weight tolerance ±10g |
-| **FR5** | Pizza Baking | System shall bake pizza at specified temperature and duration | High | 250-300°C, Temperature sensors |
-| **FR6** | Freezing Capability | System shall optionally freeze pizza for preservation | Medium | -18°C, Temperature verification |
-| **FR7** | Half-and-Half Mode | System shall support different toppings on each half of pizza | Medium | UI validation for split configuration |
-| **FR8** | Multiple Sauce Types | System shall support a variety of sauce options (tomato, white, pesto, BBQ) | Medium | ≥4 sauce types available |
-| **FR9** | Calzone Production | System shall optionally fold and seal pizza into calzone format | Low | Fold completeness check |
-| **FR10** |Packaging | System shall pack pizza in a box | High | Defect rate 5% |
+
+| ID | Requirement | Description | Priority | Measurable Criteria | Timing Constraint |
+|----|------------|-------------|----------|-------------------|-------------------|
+| **FR1** | Core Production Capability | System shall produce pizzas from raw ingredients through an automated production line | High | ≤100 pizzas/hour capacity | Event-chain - Input synchronisation constraint |
+| **FR2** | Dough Preparation | System shall prepare and shape dough according to recipes | High | Complete within 5 minutes, Timer verification | Event-chain - Input synchronisation constraint |
+| **FR3** | Sauce Application | System shall apply selected sauce type on prepared dough base | High | ±10ml accuracy, Volume measurement | Event related - Execution time constraint |
+| **FR4** | Topping Application | System shall add toppings (cheese, vegetables, meats) per order specifications | High | Weight tolerance ±10g | Event related - Execution time constraint |
+| **FR5** | Pizza Baking | System shall bake pizza at specified temperature and duration | High | 250-300°C, Temperature sensors | Event related - Execution time constraint |
+| **FR6** | Freezing Capability | System shall optionally freeze pizza for preservation | Medium | -18°C, Temperature verification | Event related - Execution time constraint |
+| **FR7** | Half-and-Half Mode | System shall support different toppings on each half of pizza | Medium | UI validation for split configuration | Event related - Arbitrary constraint |
+| **FR8** | Multiple Sauce Types | System shall support a variety of sauce options (tomato, white, pesto, BBQ) | Medium | ≥4 sauce types available | Event related - Arbitrary constraint  |
+| **FR9** | Calzone Production | System shall optionally fold and seal pizza into calzone format | Low | Fold completeness check | Event related - Arbitrary constraint |
+| **FR10** | Packaging | System shall pack pizza in a box | High | Defect rate 5% | Event related - Periodic constraint |
 
 ### Web Interface Requirements
-| ID | Requirement | Description | Priority | Measurable Criteria |
-|----|------------|-------------|----------|-------------------|
-| **FR11** | Menu Selection | System shall display menu with predefined pizza options | High | ≥5 menu options |
-| **FR12** | Full Customisation | System shall allow modification of ingredients, shape, size | High | ≥10 ingredient choices |
-| **FR13** | Quantity Selection | System shall allow ordering multiple pizzas in single transaction | High | Accept 1-100 pizza quantity |
-| **FR14** | Payment Processing | System shall process payments with multiple payment methods | High | Transaction success rate >99.9% |
-| **FR15** | Priority Queue | Custom orders shall receive production priority over standard orders | Medium | Queue metrics verification |
-| **FR16** | Order Tracking | System shall provide real-time status updates throughout production | High | Update latency <5 seconds |
+
+| ID | Requirement | Description | Priority | Measurable Criteria | Timing Constraint |
+|----|------------|-------------|----------|-------------------|-------------------|
+| **FR11** | Menu Selection | System shall display menu with predefined pizza options | High | ≥5 menu options | Event-chain - Reaction constraint |
+| **FR12** | Full Customisation | System shall allow modification of ingredients, shape, size | High | ≥10 ingredient choices |  Event-chain - Reaction constraint |
+| **FR13** | Quantity Selection | System shall allow ordering multiple pizzas in single transaction | High | Accept 1-100 pizza quantity | Event-chain - Input synchronisation constraint |
+| **FR14** | Payment Processing | System shall process payments with multiple payment methods | High | Transaction success rate >99.9% | Event-chain - Input synchronisation constraint |
+| **FR15** | Priority Queue | Custom orders shall receive production priority over standard orders | Medium | Queue metrics verification |  Event-chain - Reaction constraint |
+| **FR16** | Order Tracking | System shall provide real-time status updates throughout production | High | Update latency <5 seconds | Event-chain - Output synchronisation constraint |
 
 ### Warehouse Requirements
-| ID | Requirement | Description | Priority | Measurable Criteria |
-|----|------------|-------------|----------|-------------------|
-| **FR17** | Inventory Storage | System shall store raw materials with proper conditions | High | Temperature/humidity monitoring |
-| **FR18** | Inventory Monitoring | System shall track ingredient consumption and stock levels | High | Real-time accuracy ±1% |
-| **FR19** | Automatic Restocking | System shall automatically reorder when inventory falls below thresholds | High | Trigger within 1 minute of threshold |
+
+| ID | Requirement | Description | Priority | Measurable Criteria | Timing Constraint |
+|----|------------|-------------|----------|-------------------|-------------------|
+| **FR17** | Inventory Storage | System shall store raw materials with proper conditions | High | Temperature/humidity monitoring | Event-chain - Reaction constraint |
+| **FR18** | Inventory Monitoring | System shall track ingredient consumption and stock levels | High | Real-time accuracy ±1% | Event related - Periodic constraint |
+| **FR19** | Automatic Restocking | System shall automatically reorder when inventory falls below thresholds | High | Trigger within 1 minute of threshold | Event related - Arbitrary constraint |
 
 ## 2. Non-Functional Requirements (Quality Attributes)
 
