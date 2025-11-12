@@ -17,8 +17,8 @@ signal.signal(signal.SIGINT, shutdown_handler)
 signal.signal(signal.SIGTERM, shutdown_handler)
 
 # Kafka topics
-consume_topic = "sauce-machine"
-produce_topic = "sauce-machine-done"
+consume_topic = "freezer-machine"
+produce_topic = "freezer-machine-done"
 
 # Initialize Kafka producer
 producer = KafkaProducer(
@@ -44,9 +44,9 @@ async def process_message(data):
     """Simulate work for a message and produce a result."""
     print(f"📥 Received: {data}")
     # Simulate blocking work in a thread
-    print(f"🥫 Preparing sauce for order {data.get('id')}...")
+    print(f"❄️ Introducing pizza {data.get('id')}...")
     await asyncio.get_event_loop().run_in_executor(executor, time.sleep, 1)
-    print(f"🥫 Sauce added to pizza for order {data.get('id')}.")
+    print(f"🍕 Pizza frozen, order number {data.get('id')}.")
     # Produce result message
     result = {
         "original_id": data.get("id"),
