@@ -51,7 +51,14 @@ async def process_message(data):
     result = {
         "original_id": data.get("id"),
         "status": "done",
-        "timestamp": time.time()
+        "timestamp": time.time(),
+        "pizza": {
+            "sauce": "tomato",
+            "baked": False,
+            "cheese": "mozzarella",
+            "meat": ["pepperoni", "sausage"],
+            "veggies": ["bell peppers", "onions"]
+        }
     }
     producer.send(produce_topic, result)
     print(f"✅ Produced finished message: {result}")
