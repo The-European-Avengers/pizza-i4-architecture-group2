@@ -888,8 +888,7 @@ sauce_stock--</label>
 			<source ref="id141"/>
 			<target ref="id142"/>
 			<label kind="guard" x="-493" y="-306">dough_buffer_count &gt; 0</label>
-			<label kind="assignment" x="-493" y="-289">t=0,
-dough_buffer_count--</label>
+			<label kind="assignment" x="-493" y="-289">dough_buffer_count--</label>
 		</transition>
 	</template>
 	<template>
@@ -925,6 +924,7 @@ dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 </declaration>
 		<location id="id158" x="-416" y="-76">
 			<name x="-442" y="-110">idle</name>
+			<label kind="exponentialrate" x="-426" y="-42">0.1</label>
 		</location>
 		<location id="id159" x="-272" y="-204">
 			<name x="-315" y="-246">choosingMeat</name>
@@ -987,7 +987,7 @@ dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<target ref="id158"/>
 			<label kind="guard" x="-620" y="-8">t&gt;=2 &amp;&amp; 
 meat_buffer_count &lt; MAX_PIZZA_BUFFER</label>
-			<label kind="assignment" x="-620" y="35">meat_buffer_count++</label>
+			<label kind="assignment" x="-620" y="34">meat_buffer_count++</label>
 		</transition>
 		<transition id="id172">
 			<source ref="id159"/>
@@ -998,7 +998,7 @@ meat_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<source ref="id158"/>
 			<target ref="id159"/>
 			<label kind="guard" x="-561" y="-195">cheese_buffer_count &gt; 0</label>
-			<label kind="assignment" x="-561" y="-170">t=0, cheese_buffer_count--</label>
+			<label kind="assignment" x="-561" y="-170">cheese_buffer_count--</label>
 		</transition>
 	</template>
 	<template>
@@ -1060,8 +1060,7 @@ cheese_stock--</label>
 			<source ref="id174"/>
 			<target ref="id175"/>
 			<label kind="guard" x="-330" y="-177">sauce_buffer_count &gt; 0</label>
-			<label kind="assignment" x="-331" y="-153">t=0, 
-sauce_buffer_count--</label>
+			<label kind="assignment" x="-331" y="-153">sauce_buffer_count--</label>
 		</transition>
 		<transition id="id186">
 			<source ref="id176"/>
@@ -1135,7 +1134,7 @@ veg_stock--</label>
 			<source ref="id193"/>
 			<target ref="id194"/>
 			<label kind="synchronisation" x="323" y="-102">provide_veg?</label>
-			<label kind="assignment" x="323" y="-76">isRestocking=false</label>
+			<label kind="assignment" x="323" y="-76">isRestocking=false, t=0</label>
 		</transition>
 		<transition id="id200">
 			<source ref="id192"/>
@@ -1183,7 +1182,7 @@ isOven</label>
 			<source ref="id187"/>
 			<target ref="id188"/>
 			<label kind="guard" x="-501" y="-221">meat_buffer_count &gt; 0</label>
-			<label kind="assignment" x="-501" y="-195">t=0, meat_buffer_count--</label>
+			<label kind="assignment" x="-501" y="-195">meat_buffer_count--</label>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
@@ -1205,7 +1204,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>A[] not deadlock</formula>
 			<comment>Check that the system never deadlocks</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-11 23:29:10 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-12 11:49:01 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1304,7 +1303,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>(pizzas_in_production &gt; 0) --&gt; (packagingRobot.operatePizza)</formula>
 			<comment/>
-			<result outcome="failure" type="quality" timestamp="2025-11-11 23:23:54 +0100">
+			<result outcome="failure" type="quality" timestamp="2025-11-12 12:41:25 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
