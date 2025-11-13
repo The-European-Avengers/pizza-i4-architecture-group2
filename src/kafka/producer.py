@@ -22,7 +22,7 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
-topic = "sauce-machine"
+topic = "meat-machine"
 counter = 0
 
 print(f"🚀 Producing messages to topic '{topic}' (Ctrl+C to stop)\n")
