@@ -29,9 +29,15 @@ print(f"🚀 Producing messages to topic '{topic}' (Ctrl+C to stop)\n")
 
 try:
     while running:
+        if counter % 2 == 0:
+            value = 'I need supplies!'
+            topic = 'supply-events.request'
+        else:
+            value = 'Please pick up the pizza!'
+            topic = 'goods-events.pickup'
         message = {
             "id": counter,
-            "value": random.randint(1, 100),
+            "value": value,
             "timestamp": time.time()
         }
         producer.send(topic, message)
