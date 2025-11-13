@@ -15,25 +15,28 @@ import (
 )
 
 type Order struct {
-    ID int `json:"id"`
+    Id int `json:"id"`
+    Timestamp float64 `json:"timestamp"`
+    Sauce  string   `json:"sauce"`
+    Baked  bool     `json:"baked"`
+    Cheese string   `json:"cheese"`
+    Meat   []string `json:"meat"`
+    Veggies []string `json:"veggies"`
 }
 
 type Result struct {
-    OriginalID int    `json:"original_id"`
-    Status     string    `json:"status"`
-    Timestamp  time.Time `json:"timestamp"`
-    Pizza      struct {
-        Sauce  string   `json:"sauce"`
-        Baked  bool     `json:"baked"`
-        Cheese string   `json:"cheese"`
-        Meat   []string `json:"meat"`
-        Veggies []string `json:"veggies"`
-    } `json:"pizza"`
+    Id int    `json:"id"`
+    Timestamp  float64 `json:"timestamp"`
+    Sauce  string   `json:"sauce"`
+    Baked  bool     `json:"baked"`
+    Cheese string   `json:"cheese"`
+    Meat   []string `json:"meat"`
+    Veggies []string `json:"veggies"`
 }
 
 func main() {
     consumeTopic := "meat-machine"
-    produceTopic := "meat-machine-done"
+    produceTopic := "vegetables-machine"
     kafkaAddr := "127.0.0.1:9092"
 
     ctx, cancel := context.WithCancel(context.Background())
@@ -110,29 +113,28 @@ func consumeKafka(ctx context.Context, brokers, topic string, out chan<- Order) 
 }
 
 func processAndProduce(ctx context.Context, writer *kafka.Writer, order Order) {
-    fmt.Printf("🍖 Preparing meat for order %d...\n", order.ID)
+    fmt.Printf("🍖 Preparing meat for order %d...\n", order.Id)
     time.Sleep(time.Duration(rand.Intn(1000)+500) * time.Millisecond)
-    fmt.Printf("🍖 Meat added to pizza for order %d.\n", order.ID)
+    fmt.Printf("🍖 Meat added to pizza for order %d.\n", order.Id)
 
     result := Result{
-        OriginalID: order.ID,
-        Status:     "done",
-        Timestamp:  time.Now(),
+        Id: order.Id,
+        Timestamp:  float64(time.Now().UnixNano()) / 1e9,
     }
-    result.Pizza.Sauce = "tomato"
-    result.Pizza.Baked = false
-    result.Pizza.Cheese = "mozzarella"
-    result.Pizza.Meat = []string{"pepperoni", "bacon"}
-    result.Pizza.Veggies = []string{"onion", "mushroom"}
+    result.Sauce = "tomato"
+    result.Baked = false
+    result.Cheese = "mozzarella"
+    result.Meat = []string{"pepperoni", "bacon"}
+    result.Veggies = []string{"onion", "mushroom"}
 
     data, err := json.Marshal(result)
     if err != nil {
         log.Printf("⚠️ Failed to marshal result: %v", err)
         return
-    }
+    }    
 
     err = writer.WriteMessages(ctx, kafka.Message{
-		Key: []byte(fmt.Sprintf("%d", order.ID)),
+		Key: []byte(fmt.Sprintf("%d", order.Id)),
         Value: data,
     })
     if err != nil {
@@ -140,5 +142,5 @@ func processAndProduce(ctx context.Context, writer *kafka.Writer, order Order) {
         return
     }
 
-    log.Printf("✅ Produced finished message for order %d", order.ID)
+    log.Printf("✅ Produced finished message for order %d", order.Id)
 }

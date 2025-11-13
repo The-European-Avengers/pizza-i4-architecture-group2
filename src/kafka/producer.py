@@ -22,7 +22,7 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
-topic = "meat-machine"
+topic = "sauce-machine"
 counter = 0
 
 print(f"🚀 Producing messages to topic '{topic}' (Ctrl+C to stop)\n")
@@ -32,8 +32,12 @@ try:
     while i < 2 and running:
         message = {
             "id": counter,
-            "value": random.randint(1, 100),
-            "timestamp": time.time()
+            "timestamp": time.time(),
+            "sauce": "tomato sauce",
+            "baked": True,
+            "cheese": "mozzarella",
+            "meat": ["pepperoni", "bacon"],
+            "veggies": ["onion", "mushroom"]
         }
         producer.send(topic, message)
         print(f"✅ Sent: {message} to topic '{topic}'")

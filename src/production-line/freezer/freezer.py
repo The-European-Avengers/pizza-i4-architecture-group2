@@ -18,7 +18,7 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 
 # Kafka topics
 consume_topic = "freezer-machine"
-produce_topic = "freezer-machine-done"
+produce_topic = "packaging-machine"
 
 # Initialize Kafka producer
 producer = KafkaProducer(
@@ -49,9 +49,13 @@ async def process_message(data):
     print(f"🍕 Pizza frozen, order number {data.get('id')}.")
     # Produce result message
     result = {
-        "original_id": data.get("id"),
-        "status": "done",
-        "timestamp": time.time()
+        "id": data.get("id"),
+        "timestamp": time.time(),
+        "sauce": data.get("sauce"),
+        "baked": data.get("baked"),
+        "cheese": data.get("cheese"),
+        "meat": data.get("meat"),
+        "veggies": data.get("veggies")
     }
     producer.send(produce_topic, result)
     print(f"✅ Produced finished message: {result}")
