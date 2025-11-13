@@ -28,13 +28,15 @@ services:
     networks:
       - kafka-net
 
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+  # --- UI for Kafka (Replaced Kafka-UI with Redpanda Console) ---
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:latest
+    container_name: redpanda-console
     ports:
-      - "8080:8080"
+      - "8090:8080" # Access it on http://localhost:8090
     environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-experiment:29092 # Must match the new service name
+      # Note: Redpanda Console uses KAFKA_BROKERS (plural)
+      KAFKA_BROKERS: kafka-experiment:29092
     depends_on:
       - kafka
     networks:
