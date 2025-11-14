@@ -1,0 +1,72 @@
+version: "3.8"
+name: pizza_production_line
+
+services:
+  # PRODUCTION LINE MACHINES
+  customer:
+    build:
+      context: ./production-line/customer
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BROKER: kafka:29092
+      PYTHONUNBUFFERED: 1
+    networks:
+      - kafka-net
+  sauce:
+    build:
+      context: ./production-line/sauce
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BROKER: kafka:29092
+      PYTHONUNBUFFERED: 1
+    networks:
+      - kafka-net
+
+  meat:
+    build:
+      context: ./production-line/meat
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BROKER: kafka:29092
+    networks:
+      - kafka-net
+
+  vegetables:
+    build:
+      context: ./production-line/vegetables
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BROKER: kafka:29092
+    networks:
+      - kafka-net
+  oven:
+    build:
+      context: ./production-line/oven
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BROKER: kafka:29092
+      PYTHONUNBUFFERED: 1
+    networks:
+      - kafka-net
+
+  freezer:
+    build:
+      context: ./production-line/freezer
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BROKER: kafka:29092
+      PYTHONUNBUFFERED: 1
+    networks:
+      - kafka-net
+
+  packaging:
+    build:
+      context: ./production-line/packaging
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BROKER: kafka:29092
+    networks:
+      - kafka-net
+networks:
+  kafka-net:
+    external: true

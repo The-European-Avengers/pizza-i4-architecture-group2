@@ -37,7 +37,7 @@ type Result struct {
 func main() {
     consumeTopic := "meat-machine"
     produceTopic := "vegetables-machine"
-    kafkaAddr := "127.0.0.1:9092"
+    kafkaAddr := "kafka:29092"
 
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()

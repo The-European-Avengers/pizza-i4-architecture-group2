@@ -20,9 +20,11 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 consume_topic = "oven-machine"
 produce_topic = "packaging-machine"
 
+KAFKA_BROKER = "kafka:29092"
+
 # Initialize Kafka producer
 producer = KafkaProducer(
-    bootstrap_servers='127.0.0.1:9092',
+    bootstrap_servers=KAFKA_BROKER,
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
@@ -30,7 +32,7 @@ group_id = f"sauce-worker-{uuid.uuid4()}"  # makes a fresh group each run
 # Initialize Kafka consumer
 consumer = KafkaConsumer(
     consume_topic,
-    bootstrap_servers='127.0.0.1:9092',
+    bootstrap_servers=KAFKA_BROKER,
     auto_offset_reset='latest',
     enable_auto_commit=True,
     group_id=group_id,

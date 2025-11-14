@@ -21,4 +21,4 @@ RUN useradd -m appuser
 USER appuser
 
 # Default command (you can override in docker-compose)
-CMD ["python", "freezer.py"]
+CMD ["python", "costumer.py"]

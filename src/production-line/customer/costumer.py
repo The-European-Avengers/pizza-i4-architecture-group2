@@ -8,7 +8,8 @@ from kafka import KafkaProducer
 running = True
 
 
-num_pizzas = int(input("Choose the number of pizzas to order: "))
+# num_pizzas = int(input("Choose the number of pizzas to order: "))
+num_pizzas = 1
 print(f"You have ordered {num_pizzas} pizzas.")
 
 
@@ -22,9 +23,11 @@ def shutdown_handler(sig, frame):
 signal.signal(signal.SIGINT, shutdown_handler)
 signal.signal(signal.SIGTERM, shutdown_handler)
 
+KAFKA_BROKER = "kafka:29092"
+
 # Initialize Kafka producer
 producer = KafkaProducer(
-    bootstrap_servers='127.0.0.1:9092',
+    bootstrap_servers=KAFKA_BROKER,
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 

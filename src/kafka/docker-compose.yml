@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   kafka:
@@ -44,4 +44,5 @@ volumes:
 
 networks:
   kafka-net:
-    driver: bridge
+    external: true
+  

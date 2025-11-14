@@ -39,7 +39,7 @@ func main() {
     // Dipending on pizza type, produce to oven or freezer
     produceTopicOven := "oven-machine"
     produceTopicFreezer := "freezer-machine"
-    kafkaAddr := "127.0.0.1:9092"
+    kafkaAddr := "kafka:29092"
 
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()
