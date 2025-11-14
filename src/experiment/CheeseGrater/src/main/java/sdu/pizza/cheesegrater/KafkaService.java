@@ -27,7 +27,7 @@ public class KafkaService {
 
     @KafkaListener(topics = CONSUME_TOPIC, groupId = "cheese-grater-group")
     public void handlePizza(PizzaOrderMessage pizza) {
-        log.info("🧀 Grating cheese for Pizza {} (Order: {})...", pizza.getPizzaId(), pizza.getOrderId());
+        log.info("Grating cheese for Pizza {} (Order: {})...", pizza.getPizzaId(), pizza.getOrderId());
 
         try {
             // --- Simulate work ---

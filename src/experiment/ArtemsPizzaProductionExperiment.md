@@ -1,5 +1,25 @@
 # Production Line
 
+## Quick Start
+
+To build and run all services, execute the following command from the root `experiment` folder:
+
+```bash
+docker-compose up --build
+```
+
+To monitor Kafka topics in real-time, open Redpanda UI in your browser:
+
+```
+http://localhost:8090/
+```
+
+To simulate a customer order, run the following command in your terminal:
+
+```bash
+curl -X POST http://localhost:8081/start-order
+```
+
 ## Folder Structure
 
 Each service must be in its own folder with a `Dockerfile`.
@@ -15,7 +35,6 @@ The main production line services are:
 - `oven`: Handles baking.
 - `packaging`: Manages packaging of the final product.
 
-To simulate customer orders, use the `customer` folder which contains a simple script to create orders asking the number of pizzas desired.
 
 ## Kafka Topics
 
