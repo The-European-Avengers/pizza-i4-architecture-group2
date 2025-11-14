@@ -1,152 +1,206 @@
 using Confluent.Kafka;
 using System.Collections.Concurrent;
 using System.Text.Json;
-using System.Text.Json.Serialization; // Added for JSON property names
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Configuration ---
 var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
-var kafkaConfig = new ProducerConfig { BootstrapServers = kafkaBootstrapServers };
 
 // --- Singleton Service for Order Logic ---
-builder.Services.AddSingleton<OrderService>();
+builder.Services.AddSingleton<OrderService>(sp => 
+    new OrderService(kafkaBootstrapServers, sp.GetRequiredService<ILogger<OrderService>>()));
 
 // --- Background Service (Kafka Consumer) ---
 builder.Services.AddHostedService<KafkaConsumerService>();
 
+builder.Services.AddEndpointsApiExplorer();
+//builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
-app.MapPost("/start-order", (OrderService orderService) =>
+// --- API Endpoints ---
+app.MapPost("/start-order/{count:int}", async (int count, OrderService orderService) =>
 {
-    app.Logger.LogInformation("🚀 Order received! Starting production line...");
-    orderService.StartOrder();
-    return Results.Ok("Order started. Sending first pizza.");
+    if (count <= 0)
+    {
+        return Results.BadRequest("Order count must be greater than 0.");
+    }
+    
+    app.Logger.LogInformation("🚀 Order received for {Count} pizzas! Starting production line...", count);
+    
+    // Start the order (this runs in the background, not awaited)
+    _ = orderService.StartOrder(count);
+    
+    return Results.Ok($"Order started for {count} pizzas.");
+});
+
+app.MapPost("/start-order/10", async (OrderService orderService) =>
+{
+    app.Logger.LogInformation("🚀 Order received for 10 pizzas! Starting production line...");
+    _ = orderService.StartOrder(10);
+    return Results.Ok("Order started for 10 pizzas.");
+});
+
+app.MapPost("/start-order/50", async (OrderService orderService) =>
+{
+    app.Logger.LogInformation("🚀 Order received for 50 pizzas! Starting production line...");
+    _ = orderService.StartOrder(50);
+    return Results.Ok("Order started for 50 pizzas.");
+});
+
+app.MapPost("/start-order/100", async (OrderService orderService) =>
+{
+    app.Logger.LogInformation("🚀 Order received for 100 pizzas! Starting production line...");
+    _ = orderService.StartOrder(100);
+    return Results.Ok("Order started for 100 pizzas.");
 });
 
 app.Run();
 
 // --- Services ---
 
-/// <summary>
-/// Manages the order state and sends pizzas to the dough machine.
-/// </summary>
 public class OrderService
 {
-    // --- Kafka Topics ---
-    private const string DOUGH_MACHINE_TOPIC = "dough-machine";
-    private const string ORDER_PROCESSING_TOPIC = "order-processing"; // New topic
-
-    private readonly IProducer<Null, string> _producer;
+    private readonly IProducer<string, string> _producer;
     private readonly ILogger<OrderService> _logger;
+    private readonly ConcurrentQueue<PizzaOrderMessage> _pizzaQueue = new();
+    private readonly AutoResetEvent _orderReadyEvent = new(true); // Start "ready" (true)
+    private static readonly Random Rng = new Random();
     
-    // A thread-safe queue to hold the pizzas.
-    private readonly ConcurrentQueue<PizzaOrderMessage> _pizzaQueue = new(); // Changed to new model
-    
-    // Flag to ensure we only start once.
-    private int _orderStarted = 0;
-    private const int ORDER_SIZE = 100; // Define order size
+    private volatile int _currentOrderId = -1;
+    private volatile int _pizzasRemainingInOrder = 0;
 
-    public OrderService(ILogger<OrderService> logger)
+    // --- Kafka Topics ---
+    private const string ORDER_PROCESSING_TOPIC = "order-processing";
+    private const string DOUGH_MACHINE_TOPIC = "dough-machine";
+
+    public OrderService(string bootstrapServers, ILogger<OrderService> logger)
     {
         _logger = logger;
-        var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
-        _producer = new ProducerBuilder<Null, string>(new ProducerConfig 
-        { 
-            BootstrapServers = kafkaBootstrapServers 
-        }).Build();
+        var producerConfig = new ProducerConfig { BootstrapServers = bootstrapServers };
+        _producer = new ProducerBuilder<string, string>(producerConfig).Build();
     }
+    
+    public int GetCurrentOrderId() => _currentOrderId;
 
-    public void StartOrder()
+    public async Task StartOrder(int pizzaCount)
     {
-        // Use Interlocked.CompareExchange to ensure this only runs once.
-        if (Interlocked.CompareExchange(ref _orderStarted, 1, 0) == 0)
-        {
-            _logger.LogInformation($"Loading {ORDER_SIZE} pizzas into the queue...");
+        // Wait if a previous order is already in progress.
+        _orderReadyEvent.WaitOne(); 
 
-            // --- Create Order-level details ---
-            int orderId = new Random().Next(100, 999);
-            long startTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            
-            // --- 1. Send message to order-processing topic ---
-            var orderProcessingMsg = new OrderProcessingMessage
+        int orderId = Rng.Next(100, 1000);
+        Interlocked.Exchange(ref _currentOrderId, orderId);
+        Interlocked.Exchange(ref _pizzasRemainingInOrder, pizzaCount);
+        
+        long startTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        try
+        {
+            // 1. Send the single "OrderProcessing" message
+            var orderProcessingMessage = new OrderProcessingMessage
             {
                 OrderId = orderId,
                 StartTimestamp = startTimestamp
             };
-            var orderMessage = new Message<Null, string> { Value = JsonSerializer.Serialize(orderProcessingMsg) };
-            _producer.Produce(ORDER_PROCESSING_TOPIC, orderMessage, (report) =>
-            {
-                if(report.Error.IsError)
-                    _logger.LogError("Kafka produce error (order-processing): {Reason}", report.Error.Reason);
-            });
+            
+            await _producer.ProduceAsync(ORDER_PROCESSING_TOPIC,
+                new Message<string, string>
+                {
+                    Key = orderId.ToString(), 
+                    Value = JsonSerializer.Serialize(orderProcessingMessage)
+                });
 
-            // --- 2. Create all pizza messages for the order ---
-            for (int i = 1; i <= ORDER_SIZE; i++)
+            _logger.LogInformation("Loading {PizzaCount} pizzas into the queue for Order ID {OrderId}...", pizzaCount, orderId);
+
+            // 2. Load all pizzas into the local queue
+            for (int i = 1; i <= pizzaCount; i++)
             {
                 _pizzaQueue.Enqueue(new PizzaOrderMessage
                 {
                     PizzaId = i,
                     OrderId = orderId,
-                    OrderSize = ORDER_SIZE,
+                    OrderSize = pizzaCount,
                     StartTimestamp = startTimestamp,
                     EndTimestamp = null,
-                    MsgDesc = "Order submitted",
+                    MsgDesc = "Order received",
                     Sauce = "tomato",
-                    Baked = (i % 2 == 0), // Mix of baked/freezer
-                    Meat = ["salami"],
+                    Baked = (i % 2 == 0), 
                     Cheese = ["mozzarella"],
+                    Meat = ["salami"],
                     Veggies = ["peppers"]
                 });
             }
 
-            // --- 3. Kick off the process by sending the first pizza. ---
+            // 3. Send the *first* pizza to kick things off
             SendNextPizza();
         }
-        else
+        catch (Exception ex)
         {
-            _logger.LogWarning("Order already started.");
+            _logger.LogError(ex, "Error starting order {OrderId}", orderId);
+            // Reset the event if setup fails
+            _orderReadyEvent.Set(); 
+            Interlocked.Exchange(ref _currentOrderId, -1);
         }
     }
 
-    public void SendNextPizza()
+    public async void SendNextPizza()
     {
         if (_pizzaQueue.TryDequeue(out var pizza))
         {
-            _logger.LogInformation("--> Sending Pizza {Id} (Order: {OrderId}). Remaining: {Count}", pizza.PizzaId, pizza.OrderId, _pizzaQueue.Count);
-            
-            var message = new Message<Null, string>
+            try
             {
-                Value = JsonSerializer.Serialize(pizza)
-            };
-            
-            _producer.Produce(DOUGH_MACHINE_TOPIC, message, (report) =>
+                _logger.LogInformation("--> Sending Pizza {PizzaId} (Order: {OrderId}). Remaining: {Count}", 
+                    pizza.PizzaId, pizza.OrderId, _pizzaQueue.Count);
+
+                var pizzaMessage = new Message<string, string>
+                {
+                    Key = pizza.OrderId.ToString(),
+                    Value = JsonSerializer.Serialize(pizza)
+                };
+                
+                await _producer.ProduceAsync(DOUGH_MACHINE_TOPIC, pizzaMessage);
+            }
+            catch (Exception ex)
             {
-                if(report.Error.IsError)
-                    _logger.LogError("Kafka produce error (dough-machine): {Reason}", report.Error.Reason);
-            });
-            _producer.Flush(TimeSpan.FromSeconds(10));
+                _logger.LogError(ex, "Failed to send pizza {PizzaId}", pizza.PizzaId);
+                // Handle error - maybe re-enqueue? For now, we'll just stop.
+                _orderReadyEvent.Set(); // Release the lock
+            }
         }
         else
         {
-            _logger.LogInformation("✅✅✅ Order Complete! All {ORDER_SIZE} pizzas sent. ✅✅✅", ORDER_SIZE);
-            // Set _orderStarted back to 0 if you want to allow new orders
-            Interlocked.Exchange(ref _orderStarted, 0); 
+            // This is hit when the queue is empty.
+            // We check if it's because the order is truly finished.
+            if (Interlocked.Decrement(ref _pizzasRemainingInOrder) < 0)
+            {
+                // This means the last "ready" signal came in for an already-finished order.
+                // We just ignore it and make sure the event is set.
+                _orderReadyEvent.Set();
+                return;
+            }
+
+            _logger.LogInformation("✅✅✅ Order {OrderId} Complete! All pizzas sent. ✅✅✅", GetCurrentOrderId());
+            Interlocked.Exchange(ref _currentOrderId, -1);
+            _orderReadyEvent.Set(); // Release the lock for the next order
         }
+    }
+
+    public void Dispose()
+    {
+        _producer.Flush();
+        _producer.Dispose();
     }
 }
 
-/// <summary>
-/// Background service that listens for the "ready" signal from the dough machine.
-/// </summary>
 public class KafkaConsumerService : BackgroundService
 {
-    // --- Kafka Topic ---
-    private const string DOUGH_MACHINE_DONE_TOPIC = "dough-machine-done"; // Renamed topic
-
     private readonly OrderService _orderService;
     private readonly ILogger<KafkaConsumerService> _logger;
     private readonly ConsumerConfig _consumerConfig;
+
+    private const string READY_TOPIC = "dough-machine-done";
 
     public KafkaConsumerService(OrderService orderService, ILogger<KafkaConsumerService> logger)
     {
@@ -157,102 +211,133 @@ public class KafkaConsumerService : BackgroundService
         _consumerConfig = new ConsumerConfig
         {
             BootstrapServers = kafkaBootstrapServers,
-            GroupId = $"order-processor-group-{Guid.NewGuid()}", // Unique group ID
-            AutoOffsetReset = AutoOffsetReset.Earliest // Corrected from .Latest
+            // --- FIX: Use a STATIC GroupId ---
+            // This ensures Kafka "remembers our place" even if we restart.
+            GroupId = "order-processor-group-main",
+            
+            // --- FIX: Use "Latest" ---
+            // Now that we have a static group, we only care about messages that
+            // arrive while we are running. If we miss one (e.g., service crash),
+            // Kafka will redeliver it to us when we rejoin the group.
+            AutoOffsetReset = AutoOffsetReset.Latest 
         };
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Kafka Consumer Service running. Waiting for Kafka...");
+        _logger.LogInformation("Kafka Consumer Service running. Waiting for topics...");
+        
+        // No retry logic needed here, docker-compose `depends_on` handles it.
+        
+        using var consumer = new ConsumerBuilder<string, string>(_consumerConfig).Build();
+        consumer.Subscribe(READY_TOPIC);
+        _logger.LogInformation("Consumer subscribed to {Topic}. Ready to process signals.", READY_TOPIC);
 
-        // Retry loop to wait for Kafka to be ready
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                using var consumer = new ConsumerBuilder<Ignore, string>(_consumerConfig).Build();
-                consumer.Subscribe(DOUGH_MACHINE_DONE_TOPIC);
-                _logger.LogInformation("Consumer subscribed to {Topic}. Ready to process signals.", DOUGH_MACHINE_DONE_TOPIC);
+                var consumeResult = await Task.Run(() => consumer.Consume(stoppingToken), stoppingToken);
+                if (consumeResult?.Message == null) continue;
 
-                // Inner loop for consuming messages
-                while (!stoppingToken.IsCancellationRequested)
+                try
                 {
-                    var consumeResult = await Task.Run(() => consumer.Consume(stoppingToken), stoppingToken);
-
-                    if (consumeResult?.Message?.Value != null)
+                    var doneMessage = JsonSerializer.Deserialize<PizzaDoneMessage>(consumeResult.Message.Value);
+                    if (doneMessage == null)
                     {
-                        // Deserialize the new "PizzaDoneMessage"
-                        var doneMessage = JsonSerializer.Deserialize<PizzaDoneMessage>(consumeResult.Message.Value);
-                        if (doneMessage != null && doneMessage.DoneMsg)
-                        {
-                            _logger.LogInformation("<-- [Dough Machine Ready] signal received for Pizza {PizzaId} (Order: {OrderId}). Requesting next pizza.", doneMessage.PizzaId, doneMessage.OrderId);
-                            
-                            // Tell the OrderService to send the next pizza.
-                            _orderService.SendNextPizza();
-                        }
+                        _logger.LogWarning("Failed to deserialize 'done' message. Skipping.");
+                        continue;
                     }
+                    
+                    // --- FIX: Filter for the current order ---
+                    // This prevents spam from old, completed orders.
+                    int currentOrderId = _orderService.GetCurrentOrderId();
+                    if (currentOrderId != -1 && doneMessage.OrderId == currentOrderId)
+                    {
+                        _logger.LogInformation("<-- [Dough Machine Ready] signal received for Pizza {PizzaId} (Order: {OrderId}). Requesting next pizza.", 
+                            doneMessage.PizzaId, doneMessage.OrderId);
+                        
+                        _orderService.SendNextPizza();
+                    }
+                    else if (currentOrderId != -1)
+                    {
+                        _logger.LogWarning("Ignoring stale 'done' signal for Pizza {PizzaId} (Order: {OrderId}). Current order is {CurrentOrderId}.", 
+                            doneMessage.PizzaId, doneMessage.OrderId, currentOrderId);
+                    }
+                    // If currentOrderId is -1, we're idle, so we just ignore old messages.
+                }
+                catch (JsonException jsonEx)
+                {
+                    _logger.LogError(jsonEx, "Failed to deserialize JSON: {Message}", consumeResult.Message.Value);
                 }
             }
-            catch (OperationCanceledException)
-            {
-                _logger.LogInformation("Consumer service stopping (OperationCanceled).");
-                break; // Exit loop on cancellation
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Kafka consumer error. Retrying in 5 seconds... (Kafka might be starting or topic not ready)");
-                await Task.Delay(5000, stoppingToken); // Wait 5s before retrying connection
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Consumer service stopping.");
+        }
+        finally
+        {
+            consumer.Close();
         }
     }
 }
 
 // --- Data Models (from PizzaProductionExperiment.md) ---
 
-// The main message for a single pizza
-public class PizzaOrderMessage
-{
-    [JsonPropertyName("pizzaId")]
-    public int PizzaId { get; set; }
-    [JsonPropertyName("orderId")]
-    public int OrderId { get; set; }
-    [JsonPropertyName("orderSize")]
-    public int OrderSize { get; set; }
-    [JsonPropertyName("startTimestamp")]
-    public long? StartTimestamp { get; set; }
-    [JsonPropertyName("endTimestamp")]
-    public long? EndTimestamp { get; set; }
-    [JsonPropertyName("msgDesc")]
-    public string? MsgDesc { get; set; }
-    [JsonPropertyName("sauce")]
-    public string? Sauce { get; set; }
-    [JsonPropertyName("baked")]
-    public bool Baked { get; set; } // Renamed from IsBaked
-    [JsonPropertyName("cheese")]
-    public List<string> Cheese { get; set; } = []; // Renamed from Chees
-    [JsonPropertyName("meat")]
-    public List<string> Meat { get; set; } = [];
-    [JsonPropertyName("veggies")]
-    public List<string> Veggies { get; set; } = []; // Renamed from Vegetable
-}
-
-// The "done" signal from a machine
-public class PizzaDoneMessage
-{
-    [JsonPropertyName("pizzaId")]
-    public int PizzaId { get; set; }
-    [JsonPropertyName("orderId")]
-    public int OrderId { get; set; } // Renamed from "id"
-    [JsonPropertyName("doneMsg")]
-    public bool DoneMsg { get; set; } = true;
-}
-
-// The message for the order-processing topic
 public class OrderProcessingMessage
 {
     [JsonPropertyName("orderId")]
     public int OrderId { get; set; }
+    
     [JsonPropertyName("startTimestamp")]
     public long StartTimestamp { get; set; }
+}
+
+public class PizzaDoneMessage
+{
+    [JsonPropertyName("pizzaId")]
+    public int PizzaId { get; set; }
+
+    [JsonPropertyName("orderId")]
+    public int OrderId { get; set; }
+    
+    [JsonPropertyName("doneMsg")]
+    public bool DoneMsg { get; set; }
+}
+
+public class PizzaOrderMessage
+{
+    [JsonPropertyName("pizzaId")]
+    public int PizzaId { get; set; }
+
+    [JsonPropertyName("orderId")]
+    public int OrderId { get; set; }
+
+    [JsonPropertyName("orderSize")]
+    public int OrderSize { get; set; }
+
+    [JsonPropertyName("startTimestamp")]
+    public long? StartTimestamp { get; set; }
+
+    [JsonPropertyName("endTimestamp")]
+    public long? EndTimestamp { get; set; }
+
+    [JsonPropertyName("msgDesc")]
+    public string MsgDesc { get; set; } = "";
+
+    [JsonPropertyName("sauce")]
+    public string Sauce { get; set; } = "";
+
+    [JsonPropertyName("baked")]
+    public bool Baked { get; set; }
+
+    [JsonPropertyName("cheese")]
+    public List<string> Cheese { get; set; } = [];
+
+    [JsonPropertyName("meat")]
+    public List<string> Meat { get; set; } = [];
+
+    [JsonPropertyName("veggies")]
+    public List<string> Veggies { get; set; } = [];
 }

@@ -17,8 +17,8 @@ public class DoughShaperConsumer : BackgroundService
 {
     // --- Kafka Topics ---
     private const string CONSUME_TOPIC = "dough-shaper";
-    //private const string NEXT_TOPIC = "sauce-machine"; // Next step from markdown
-    private const string NEXT_TOPIC = "cheese-machine";
+    private const string NEXT_TOPIC = "sauce-machine"; 
+    //private const string NEXT_TOPIC = "cheese-machine"; // Alternative next topic, if needed
     private const string DONE_TOPIC = "dough-shaper-done"; // This machine's done topic
 
     private readonly ILogger<DoughShaperConsumer> _logger;

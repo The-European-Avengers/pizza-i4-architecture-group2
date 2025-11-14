@@ -21,28 +21,40 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Still true, but our init service is safer
       CLUSTER_ID: "M6XzU6Q4TjeiJmK8y9V5Qg"
     volumes:
       - kafka-data:/var/lib/kafka/data
     networks:
       - kafka-net
 
-  # --- UI for Kafka (Replaced Kafka-UI with Redpanda Console) ---
+  # --- UI for Kafka ---
   redpanda-console:
     image: docker.redpanda.com/redpandadata/console:latest
     container_name: redpanda-console
     ports:
       - "8090:8080" # Access it on http://localhost:8090
     environment:
-      # Note: Redpanda Console uses KAFKA_BROKERS (plural)
       KAFKA_BROKERS: kafka-experiment:29092
     depends_on:
-      - kafka
+      - kafka # Only depends on Kafka
+    networks:
+      - kafka-net
+      
+  # --- NEW: Kafka Initializer Service ---
+  kafka-init:
+    build:
+      context: ./KafkaInitializerSolution
+      dockerfile: ./KafkaInitializer/Dockerfile
+    container_name: kafka-init
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      - kafka # This service must wait for Kafka to be connectable
     networks:
       - kafka-net
 
-  # --- Services ---
+  # --- C# Services (Separate Solutions) ---
   order-processor:
     build:
       context: ./OrderProcessingSolution
@@ -51,9 +63,10 @@ services:
     ports:
       - "8081:8080" # Host:Container
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092 
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      - kafka
+      kafka-init: # <-- FIX: Wait for topics to be created
+        condition: service_completed_successfully
     networks:
       - kafka-net
 
@@ -63,9 +76,10 @@ services:
       dockerfile: ./DoughMachine/Dockerfile
     container_name: dough-machine
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092 
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      - kafka
+      kafka-init: # <-- FIX: Wait for topics to be created
+        condition: service_completed_successfully
     networks:
       - kafka-net
 
@@ -75,9 +89,10 @@ services:
       dockerfile: ./DoughShaper/Dockerfile
     container_name: dough-shaper
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092 
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      - kafka
+      kafka-init: # <-- FIX: Wait for topics to be created
+        condition: service_completed_successfully
     networks:
       - kafka-net
 
@@ -87,10 +102,10 @@ services:
       dockerfile: Dockerfile
     container_name: cheese-grater
     environment:
-      # Pass the Kafka server address to Spring Boot
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      - kafka
+      kafka-init: # <-- FIX: Wait for topics to be created
+        condition: service_completed_successfully
     networks:
       - kafka-net
 

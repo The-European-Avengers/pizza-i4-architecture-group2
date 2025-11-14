@@ -20,6 +20,16 @@ To simulate a customer order, run the following command in your terminal:
 curl -X POST http://localhost:8081/start-order
 ```
 
+In order to simulate experiment again, execute:
+```bash
+docker-compose down -v
+```
+and then:
+```bash
+docker-compose up --build
+```
+
+
 ## Folder Structure
 
 Each service must be in its own folder with a `Dockerfile`.

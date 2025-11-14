@@ -12,12 +12,11 @@ public class KafkaService {
     private static final Logger log = LoggerFactory.getLogger(KafkaService.class);
 
     // Consuming from topic 'cheese-machine'
-    //private static final String CONSUME_TOPIC = "cheese-machine";
     private static final String CONSUME_TOPIC = "cheese-machine";
 
     // Producing to the next topic 'meat-machine'
-    //private static final String NEXT_TOPIC = "meat-machine";
-    private static final String NEXT_TOPIC = "sauce-machine";
+    private static final String NEXT_TOPIC = "meat-machine";
+    //private static final String NEXT_TOPIC = "sauce-machine";
 
     // Producing our "done" signal to the topic 'cheese-machine-done'
     private static final String DONE_TOPIC = "cheese-machine-done";
