@@ -42,7 +42,7 @@ services:
     networks:
       - kafka-net
 
-  # --- C# Services (Separate Solutions) ---
+  # --- Services ---
   order-processor:
     build:
       context: ./OrderProcessingSolution
@@ -51,7 +51,7 @@ services:
     ports:
       - "8081:8080" # Host:Container
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092 # <-- FIX: Was 'kafka:29092'
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092 
     depends_on:
       - kafka
     networks:
@@ -63,7 +63,7 @@ services:
       dockerfile: ./DoughMachine/Dockerfile
     container_name: dough-machine
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092 # <-- FIX: Was 'kafka:29092'
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092 
     depends_on:
       - kafka
     networks:
@@ -75,7 +75,20 @@ services:
       dockerfile: ./DoughShaper/Dockerfile
     container_name: dough-shaper
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092 # <-- FIX: Was 'kafka:29092'
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092 
+    depends_on:
+      - kafka
+    networks:
+      - kafka-net
+
+  cheese-grater:
+    build:
+      context: ./CheeseGrater 
+      dockerfile: Dockerfile
+    container_name: cheese-grater
+    environment:
+      # Pass the Kafka server address to Spring Boot
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
       - kafka
     networks:

@@ -1,5 +1,6 @@
 using Confluent.Kafka;
 using System.Text.Json;
+using System.Text.Json.Serialization; // Added for JSON property names
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,10 +15,10 @@ app.Run();
 
 public class DoughMachineProcessor : BackgroundService
 {
-    // --- Kafka Topics ---
-    private const string CONSUME_TOPIC = "dough-machine-topic";
-    private const string SHAPER_TOPIC = "dough-shaper-topic";
-    private const string READY_TOPIC = "dough-machine-ready-topic";
+    // --- Kafka Topics (Updated) ---
+    private const string CONSUME_TOPIC = "dough-machine";
+    private const string SHAPER_TOPIC = "dough-shaper";
+    private const string READY_TOPIC = "dough-machine-done";
 
     private readonly ILogger<DoughMachineProcessor> _logger;
     private readonly ConsumerConfig _consumerConfig;
@@ -53,29 +54,39 @@ public class DoughMachineProcessor : BackgroundService
                 using var consumer = new ConsumerBuilder<Ignore, string>(_consumerConfig).Build();
                 using var producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
         
-                consumer.Subscribe(CONSUME_TOPIC); // <-- FIX: Corrected typo from CONSUME_TOPCiC
-                _logger.LogInformation("Consumer subscribed. Ready to process pizzas.");
+                consumer.Subscribe(CONSUME_TOPIC);
+                _logger.LogInformation("Consumer subscribed to {Topic}. Ready to process pizzas.", CONSUME_TOPIC);
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var consumeResult = await Task.Run(() => consumer.Consume(stoppingToken), stoppingToken);
                     if (consumeResult?.Message == null) continue;
 
-                    // --- FIX: Added the missing deserialization line ---
-                    var pizza = JsonSerializer.Deserialize<Pizza>(consumeResult.Message.Value);
-                    _logger.LogInformation("Processing Pizza {Id}...", pizza?.Id);
+                    var pizza = JsonSerializer.Deserialize<PizzaOrderMessage>(consumeResult.Message.Value);
+                    if (pizza == null) continue;
+                    
+                    _logger.LogInformation("Processing Pizza {Id} (Order: {OrderId})...", pizza.PizzaId, pizza.OrderId);
 
                     // --- Simulate work (e.g., latency) ---
                     await Task.Delay(1000, stoppingToken); // 1 second processing time
-                    _logger.LogInformation("...Finished Pizza {Id}.", pizza?.Id); // This line will work now
+                    
+                    // --- Update Pizza Message ---
+                    pizza.MsgDesc = "Dough prepared";
+                    _logger.LogInformation("...Finished Pizza {Id} (Order: {OrderId}).", pizza.PizzaId, pizza.OrderId);
 
-                    // 1. Send to Dough Shaper
-                    var shaperMessage = new Message<Null, string> { Value = consumeResult.Message.Value };
+                    // 1. Send updated PizzaOrderMessage to Dough Shaper
+                    var shaperMessage = new Message<Null, string> { Value = JsonSerializer.Serialize(pizza) };
                     await producer.ProduceAsync(SHAPER_TOPIC, shaperMessage, stoppingToken);
                 
-                    // 2. Send "ready" signal back to Order Processor
-                    // --- FIX: Added the missing "ready" message ---
-                    var readyMessage = new Message<Null, string> { Value = "ready" };
+                    // 2. Send "PizzaDoneMessage" back to Order Processor
+                    var readyMessage = new Message<Null, string> 
+                    { 
+                        Value = JsonSerializer.Serialize(new PizzaDoneMessage 
+                        { 
+                            PizzaId = pizza.PizzaId, // Added this
+                            OrderId = pizza.OrderId    // Renamed from Id
+                        }) 
+                    };
                     await producer.ProduceAsync(READY_TOPIC, readyMessage, stoppingToken);
                 
                     producer.Flush(stoppingToken);
@@ -95,14 +106,51 @@ public class DoughMachineProcessor : BackgroundService
     }
 }
 
-// --- Data Model ---
-public class Pizza
+// --- Data Models (from PizzaProductionExperiment.md) ---
+
+// The main message for a single pizza
+public class PizzaOrderMessage
 {
-    public int Id { get; set; }
-    public string Size { get; set; } = "medium";
-    public bool IsBaked { get; set; }
-    public string Sauce { get; set; } = "tomato";
-    public List<string> Meat { get; set; } = [];
+    [JsonPropertyName("pizzaId")]
+    public int PizzaId { get; set; }
+    [JsonPropertyName("orderId")]
+    public int OrderId { get; set; }
+    [JsonPropertyName("orderSize")]
+    public int OrderSize { get; set; }
+    [JsonPropertyName("startTimestamp")]
+    public long? StartTimestamp { get; set; }
+    [JsonPropertyName("endTimestamp")]
+    public long? EndTimestamp { get; set; }
+    [JsonPropertyName("msgDesc")]
+    public string? MsgDesc { get; set; }
+    [JsonPropertyName("sauce")]
+    public string? Sauce { get; set; }
+    [JsonPropertyName("baked")]
+    public bool Baked { get; set; }
+    [JsonPropertyName("cheese")]
     public List<string> Cheese { get; set; } = [];
-    public List<string> Vegetable { get; set; } = [];
+    [JsonPropertyName("meat")]
+    public List<string> Meat { get; set; } = [];
+    [JsonPropertyName("veggies")]
+    public List<string> Veggies { get; set; } = [];
+}
+
+// The "done" signal from a machine
+public class PizzaDoneMessage
+{
+    [JsonPropertyName("pizzaId")]
+    public int PizzaId { get; set; }
+    [JsonPropertyName("orderId")]
+    public int OrderId { get; set; } // Renamed from "id"
+    [JsonPropertyName("doneMsg")]
+    public bool DoneMsg { get; set; } = true;
+}
+
+// The message for the order-processing topic
+public class OrderProcessingMessage
+{
+    [JsonPropertyName("orderId")]
+    public int OrderId { get; set; }
+    [JsonPropertyName("startTimestamp")]
+    public long StartTimestamp { get; set; }
 }
