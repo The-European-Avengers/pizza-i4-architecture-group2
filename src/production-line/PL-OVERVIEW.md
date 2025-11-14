@@ -36,19 +36,30 @@ The production line services communicate via Kafka topics. Each service has its 
 - `freezer-machine`
 - `freezer-machine-done`
 - `oven-machine`
-- `oven-machine`
 - `oven-machine-done`
 - `packaging-machine`
 - `packaging-machine-done`
 
+### Order Tracking Topics
+
+Additionally, the following Kafka topics are used to track complete orders and measure their latency:
+
+- `order-stack` – Stores incoming orders from customers in a queue. When the Order Processing service receives multiple orders, it stores them in this topic to be processed sequentially. Once the production line completes the current order, it proceeds to the next order in the stack. Future enhancements will include priority-based order selection.
+- `order-processing` – The Order Processing service sends a message to this topic when it begins processing an order, including the order ID and start timestamp.
+- `order-done` – The Packaging service sends a message to this topic when the order is complete, including the order ID and end timestamp.
+
 ## Kafka Messages
 
-There are two types of messages used in the production line:
+There are two main message types used in the production line:
 
 ### Pizza Order Message
 
-- `id` (number): Unique order identifier.
-- `msgDesc` (string): Description of the message.
+- `pizzaId` (int): Unique pizza identifier.
+- `orderId` (int): Unique order identifier.
+- `orderSize` (int): Total number of pizzas in the order.
+- `startTimestamp` (long): Timestamp when order processing started.
+- `endTimestamp` (long): Timestamp when order processing ended.
+- `msgDesc` (string): Description of the current processing step.
 - `sauce` (string): Sauce type (e.g., `"tomato"`, `"pesto"`).
 - `baked` (boolean): Whether the pizza has been baked.
 - `cheese` (array of strings): List of cheese toppings.
@@ -59,11 +70,15 @@ Example message:
 
 ```json
 {
-  "id": 123,
-  "msgDesc": "Sauce added to pizza with ID 123",
+  "pizzaId": 1,
+  "orderId": 123,
+  "orderSize": 3,
+  "startTimestamp": 1731571200000,
+  "endTimestamp": null,
+  "msgDesc": "Sauce added to pizza",
   "sauce": "tomato",
   "baked": false,
-  "cheese": "mozzarella",
+  "cheese": ["mozzarella"],
   "meat": ["pepperoni", "sausage"],
   "veggies": ["mushroom", "onion"]
 }
@@ -81,6 +96,64 @@ Example message:
   "doneMsg": true
 }
 ```
+
+### Order Processing Message
+
+Sent to the `order-processing` topic when an order begins processing:
+
+```json
+{
+  "orderId": 123,
+  "startTimestamp": 1731571200000
+}
+```
+
+### Order Done Message
+
+Sent to the `order-done` topic when an order is completed:
+
+```json
+{
+  "orderId": 123,
+  "endTimestamp": 1731571380000
+}
+```
+
+### Order Stack Message
+
+Stored in the `order-stack` topic for pending orders:
+
+```json
+{
+  "orderId": 123,
+  "priority": 1,
+  "orderSize": 3,
+  "pizzas": [
+    {
+      "pizzaId": 1,
+      "sauce": "tomato",
+      "cheese": ["mozzarella"],
+      "meat": ["pepperoni"],
+      "veggies": ["mushroom"]
+    },
+    {
+      "pizzaId": 2,
+      "sauce": "pesto",
+      "cheese": ["mozzarella", "parmesan"],
+      "meat": [],
+      "veggies": ["basil", "garlic"]
+    },
+    {
+      "pizzaId": 3,
+      "sauce": "tomato",
+      "cheese": ["mozzarella"],
+      "meat": ["sausage"],
+      "veggies": ["onion", "bell pepper"]
+    }
+  ]
+}
+```
+
 
 ## Running the Experiment
 
