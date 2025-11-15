@@ -98,16 +98,89 @@ services:
 
   cheese-grater:
     build:
-      context: ./CheeseGrater 
-      dockerfile: Dockerfile
+      context: ./CheeseGraterSolution 
+      dockerfile: ./CheeseGrater/Dockerfile
     container_name: cheese-grater
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: # <-- FIX: Wait for topics to be created
+      kafka-init: 
         condition: service_completed_successfully
     networks:
       - kafka-net
+      
+  oven:
+    build:
+      context: ./oven
+      dockerfile: Dockerfile
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      kafka-init: 
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
+      
+  freezer:
+    build:
+      context: ./freezer
+      dockerfile: Dockerfile
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      kafka-init: 
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
+      
+  vegetables:
+    build:
+      context: ./vegetables
+      dockerfile: Dockerfile
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      kafka-init: 
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
+
+  meat:
+    build:
+      context: ./meat
+      dockerfile: Dockerfile
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      kafka-init: 
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
+
+  sauce:
+    build:
+      context: ./sauce
+      dockerfile: Dockerfile
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      kafka-init: 
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
+
+  packaging:
+    build:
+      context: ./packaging
+      dockerfile: Dockerfile
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      kafka-init: 
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
+
 
 volumes:
   kafka-data:

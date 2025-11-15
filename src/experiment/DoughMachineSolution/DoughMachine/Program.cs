@@ -178,15 +178,12 @@ public class ProcessingService : BackgroundService
                 _logger.LogInformation("Main Processor (3/3) waiting for a pizza from OrderProcessing...");
                 var pizza = await Task.Run(() => _state.PizzaQueue.Take(stoppingToken), stoppingToken);
                 
-                // Step 2: For pizzas after the first one, wait for signal from DoughShaper
-                if (pizza.PizzaId > 1)
+                _logger.LogInformation("Main Processor (3/3) waiting for Dough Shaper to be ready (Pizza {PizzaId})...", pizza.PizzaId);
+                await Task.Run(() => _state.IsShaperReady.WaitOne(), stoppingToken);
+
+                if (pizza.PizzaId == 1)
                 {
-                    _logger.LogInformation("Main Processor (3/3) waiting for Dough Shaper to be ready (Pizza {PizzaId})...", pizza.PizzaId);
-                    await Task.Run(() => _state.IsShaperReady.WaitOne(), stoppingToken);
-                }
-                else
-                {
-                    _logger.LogInformation("First pizza in order - processing immediately without waiting.");
+                    _logger.LogInformation("First pizza in order - consumed initial 'ready' signal.");
                 }
 
                 // Step 3: Process the pizza

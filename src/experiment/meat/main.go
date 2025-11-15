@@ -42,7 +42,7 @@ func main() {
 	produceTopicNext := "vegetables-machine"
 	produceTopicDone := "meat-machine-done"
 
-	kafkaAddr := "kafka:9092"
+	kafkaAddr := "kafka-experiment:29092"
 
 	msgChan := make(chan Pizza)
 	doneChan := make(chan DoneMessage)

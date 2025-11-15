@@ -6,41 +6,44 @@ using System.Collections.Concurrent;
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Shared State ---
-builder.Services.AddSingleton<DoughShaperState>();
+builder.Services.AddSingleton<CheeseGraterState>();
 
 // --- Register background services ---
 builder.Services.AddHostedService<PizzaConsumerService>();
-builder.Services.AddHostedService<SauceSignalConsumerService>();
+builder.Services.AddHostedService<MeatSignalConsumerService>();
 builder.Services.AddHostedService<ProcessingService>();
 
 var app = builder.Build();
-app.MapGet("/", () => "Dough Shaper Service is running (v2 - Backpressure).");
+app.MapGet("/", () => "Cheese Grater Service is running (v2 - Backpressure).");
 app.Run();
 
 // --- Shared State ---
-public class DoughShaperState
+public class CheeseGraterState
 {
+    // C# equivalent of Java's BlockingQueue
     public BlockingCollection<PizzaOrderMessage> PizzaQueue { get; } = new BlockingCollection<PizzaOrderMessage>();
-    public AutoResetEvent IsSauceReady { get; } = new AutoResetEvent(true); // Start ready for first pizza
+    
+    // C# equivalent of Java's AtomicBoolean + wait/notify
+    public AutoResetEvent IsMeatMachineReady { get; } = new AutoResetEvent(true); // Start ready for first pizza
 }
 
-// --- Service 1: Consumes pizzas from DoughMachine ---
+// --- Service 1: Consumes pizzas from SauceMachine ---
 public class PizzaConsumerService : BackgroundService
 {
-    private const string CONSUME_TOPIC = "dough-shaper";
+    private const string CONSUME_TOPIC = "cheese-machine";
     private readonly ILogger<PizzaConsumerService> _logger;
     private readonly ConsumerConfig _consumerConfig;
-    private readonly DoughShaperState _state;
+    private readonly CheeseGraterState _state;
 
-    public PizzaConsumerService(DoughShaperState state, ILogger<PizzaConsumerService> logger)
+    public PizzaConsumerService(CheeseGraterState state, IConfiguration config, ILogger<PizzaConsumerService> logger)
     {
         _state = state;
         _logger = logger;
-        var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
+        var kafkaBootstrapServers = config["KAFKA_BOOTSTRAP_SERVERS"] ?? "localhost:9092";
         _consumerConfig = new ConsumerConfig
         {
             BootstrapServers = kafkaBootstrapServers,
-            GroupId = "dough-shaper-group",
+            GroupId = "cheese-grater-group",
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
     }
@@ -65,7 +68,7 @@ public class PizzaConsumerService : BackgroundService
                     var pizza = JsonSerializer.Deserialize<PizzaOrderMessage>(consumeResult.Message.Value);
                     if (pizza != null)
                     {
-                        _logger.LogInformation("--> Pizza {PizzaId} (Order: {OrderId}) received from DoughMachine. Adding to queue.", pizza.PizzaId, pizza.OrderId);
+                        _logger.LogInformation("--> Pizza {PizzaId} (Order: {OrderId}) received from SauceMachine. Adding to queue.", pizza.PizzaId, pizza.OrderId);
                         _state.PizzaQueue.Add(pizza, stoppingToken);
                     }
                 }
@@ -83,30 +86,30 @@ public class PizzaConsumerService : BackgroundService
     }
 }
 
-// --- Service 2: Consumes "done" signals from Sauce Machine ---
-public class SauceSignalConsumerService : BackgroundService
+// --- Service 2: Consumes "done" signals from Meat Machine ---
+public class MeatSignalConsumerService : BackgroundService
 {
-    private const string CONSUME_TOPIC = "sauce-machine-done";
-    private readonly ILogger<SauceSignalConsumerService> _logger;
+    private const string CONSUME_TOPIC = "meat-machine-done";
+    private readonly ILogger<MeatSignalConsumerService> _logger;
     private readonly ConsumerConfig _consumerConfig;
-    private readonly DoughShaperState _state;
+    private readonly CheeseGraterState _state;
 
-    public SauceSignalConsumerService(DoughShaperState state, ILogger<SauceSignalConsumerService> logger)
+    public MeatSignalConsumerService(CheeseGraterState state, IConfiguration config, ILogger<MeatSignalConsumerService> logger)
     {
         _state = state;
         _logger = logger;
-        var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
+        var kafkaBootstrapServers = config["KAFKA_BOOTSTRAP_SERVERS"] ?? "localhost:9092";
         _consumerConfig = new ConsumerConfig
         {
             BootstrapServers = kafkaBootstrapServers,
-            GroupId = "dough-shaper-sauce-signal-group",
+            GroupId = "cheese-grater-signal-group",
             AutoOffsetReset = AutoOffsetReset.Latest
         };
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Sauce Signal Consumer (2/3) running. Waiting for Kafka...");
+        _logger.LogInformation("Meat Signal Consumer (2/3) running. Waiting for Kafka...");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -114,7 +117,7 @@ public class SauceSignalConsumerService : BackgroundService
             {
                 using var consumer = new ConsumerBuilder<string, string>(_consumerConfig).Build();
                 consumer.Subscribe(CONSUME_TOPIC);
-                _logger.LogInformation("Sauce Signal Consumer (2/3) subscribed to {Topic}. Ready for signals.", CONSUME_TOPIC);
+                _logger.LogInformation("Meat Signal Consumer (2/3) subscribed to {Topic}. Ready for signals.", CONSUME_TOPIC);
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -124,18 +127,18 @@ public class SauceSignalConsumerService : BackgroundService
                     var doneMessage = JsonSerializer.Deserialize<PizzaDoneMessage>(consumeResult.Message.Value);
                     if (doneMessage != null)
                     {
-                        _logger.LogInformation("<-- [Sauce Machine Ready] signal received for Pizza {PizzaId} (Order: {OrderId}). Unlocking processor.", doneMessage.PizzaId, doneMessage.OrderId);
-                        _state.IsSauceReady.Set();
+                        _logger.LogInformation("<-- [Meat Machine Ready] signal received for Pizza {PizzaId} (Order: {OrderId}). Unlocking processor.", doneMessage.PizzaId, doneMessage.OrderId);
+                        _state.IsMeatMachineReady.Set();
                     }
                 }
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Sauce Signal Consumer (2/3) stopping.");
+                _logger.LogInformation("Meat Signal Consumer (2/3) stopping.");
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Sauce Signal Consumer (2/3) error. Retrying in 5s.");
+                _logger.LogWarning(ex, "Meat Signal Consumer (2/3) error. Retrying in 5s.");
                 await Task.Delay(5000, stoppingToken);
             }
         }
@@ -145,18 +148,18 @@ public class SauceSignalConsumerService : BackgroundService
 // --- Service 3: Main Processing Logic ---
 public class ProcessingService : BackgroundService
 {
-    private const string NEXT_TOPIC = "sauce-machine";
-    private const string DONE_TOPIC = "dough-shaper-done";
+    private const string NEXT_TOPIC = "meat-machine";
+    private const string DONE_TOPIC = "cheese-machine-done";
 
     private readonly ILogger<ProcessingService> _logger;
     private readonly ProducerConfig _producerConfig;
-    private readonly DoughShaperState _state;
+    private readonly CheeseGraterState _state;
 
-    public ProcessingService(DoughShaperState state, ILogger<ProcessingService> logger)
+    public ProcessingService(CheeseGraterState state, IConfiguration config, ILogger<ProcessingService> logger)
     {
         _state = state;
         _logger = logger;
-        var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
+        var kafkaBootstrapServers = config["KAFKA_BOOTSTRAP_SERVERS"] ?? "localhost:9092";
         _producerConfig = new ProducerConfig { BootstrapServers = kafkaBootstrapServers };
     }
 
@@ -171,25 +174,28 @@ public class ProcessingService : BackgroundService
             while (!stoppingToken.IsCancellationRequested)
             {
                 // Step 1: Wait for a pizza
-                _logger.LogInformation("Main Processor (3/3) waiting for a pizza from DoughMachine...");
+                _logger.LogInformation("Main Processor (3/3) waiting for a pizza from SauceMachine...");
                 var pizza = await Task.Run(() => _state.PizzaQueue.Take(stoppingToken), stoppingToken);
                 
-                _logger.LogInformation("Main Processor (3/3) waiting for Sauce Machine to be ready (Pizza {PizzaId})...", pizza.PizzaId);
-                await Task.Run(() => _state.IsSauceReady.WaitOne(), stoppingToken);
+                // Step 2: Wait for Meat Machine signal 
+                _logger.LogInformation("Main Processor (3/3) waiting for Meat Machine to be ready (Pizza {PizzaId})...", pizza.PizzaId);
+                await Task.Run(() => _state.IsMeatMachineReady.WaitOne(), stoppingToken);
 
                 if (pizza.PizzaId == 1)
                 {
-                    // This log is still helpful
                     _logger.LogInformation("First pizza in order - consumed initial 'ready' signal.");
                 }
+                
+                
 
+                
                 // Step 3: Process the pizza
-                _logger.LogInformation("Processing Pizza {PizzaId} (Order: {OrderId})...", pizza.PizzaId, pizza.OrderId);
-                await Task.Delay(500, stoppingToken); // 0.5 second processing time
-                pizza.MsgDesc = "Dough shaped";
+                _logger.LogInformation("Grating cheese for Pizza {PizzaId} (Order: {OrderId})...", pizza.PizzaId, pizza.OrderId);
+                await Task.Delay(750, stoppingToken); // 750ms processing time from Java service
+                pizza.MsgDesc = "Cheese grated";
                 _logger.LogInformation("...Finished Pizza {PizzaId}. Sending to {Topic}", pizza.PizzaId, NEXT_TOPIC);
 
-                // Step 4: Send pizza to Sauce Machine
+                // Step 4: Send pizza to Meat Machine
                 var nextMessage = new Message<string, string>
                 {
                     Key = pizza.OrderId.ToString(),
@@ -197,7 +203,7 @@ public class ProcessingService : BackgroundService
                 };
                 await producer.ProduceAsync(NEXT_TOPIC, nextMessage, stoppingToken);
 
-                // Step 5: Send "done" signal back to DoughMachine
+                // Step 5: Send "done" signal back to SauceMachine
                 var doneMessage = new Message<string, string>
                 {
                     Key = pizza.OrderId.ToString(),
@@ -223,7 +229,7 @@ public class ProcessingService : BackgroundService
     }
 }
 
-// --- Data Models ---
+// --- Data Models (from your example) ---
 public class PizzaOrderMessage
 {
     [JsonPropertyName("pizzaId")]

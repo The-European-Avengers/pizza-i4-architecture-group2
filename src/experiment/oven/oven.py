@@ -24,7 +24,7 @@ produce_topic_next = "packaging-machine"
 produce_topic_done = "oven-machine-done"
 consume_topic_done = "packaging-machine-done"
 
-KAFKA_BROKER = "kafka:9092"
+KAFKA_BROKER = "kafka-experiment:29092"
 
 # Producer
 producer = KafkaProducer(
@@ -32,7 +32,7 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
-group_id = f"oven-{uuid.uuid4()}"
+group_id = "oven-group"
 
 # Consumers
 consumer = KafkaConsumer(
@@ -62,15 +62,15 @@ async def process_pizza(pizza):
     global next_machine_busy
 
     pizza_id = pizza["pizzaId"]
-    print(f"🔥 Introducing pizza {pizza_id}...")
+    print(f"🔥 Starting oven for pizza {pizza_id}...")
 
     # Simulated work
     await asyncio.sleep(1)
 
-    print(f"🍕 Pizza baked {pizza_id}")
+    print(f"🔥 oven finished for pizza {pizza_id}")
 
     # Update message description according to schema
-    pizza["msgDesc"] = f"Pizza baked with id {pizza_id} in order {pizza['orderId']}"
+    pizza["msgDesc"] = f"Pizza frozen with id {pizza_id} in order {pizza['orderId']}"
 
     # 1️⃣ Notify previous machine (Pizza Done Message)
     done_message = {
@@ -112,18 +112,19 @@ async def monitor_machine_done():
             await asyncio.sleep(0.1)
             continue
 
-        (_, messages), = msg_pack.items()
-        message = messages[0]
-        data = message.value
-
-        # Must match team-defined schema
-        if data.get("doneMsg") == True:
-            next_machine_busy = False
-            print(f"✅ Packaging machine free (pizzaId={data.get('pizzaId')})")
+        # Iterate over ALL topics/partitions in the batch
+        for topic_partition, messages in msg_pack.items():
+            # Iterate over ALL messages in that partition
+            for message in messages:
+                data = message.value
+                # Must match team-defined schema
+                if data.get("doneMsg") == True:
+                    next_machine_busy = False
+                    print(f"✅ Packaging machine free (pizzaId={data.get('pizzaId')})")
 
 
 async def main_loop():
-    print("Oven machine ready\n")
+    print("oven machine ready\n")
 
     # Start listener for doneMsg events from next machine
     asyncio.create_task(monitor_machine_done())
@@ -135,13 +136,15 @@ async def main_loop():
             await asyncio.sleep(0.1)
             continue
 
-        (_, messages), = msg_pack.items()
-        pizza = messages[0].value
+        # Iterate over ALL topics/partitions in the batch
+        for topic_partition, messages in msg_pack.items():
+            # Iterate over ALL messages in that partition
+            for message in messages:
+                pizza = message.value
+                print(f"📥 Received pizza: {pizza}")
 
-        print(f"📥 Received pizza: {pizza}")
-
-        # Processes only one pizza at a time
-        await process_pizza(pizza)
+                # oven processes only one pizza at a time
+                await process_pizza(pizza)
 
     print("🛑 Stopped listening.")
 

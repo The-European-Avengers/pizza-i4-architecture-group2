@@ -54,7 +54,7 @@ func main() {
 	produceTopicDone := "packaging-machine-done"
 	produceOrderDone := "order-done"
 
-	kafkaAddr := "kafka:9092"
+	kafkaAddr := "kafka-experiment:29092"
 
 	msgChan := make(chan Pizza)
 
