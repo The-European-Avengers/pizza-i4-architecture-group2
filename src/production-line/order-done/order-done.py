@@ -2,7 +2,7 @@ from kafka import KafkaConsumer
 import json
 import uuid
 
-group_id = f"test-group-{uuid.uuid4()}"
+group_id = f"order-done-group-{uuid.uuid4()}"
 # Initialize Kafka consumer
 consumer = KafkaConsumer(
     'order-done',
