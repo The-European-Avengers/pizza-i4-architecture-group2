@@ -12,11 +12,10 @@ var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_
 builder.Services.AddSingleton<OrderService>(sp => 
     new OrderService(kafkaBootstrapServers, sp.GetRequiredService<ILogger<OrderService>>()));
 
-// --- Background Service (Kafka Consumer) ---
+// --- Background Service (Kafka Consumer for dough-machine-done signals) ---
 builder.Services.AddHostedService<KafkaConsumerService>();
 
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -66,7 +65,7 @@ public class OrderService
     private readonly IProducer<string, string> _producer;
     private readonly ILogger<OrderService> _logger;
     private readonly ConcurrentQueue<PizzaOrderMessage> _pizzaQueue = new();
-    private readonly AutoResetEvent _orderReadyEvent = new(true); // Start "ready" (true)
+    private readonly AutoResetEvent _doughMachineReady = new(true); // Start "ready" for first pizza
     private static readonly Random Rng = new Random();
     
     private volatile int _currentOrderId = -1;
@@ -87,9 +86,6 @@ public class OrderService
 
     public async Task StartOrder(int pizzaCount)
     {
-        // Wait if a previous order is already in progress.
-        _orderReadyEvent.WaitOne(); 
-
         int orderId = Rng.Next(100, 1000);
         Interlocked.Exchange(ref _currentOrderId, orderId);
         Interlocked.Exchange(ref _pizzasRemainingInOrder, pizzaCount);
@@ -133,14 +129,15 @@ public class OrderService
                 });
             }
 
-            // 3. Send the *first* pizza to kick things off
+            // 3. Reset the "ready" signal to true for the first pizza
+            _doughMachineReady.Set();
+
+            // 4. Send the *first* pizza immediately (no waiting)
             SendNextPizza();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error starting order {OrderId}", orderId);
-            // Reset the event if setup fails
-            _orderReadyEvent.Set(); 
             Interlocked.Exchange(ref _currentOrderId, -1);
         }
     }
@@ -151,7 +148,14 @@ public class OrderService
         {
             try
             {
-                _logger.LogInformation("--> Sending Pizza {PizzaId} (Order: {OrderId}). Remaining: {Count}", 
+                // For pizzas after the first one, wait for the "ready" signal
+                if (pizza.PizzaId > 1)
+                {
+                    _logger.LogInformation("Waiting for Dough Machine to be ready before sending Pizza {PizzaId}...", pizza.PizzaId);
+                    _doughMachineReady.WaitOne(); // Block until we get the signal
+                }
+
+                _logger.LogInformation("--> Sending Pizza {PizzaId} (Order: {OrderId}). Remaining in queue: {Count}", 
                     pizza.PizzaId, pizza.OrderId, _pizzaQueue.Count);
 
                 var pizzaMessage = new Message<string, string>
@@ -161,30 +165,30 @@ public class OrderService
                 };
                 
                 await _producer.ProduceAsync(DOUGH_MACHINE_TOPIC, pizzaMessage);
+                _producer.Flush();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send pizza {PizzaId}", pizza.PizzaId);
-                // Handle error - maybe re-enqueue? For now, we'll just stop.
-                _orderReadyEvent.Set(); // Release the lock
             }
         }
         else
         {
-            // This is hit when the queue is empty.
-            // We check if it's because the order is truly finished.
+            // Queue is empty - check if order is complete
             if (Interlocked.Decrement(ref _pizzasRemainingInOrder) < 0)
             {
-                // This means the last "ready" signal came in for an already-finished order.
-                // We just ignore it and make sure the event is set.
-                _orderReadyEvent.Set();
+                // Already finished, just ignore
                 return;
             }
 
             _logger.LogInformation("✅✅✅ Order {OrderId} Complete! All pizzas sent. ✅✅✅", GetCurrentOrderId());
             Interlocked.Exchange(ref _currentOrderId, -1);
-            _orderReadyEvent.Set(); // Release the lock for the next order
         }
+    }
+
+    public void OnDoughMachineReady()
+    {
+        _doughMachineReady.Set(); // Signal that we can send the next pizza
     }
 
     public void Dispose()
@@ -211,23 +215,14 @@ public class KafkaConsumerService : BackgroundService
         _consumerConfig = new ConsumerConfig
         {
             BootstrapServers = kafkaBootstrapServers,
-            // --- FIX: Use a STATIC GroupId ---
-            // This ensures Kafka "remembers our place" even if we restart.
             GroupId = "order-processor-group-main",
-            
-            // --- FIX: Use "Latest" ---
-            // Now that we have a static group, we only care about messages that
-            // arrive while we are running. If we miss one (e.g., service crash),
-            // Kafka will redeliver it to us when we rejoin the group.
             AutoOffsetReset = AutoOffsetReset.Latest 
         };
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Kafka Consumer Service running. Waiting for topics...");
-        
-        // No retry logic needed here, docker-compose `depends_on` handles it.
+        _logger.LogInformation("Kafka Consumer Service running. Waiting for dough-machine-done signals...");
         
         using var consumer = new ConsumerBuilder<string, string>(_consumerConfig).Build();
         consumer.Subscribe(READY_TOPIC);
@@ -249,14 +244,14 @@ public class KafkaConsumerService : BackgroundService
                         continue;
                     }
                     
-                    // --- FIX: Filter for the current order ---
-                    // This prevents spam from old, completed orders.
+                    // Filter for the current order
                     int currentOrderId = _orderService.GetCurrentOrderId();
                     if (currentOrderId != -1 && doneMessage.OrderId == currentOrderId)
                     {
-                        _logger.LogInformation("<-- [Dough Machine Ready] signal received for Pizza {PizzaId} (Order: {OrderId}). Requesting next pizza.", 
+                        _logger.LogInformation("<-- [Dough Machine Ready] signal received for Pizza {PizzaId} (Order: {OrderId}).", 
                             doneMessage.PizzaId, doneMessage.OrderId);
                         
+                        _orderService.OnDoughMachineReady();
                         _orderService.SendNextPizza();
                     }
                     else if (currentOrderId != -1)
@@ -264,7 +259,6 @@ public class KafkaConsumerService : BackgroundService
                         _logger.LogWarning("Ignoring stale 'done' signal for Pizza {PizzaId} (Order: {OrderId}). Current order is {CurrentOrderId}.", 
                             doneMessage.PizzaId, doneMessage.OrderId, currentOrderId);
                     }
-                    // If currentOrderId is -1, we're idle, so we just ignore old messages.
                 }
                 catch (JsonException jsonEx)
                 {
@@ -283,7 +277,7 @@ public class KafkaConsumerService : BackgroundService
     }
 }
 
-// --- Data Models (from PizzaProductionExperiment.md) ---
+// --- Data Models ---
 
 public class OrderProcessingMessage
 {

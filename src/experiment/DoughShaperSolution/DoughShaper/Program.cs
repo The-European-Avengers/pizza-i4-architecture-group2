@@ -1,63 +1,61 @@
 using Confluent.Kafka;
 using System.Text.Json;
-using System.Text.Json.Serialization; // Added for JSON property names
+using System.Text.Json.Serialization;
+using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Background Service (Kafka Consumer) ---
-builder.Services.AddHostedService<DoughShaperConsumer>();
+// --- Shared State ---
+builder.Services.AddSingleton<DoughShaperState>();
+
+// --- Register background services ---
+builder.Services.AddHostedService<PizzaConsumerService>();
+builder.Services.AddHostedService<SauceSignalConsumerService>();
+builder.Services.AddHostedService<ProcessingService>();
 
 var app = builder.Build();
-app.MapGet("/", () => "Dough Shaper Service is running.");
+app.MapGet("/", () => "Dough Shaper Service is running (v2 - Backpressure).");
 app.Run();
 
-// --- Service ---
-
-public class DoughShaperConsumer : BackgroundService
+// --- Shared State ---
+public class DoughShaperState
 {
-    // --- Kafka Topics ---
+    public BlockingCollection<PizzaOrderMessage> PizzaQueue { get; } = new BlockingCollection<PizzaOrderMessage>();
+    public AutoResetEvent IsSauceReady { get; } = new AutoResetEvent(true); // Start ready for first pizza
+}
+
+// --- Service 1: Consumes pizzas from DoughMachine ---
+public class PizzaConsumerService : BackgroundService
+{
     private const string CONSUME_TOPIC = "dough-shaper";
-    private const string NEXT_TOPIC = "sauce-machine"; 
-    //private const string NEXT_TOPIC = "cheese-machine"; // Alternative next topic, if needed
-    private const string DONE_TOPIC = "dough-shaper-done"; // This machine's done topic
-
-    private readonly ILogger<DoughShaperConsumer> _logger;
+    private readonly ILogger<PizzaConsumerService> _logger;
     private readonly ConsumerConfig _consumerConfig;
-    private readonly ProducerConfig _producerConfig; // Added producer
+    private readonly DoughShaperState _state;
 
-    public DoughShaperConsumer(ILogger<DoughShaperConsumer> logger)
+    public PizzaConsumerService(DoughShaperState state, ILogger<PizzaConsumerService> logger)
     {
+        _state = state;
         _logger = logger;
         var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
-
         _consumerConfig = new ConsumerConfig
         {
             BootstrapServers = kafkaBootstrapServers,
             GroupId = "dough-shaper-group",
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
-        
-        // Added producer config
-        _producerConfig = new ProducerConfig
-        {
-            BootstrapServers = kafkaBootstrapServers
-        };
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Dough Shaper consumer running. Waiting for Kafka...");
+        _logger.LogInformation("Pizza Consumer (1/3) running. Waiting for Kafka...");
 
-        // Retry loop to wait for Kafka to be ready
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                using var consumer = new ConsumerBuilder<Ignore, string>(_consumerConfig).Build();
-                using var producer = new ProducerBuilder<Null, string>(_producerConfig).Build(); // Added producer
-                
+                using var consumer = new ConsumerBuilder<string, string>(_consumerConfig).Build();
                 consumer.Subscribe(CONSUME_TOPIC);
-                _logger.LogInformation("Consumer subscribed to {Topic}. Ready to receive from dough machine.", CONSUME_TOPIC);
+                _logger.LogInformation("Pizza Consumer (1/3) subscribed to {Topic}. Ready for pizzas.", CONSUME_TOPIC);
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -65,49 +63,169 @@ public class DoughShaperConsumer : BackgroundService
                     if (consumeResult?.Message == null) continue;
 
                     var pizza = JsonSerializer.Deserialize<PizzaOrderMessage>(consumeResult.Message.Value);
-                    if (pizza == null) continue;
-
-                    _logger.LogInformation("✅ Pizza {Id} received by Dough Shaper. Processing...", pizza.PizzaId);
-
-                    // --- Simulate work ---
-                    await Task.Delay(500, stoppingToken); // 0.5 second processing time
-                    pizza.MsgDesc = "Dough shaped";
-                    
-                    // 1. Send updated PizzaOrderMessage to Sauce Machine
-                    var nextMessage = new Message<Null, string> { Value = JsonSerializer.Serialize(pizza) };
-                    await producer.ProduceAsync(NEXT_TOPIC, nextMessage, stoppingToken);
-                    
-                    // 2. Send "PizzaDoneMessage" to our done topic
-                    var doneMessage = new Message<Null, string>
+                    if (pizza != null)
                     {
-                        Value = JsonSerializer.Serialize(new PizzaDoneMessage 
-                        { 
-                            PizzaId = pizza.PizzaId, // Added this
-                            OrderId = pizza.OrderId    // Renamed from Id
-                        })
-                    };
-                    await producer.ProduceAsync(DONE_TOPIC, doneMessage, stoppingToken);
-
-                    producer.Flush(stoppingToken);
+                        _logger.LogInformation("--> Pizza {PizzaId} (Order: {OrderId}) received from DoughMachine. Adding to queue.", pizza.PizzaId, pizza.OrderId);
+                        _state.PizzaQueue.Add(pizza, stoppingToken);
+                    }
                 }
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Dough Shaper stopping (OperationCanceled).");
-                break; // Exit loop on cancellation
+                _logger.LogInformation("Pizza Consumer (1/3) stopping.");
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Kafka consumer error. Retrying in 5 seconds... (Kafka might be starting or topic not ready)");
-                await Task.Delay(5000, stoppingToken); // Wait 5s before retrying connection
+                _logger.LogWarning(ex, "Pizza Consumer (1/3) error. Retrying in 5s.");
+                await Task.Delay(5000, stoppingToken);
             }
         }
     }
 }
 
-// --- Data Models (from PizzaProductionExperiment.md) ---
+// --- Service 2: Consumes "done" signals from Sauce Machine ---
+public class SauceSignalConsumerService : BackgroundService
+{
+    private const string CONSUME_TOPIC = "sauce-machine-done";
+    private readonly ILogger<SauceSignalConsumerService> _logger;
+    private readonly ConsumerConfig _consumerConfig;
+    private readonly DoughShaperState _state;
 
-// The main message for a single pizza
+    public SauceSignalConsumerService(DoughShaperState state, ILogger<SauceSignalConsumerService> logger)
+    {
+        _state = state;
+        _logger = logger;
+        var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
+        _consumerConfig = new ConsumerConfig
+        {
+            BootstrapServers = kafkaBootstrapServers,
+            GroupId = "dough-shaper-sauce-signal-group",
+            AutoOffsetReset = AutoOffsetReset.Latest
+        };
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Sauce Signal Consumer (2/3) running. Waiting for Kafka...");
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                using var consumer = new ConsumerBuilder<string, string>(_consumerConfig).Build();
+                consumer.Subscribe(CONSUME_TOPIC);
+                _logger.LogInformation("Sauce Signal Consumer (2/3) subscribed to {Topic}. Ready for signals.", CONSUME_TOPIC);
+
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var consumeResult = await Task.Run(() => consumer.Consume(stoppingToken), stoppingToken);
+                    if (consumeResult?.Message == null) continue;
+
+                    var doneMessage = JsonSerializer.Deserialize<PizzaDoneMessage>(consumeResult.Message.Value);
+                    if (doneMessage != null)
+                    {
+                        _logger.LogInformation("<-- [Sauce Machine Ready] signal received for Pizza {PizzaId} (Order: {OrderId}). Unlocking processor.", doneMessage.PizzaId, doneMessage.OrderId);
+                        _state.IsSauceReady.Set();
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Sauce Signal Consumer (2/3) stopping.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Sauce Signal Consumer (2/3) error. Retrying in 5s.");
+                await Task.Delay(5000, stoppingToken);
+            }
+        }
+    }
+}
+
+// --- Service 3: Main Processing Logic ---
+public class ProcessingService : BackgroundService
+{
+    private const string NEXT_TOPIC = "sauce-machine";
+    private const string DONE_TOPIC = "dough-shaper-done";
+
+    private readonly ILogger<ProcessingService> _logger;
+    private readonly ProducerConfig _producerConfig;
+    private readonly DoughShaperState _state;
+
+    public ProcessingService(DoughShaperState state, ILogger<ProcessingService> logger)
+    {
+        _state = state;
+        _logger = logger;
+        var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
+        _producerConfig = new ProducerConfig { BootstrapServers = kafkaBootstrapServers };
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Main Processor (3/3) running. Waiting for work...");
+
+        using var producer = new ProducerBuilder<string, string>(_producerConfig).Build();
+
+        try
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                // Step 1: Wait for a pizza
+                _logger.LogInformation("Main Processor (3/3) waiting for a pizza from DoughMachine...");
+                var pizza = await Task.Run(() => _state.PizzaQueue.Take(stoppingToken), stoppingToken);
+                
+                // Step 2: For pizzas after the first one, wait for Sauce Machine signal
+                if (pizza.PizzaId > 1)
+                {
+                    _logger.LogInformation("Main Processor (3/3) waiting for Sauce Machine to be ready (Pizza {PizzaId})...", pizza.PizzaId);
+                    await Task.Run(() => _state.IsSauceReady.WaitOne(), stoppingToken);
+                }
+                else
+                {
+                    _logger.LogInformation("First pizza in order - processing immediately without waiting.");
+                }
+
+                // Step 3: Process the pizza
+                _logger.LogInformation("Processing Pizza {PizzaId} (Order: {OrderId})...", pizza.PizzaId, pizza.OrderId);
+                await Task.Delay(500, stoppingToken); // 0.5 second processing time
+                pizza.MsgDesc = "Dough shaped";
+                _logger.LogInformation("...Finished Pizza {PizzaId}. Sending to {Topic}", pizza.PizzaId, NEXT_TOPIC);
+
+                // Step 4: Send pizza to Sauce Machine
+                var nextMessage = new Message<string, string>
+                {
+                    Key = pizza.OrderId.ToString(),
+                    Value = JsonSerializer.Serialize(pizza)
+                };
+                await producer.ProduceAsync(NEXT_TOPIC, nextMessage, stoppingToken);
+
+                // Step 5: Send "done" signal back to DoughMachine
+                var doneMessage = new Message<string, string>
+                {
+                    Key = pizza.OrderId.ToString(),
+                    Value = JsonSerializer.Serialize(new PizzaDoneMessage
+                    {
+                        PizzaId = pizza.PizzaId,
+                        OrderId = pizza.OrderId
+                    })
+                };
+                await producer.ProduceAsync(DONE_TOPIC, doneMessage, stoppingToken);
+
+                producer.Flush(stoppingToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Main Processor (3/3) stopping.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Main Processor (3/3) critical error.");
+        }
+    }
+}
+
+// --- Data Models ---
 public class PizzaOrderMessage
 {
     [JsonPropertyName("pizzaId")]
@@ -134,22 +252,12 @@ public class PizzaOrderMessage
     public List<string> Veggies { get; set; } = [];
 }
 
-// The "done" signal from a machine
 public class PizzaDoneMessage
 {
     [JsonPropertyName("pizzaId")]
     public int PizzaId { get; set; }
     [JsonPropertyName("orderId")]
-    public int OrderId { get; set; } // Renamed from "id"
+    public int OrderId { get; set; }
     [JsonPropertyName("doneMsg")]
     public bool DoneMsg { get; set; } = true;
-}
-
-// The message for the order-processing topic
-public class OrderProcessingMessage
-{
-    [JsonPropertyName("orderId")]
-    public int OrderId { get; set; }
-    [JsonPropertyName("startTimestamp")]
-    public long StartTimestamp { get; set; }
 }
