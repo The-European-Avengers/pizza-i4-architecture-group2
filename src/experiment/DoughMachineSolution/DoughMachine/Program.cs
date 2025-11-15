@@ -185,6 +185,7 @@ public class ProcessingService : BackgroundService
                 {
                     _logger.LogInformation("First pizza in order - consumed initial 'ready' signal.");
                 }
+                pizza.StartTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
                 // Step 3: Process the pizza
                 _logger.LogInformation("Processing Pizza {PizzaId} (Order: {OrderId})...", pizza.PizzaId, pizza.OrderId);
