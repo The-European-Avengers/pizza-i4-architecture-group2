@@ -29,51 +29,37 @@ var app = builder.Build();
 // --- API Endpoints ---
 app.MapPost("/start-order/{count:int}", 
     (int count, OrderState state, KafkaProducerService producer, ILogger<Program> logger) =>
-{
-    if (count <= 0)
     {
-        return Results.BadRequest("Order count must be greater than 0.");
-    }
-    
-    logger.LogInformation("🚀 Order received for {Count} pizzas! Adding to queue...", count);
-    
-    // --- THIS IS THE NEW LOGIC ---
-    // The HTTP endpoint ONLY adds pizzas to the queue.
-    // It does not send, wait, or manage signals.
-    
-    int orderId = new Random().Next(100, 1000);
-    long startTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-    // 1. Send the single "OrderProcessing" message
-    var orderProcessingMessage = new OrderProcessingMessage
-    {
-        OrderId = orderId,
-        StartTimestamp = startTimestamp
-    };
-    // Fire-and-forget produce
-    _ = producer.ProduceOrderProcessingMessage(orderProcessingMessage);
-
-    // 2. Load all pizzas into the shared processing queue
-    for (int i = 1; i <= count; i++)
-    {
-        state.PizzaQueue.Add(new PizzaOrderMessage
+        if (count <= 0)
         {
-            PizzaId = i,
-            OrderId = orderId,
-            OrderSize = count,
-            StartTimestamp = startTimestamp,
-            MsgDesc = "Order received",
-            Sauce = "tomato",
-            Baked = (i % 2 == 0),
-            Cheese = ["mozzarella"],
-            Meat = ["salami"],
-            Veggies = ["peppers"]
-        });
-    }
+            return Results.BadRequest("Order count must be greater than 0.");
+        }
     
-    logger.LogInformation("✅ Added {Count} pizzas for Order {OrderId} to the queue.", count, orderId);
-    return Results.Ok($"Order {orderId} for {count} pizzas added to queue.");
-});
+        logger.LogInformation("🚀 Order received for {Count} pizzas! Adding to queue...", count);
+    
+        int orderId = new Random().Next(100, 1000);
+
+        // 1. Load all pizzas into the shared processing queue
+        for (int i = 1; i <= count; i++)
+        {
+            state.PizzaQueue.Add(new PizzaOrderMessage
+            {
+                PizzaId = i,
+                OrderId = orderId,
+                OrderSize = count,
+                StartTimestamp = null, 
+                MsgDesc = "Order received",
+                Sauce = "tomato",
+                Baked = (i % 2 == 0),
+                Cheese = ["mozzarella"],
+                Meat = ["salami"],
+                Veggies = ["peppers"]
+            });
+        }
+    
+        logger.LogInformation("✅ Added {Count} pizzas for Order {OrderId} to the queue.", count, orderId);
+        return Results.Ok($"Order {orderId} for {count} pizzas added to queue.");
+    });
 
 app.Run();
 
@@ -147,6 +133,7 @@ public class DoughMachineSignalConsumer : BackgroundService
         };
     }
 
+    // --- THIS IS THE CORRECT, SIMPLE LOGIC FOR THIS CLASS ---
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Dough Machine Signal Consumer running...");
@@ -159,9 +146,6 @@ public class DoughMachineSignalConsumer : BackgroundService
             {
                 var consumeResult = await Task.Run(() => consumer.Consume(stoppingToken), stoppingToken);
                 
-                // --- THIS IS THE NEW LOGIC ---
-                // NO filtering by order ID. We accept ALL "done" signals.
-                // We ONLY set the signal. We do not call SendNextPizza().
                 try
                 {
                     var doneMessage = JsonSerializer.Deserialize<PizzaDoneMessage>(consumeResult.Message.Value);
@@ -192,6 +176,8 @@ public class OrderProcessingService : BackgroundService
     private readonly KafkaProducerService _producer;
     private readonly ILogger<OrderProcessingService> _logger;
 
+    private readonly ConcurrentDictionary<int, long> _orderStartTimes = new();
+
     public OrderProcessingService(OrderState state, KafkaProducerService producer, ILogger<OrderProcessingService> logger)
     {
         _state = state;
@@ -199,6 +185,7 @@ public class OrderProcessingService : BackgroundService
         _logger = logger;
     }
 
+    // --- THIS IS WHERE THE TIMESTAMP LOGIC BELONGS ---
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Main Order Processing Service running. Waiting for pizzas in queue...");
@@ -215,9 +202,34 @@ public class OrderProcessingService : BackgroundService
                     pizza.PizzaId, pizza.OrderId);
                 await Task.Run(() => _state.IsDoughMachineReady.WaitOne(), stoppingToken);
 
+                
+                // --- NEW TIMESTAMP LOGIC ---
+                // GetOrAdd is atomic. It will only execute the factory function
+                // the very first time an orderId is seen.
+                long productionStartTime = _orderStartTimes.GetOrAdd(pizza.OrderId, (orderId) => {
+                    long newTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    _logger.LogInformation("🎉 Production starting for Order {OrderId} at {Timestamp}!", 
+                        orderId, newTimestamp);
+                    return newTimestamp;
+                });
+                
+                // Set the timestamp for the current pizza
+                pizza.StartTimestamp = productionStartTime;
+                // --- END NEW LOGIC ---
+
+                // --- COMBINED LOGIC BLOCK ---
                 if (pizza.PizzaId == 1)
                 {
                     _logger.LogInformation("First pizza in order - consumed initial 'ready' signal.");
+
+                    // Send the "order-processing" topic message *now*
+                    var orderProcessingMessage = new OrderProcessingMessage
+                    {
+                        OrderId = pizza.OrderId,
+                        StartTimestamp = productionStartTime // Use the real production start time
+                    };
+                    // Send the message (fire-and-forget, don't block the pizza)
+                    _ = _producer.ProduceOrderProcessingMessage(orderProcessingMessage);
                 }
 
                 // 3. Send the pizza
