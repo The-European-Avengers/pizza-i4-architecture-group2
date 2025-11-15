@@ -33,17 +33,22 @@ producer = KafkaProducer(
 
 topic = "sauce-machine"
 try:
+    time.sleep(10)
     message = {
         "id": 0,
         "order_number": num_pizzas,
         "timestamp": time.time(),
         "sauce": "tomato sauce",
         "baked": True,
-        "cheese": "mozzarella",
+        "cheese": ["mozzarella", "parmesan"],
         "meat": ["pepperoni", "bacon"],
         "veggies": ["onion", "mushroom"]
     }
     producer.send(topic, message)
+    producer.flush()
+    message["id"] += 1
+    producer.send(topic, message)
+    producer.flush()
     print(f"✅ Sent: {message} to topic '{topic}'")
 
 
@@ -52,7 +57,6 @@ except Exception as e:
     print(f"❌ Error: {e}")
 
 finally:
-    producer.flush()
     producer.close()
     print("✅ Producer closed cleanly.")
 

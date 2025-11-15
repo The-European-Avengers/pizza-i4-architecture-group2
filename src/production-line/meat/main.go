@@ -5,7 +5,6 @@ import (
     "encoding/json"
     "fmt"
     "log"
-    "math/rand"
     "os"
     "os/signal"
     "syscall"
@@ -14,133 +13,158 @@ import (
     "github.com/segmentio/kafka-go"
 )
 
-type Order struct {
-    Id int `json:"id"`
-    Timestamp float64 `json:"timestamp"`
-    Sauce  string   `json:"sauce"`
-    Baked  bool     `json:"baked"`
-    Cheese string   `json:"cheese"`
-    Meat   []string `json:"meat"`
-    Veggies []string `json:"veggies"`
+type Pizza struct {
+    PizzaId        int      `json:"pizzaId"`
+    OrderId        int      `json:"orderId"`
+    OrderSize      int      `json:"orderSize"`
+    StartTimestamp int64    `json:"startTimestamp"`
+    EndTimestamp   *int64   `json:"endTimestamp"`
+    MsgDesc        string   `json:"msgDesc"`
+    Sauce          string   `json:"sauce"`
+    Baked          bool     `json:"baked"`
+    Cheese         []string `json:"cheese"`
+    Meat           []string `json:"meat"`
+    Veggies        []string `json:"veggies"`
 }
 
-type Result struct {
-    Id int    `json:"id"`
-    Timestamp  float64 `json:"timestamp"`
-    Sauce  string   `json:"sauce"`
-    Baked  bool     `json:"baked"`
-    Cheese string   `json:"cheese"`
-    Meat   []string `json:"meat"`
-    Veggies []string `json:"veggies"`
+type DoneMessage struct {
+    PizzaId int  `json:"pizzaId"`
+    OrderId int  `json:"orderId"`
+    DoneMsg bool `json:"doneMsg"`
 }
+
+var nextMachineBusy = false
 
 func main() {
     consumeTopic := "meat-machine"
-    produceTopic := "vegetables-machine"
+    consumeTopicDone := "vegetables-machine-done"
+    produceTopicNext := "vegetables-machine"
+    produceTopicDone := "meat-machine-done"
+
     kafkaAddr := "kafka:29092"
+
+    msgChan := make(chan Pizza)
+    doneChan := make(chan DoneMessage)
 
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()
 
-    // Channel for messages coming from Kafka
-    msgChan := make(chan Order)
-
-    // Signal handling for graceful shutdown
+    // shutdown handler
     sigs := make(chan os.Signal, 1)
     signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
     go func() {
         <-sigs
-        fmt.Println("\n🛑 Stopping service...")
+        fmt.Println("\n🛑 Shutdown requested...")
         cancel()
     }()
 
-    // Start Kafka consumer goroutine
-    go consumeKafka(ctx, kafkaAddr, consumeTopic, msgChan)
+    // consumers
+    go consumePizza(ctx, kafkaAddr, consumeTopic, msgChan)
+    go consumeDone(ctx, kafkaAddr, consumeTopicDone, doneChan)
 
-    // Kafka producer
-    writer := &kafka.Writer{
-        Addr:     kafka.TCP(kafkaAddr),
-        Topic:    produceTopic,
-        Balancer: &kafka.LeastBytes{},
-    }
-    defer writer.Close()
+    // producers
+    writerNext := newWriter(kafkaAddr, produceTopicNext)
+    writerDone := newWriter(kafkaAddr, produceTopicDone)
+    defer writerNext.Close()
+    defer writerDone.Close()
 
-    fmt.Printf("🎧 Listening on '%s' and producing to '%s'...\n", consumeTopic, produceTopic)
+    fmt.Println("🎧 Meat machine ready")
 
-    // Main loop: process messages received through the channel
     for {
         select {
         case <-ctx.Done():
-            fmt.Println("✅ Service stopped cleanly.")
+            fmt.Println("✔ Clean shutdown")
             return
-        case msg := <-msgChan:
-            processAndProduce(ctx, writer, msg)
+
+        case pizza := <-msgChan:
+            processPizza(ctx, pizza, writerNext, writerDone, doneChan)
         }
     }
 }
 
-func consumeKafka(ctx context.Context, brokers, topic string, out chan<- Order) {
+func newWriter(addr, topic string) *kafka.Writer {
+    return &kafka.Writer{
+        Addr:     kafka.TCP(addr),
+        Topic:    topic,
+        Balancer: &kafka.LeastBytes{},
+    }
+}
+
+func consumePizza(ctx context.Context, broker, topic string, out chan<- Pizza) {
     reader := kafka.NewReader(kafka.ReaderConfig{
-        Brokers:   []string{brokers},
-        Topic:     topic,
-        GroupID:   fmt.Sprintf("meat-worker-%d", time.Now().UnixNano()),
-        MinBytes:  1e3,  // 1KB
-        MaxBytes:  10e6, // 10MB
-		StartOffset: kafka.LastOffset, // Start at latest message
+        Brokers:     []string{broker},
+        Topic:       topic,
+        GroupID:     fmt.Sprintf("%s-group", topic),
+        StartOffset: kafka.LastOffset,
     })
     defer reader.Close()
 
     for {
         m, err := reader.ReadMessage(ctx)
         if err != nil {
-            if ctx.Err() != nil {
-                return // Context cancelled
-            }
-            log.Printf("❌ Error reading message: %v", err)
+            return
+        }
+        var pizza Pizza
+        if err := json.Unmarshal(m.Value, &pizza); err != nil {
+            log.Println("⚠️ Bad JSON:", err)
             continue
         }
-
-        var order Order
-        if err := json.Unmarshal(m.Value, &order); err != nil {
-            log.Printf("⚠️ Failed to unmarshal: %v", err)
-            continue
-        }
-
-        log.Printf("📥 Received: %+v", order)
-        out <- order
+        out <- pizza
     }
 }
 
-func processAndProduce(ctx context.Context, writer *kafka.Writer, order Order) {
-    fmt.Printf("🍖 Preparing meat for order %d...\n", order.Id)
-    time.Sleep(time.Duration(rand.Intn(1000)+500) * time.Millisecond)
-    fmt.Printf("🍖 Meat added to pizza for order %d.\n", order.Id)
-
-    result := Result{
-        Id: order.Id,
-        Timestamp:  float64(time.Now().UnixNano()) / 1e9,
-    }
-    result.Sauce = "tomato"
-    result.Baked = false
-    result.Cheese = "mozzarella"
-    result.Meat = []string{"pepperoni", "bacon"}
-    result.Veggies = []string{"onion", "mushroom"}
-
-    data, err := json.Marshal(result)
-    if err != nil {
-        log.Printf("⚠️ Failed to marshal result: %v", err)
-        return
-    }    
-
-    err = writer.WriteMessages(ctx, kafka.Message{
-		Key: []byte(fmt.Sprintf("%d", order.Id)),
-        Value: data,
+func consumeDone(ctx context.Context, broker, topic string, out chan<- DoneMessage) {
+    reader := kafka.NewReader(kafka.ReaderConfig{
+        Brokers:     []string{broker},
+        Topic:       topic,
+        GroupID:     fmt.Sprintf("%s-group", topic),
+        StartOffset: kafka.LastOffset,
     })
-    if err != nil {
-        log.Printf("❌ Failed to produce message: %v", err)
-        return
-    }
+    defer reader.Close()
 
-    log.Printf("✅ Produced finished message for order %d", order.Id)
+    for {
+        m, err := reader.ReadMessage(ctx)
+        if err != nil {
+            return
+        }
+        var done DoneMessage
+        if err := json.Unmarshal(m.Value, &done); err != nil {
+            log.Println("⚠️ Bad done JSON:", err)
+            continue
+        }
+        out <- done
+    }
+}
+
+func processPizza(ctx context.Context, pizza Pizza, writerNext, writerDone *kafka.Writer, doneChan <-chan DoneMessage) {
+    fmt.Printf("🍖 Start meat processing for pizza %d\n", pizza.PizzaId)
+    time.Sleep(1 * time.Second)
+
+    pizza.MsgDesc = fmt.Sprintf("Meat added to pizza %d", pizza.PizzaId)
+
+    // Send done event
+    done := DoneMessage{
+        PizzaId: pizza.PizzaId,
+        OrderId: pizza.OrderId,
+        DoneMsg: true,
+    }
+    sendJSON(ctx, writerDone, pizza.PizzaId, done)
+    fmt.Println("📤 Sent done message")
+
+    // Wait for next machine
+    fmt.Println("⏳ Waiting for vegetables machine to be free...")
+    <-doneChan
+    fmt.Println("✅ Vegetables machine ready")
+
+    // Send pizza to next machine
+    sendJSON(ctx, writerNext, pizza.PizzaId, pizza)
+    fmt.Printf("➡️ Sent pizza %d to vegetables machine\n", pizza.PizzaId)
+}
+
+func sendJSON(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
+    b, _ := json.Marshal(value)
+    writer.WriteMessages(ctx, kafka.Message{
+        Key:   []byte(fmt.Sprintf("%d", key)),
+        Value: b,
+    })
 }

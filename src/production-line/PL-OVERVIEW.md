@@ -85,14 +85,16 @@ Example message:
 ```
 
 ### Pizza Done Message
-- `id` (number): Unique order identifier.
+- `pizzaId` (int): Unique pizza identifier.
+- `orderId` (int): Unique order identifier.
 - `doneMsg` (boolean): Indicates if the pizza is done.
 
 Example message:
 
 ```json
 {
-  "id": 123,
+  "pizzaId": 1,
+  "orderId": 123,
   "doneMsg": true
 }
 ```
@@ -103,6 +105,7 @@ Sent to the `order-processing` topic when an order begins processing:
 
 ```json
 {
+  "pizzaId": 1,
   "orderId": 123,
   "startTimestamp": 1731571200000
 }
@@ -114,6 +117,7 @@ Sent to the `order-done` topic when an order is completed:
 
 ```json
 {
+  "pizzaId": 1,
   "orderId": 123,
   "endTimestamp": 1731571380000
 }
