@@ -33,7 +33,7 @@ producer = KafkaProducer(
 
 topic = "sauce-machine"
 try:
-    # time.sleep(10)
+    time.sleep(20)
     message = {
         "pizzaId": 1,
         "orderId": 12,

@@ -69,7 +69,7 @@ async def process_pizza(pizza):
     print(f"🥫 Sauce added to pizza for pizza {pizza_id}")
 
     # Update message description according to schema
-    pizza["msgDesc"] = f"Sacue added to pizza with id {pizza_id} in order {pizza["orderId"]}"
+    pizza["msgDesc"] = f"Sacue added to pizza with id {pizza_id} in order {pizza['orderId']}"
 
     # 1️⃣ Notify previous machine (Pizza Done Message)
     done_message = {
