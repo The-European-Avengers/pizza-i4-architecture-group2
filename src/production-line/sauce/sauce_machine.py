@@ -11,6 +11,9 @@ def shutdown_handler(sig, frame):
     global running
     print("\n🛑 Stopping service...")
     running = False
+    consumer.close()       # unblock main poll
+    consumer_done.close()  # unblock monitor poll
+    producer.close()
 
 signal.signal(signal.SIGINT, shutdown_handler)
 signal.signal(signal.SIGTERM, shutdown_handler)
@@ -21,7 +24,7 @@ produce_topic_next = "meat-machine" # cheese-machine
 produce_topic_done = "sauce-machine-done"
 consume_topic_done = "meat-machine-done" # cheese-machine-done
 
-KAFKA_BROKER = "kafka:29092"
+KAFKA_BROKER = "kafka:9092"
 
 # Producer
 producer = KafkaProducer(
@@ -59,14 +62,14 @@ async def process_pizza(pizza):
     global next_machine_busy
 
     pizza_id = pizza["pizzaId"]
-    print(f"🥫 Preparing sauce for pizza {data.get('id')}...")
+    print(f"🥫 Preparing sauce for pizza {pizza_id}...")
 
     # Simulated work
     await asyncio.sleep(1)
     print(f"🥫 Sauce added to pizza for pizza {pizza_id}")
 
     # Update message description according to schema
-    pizza["msgDesc"] = f"Sacue added to pizza with id {pizza_id} in order {pizza[orderId]}"
+    pizza["msgDesc"] = f"Sacue added to pizza with id {pizza_id} in order {pizza["orderId"]}"
 
     # 1️⃣ Notify previous machine (Pizza Done Message)
     done_message = {
@@ -82,7 +85,7 @@ async def process_pizza(pizza):
     # 2️⃣ Wait for next machine availability
     while next_machine_busy:
         print("⏳ Next machine busy, waiting...")
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(1)
 
     # 3️⃣ Send updated Pizza Order Message to next machine
     producer.send(produce_topic_next, pizza)

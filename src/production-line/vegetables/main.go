@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -19,8 +20,8 @@ type Pizza struct {
 	PizzaId        int      `json:"pizzaId"`
 	OrderId        int      `json:"orderId"`
 	OrderSize      int      `json:"orderSize"`
-	StartTimestamp int64    `json:"startTimestamp"`
-	EndTimestamp   *int64   `json:"endTimestamp"`
+	StartTimestamp float64  `json:"startTimestamp"`
+	EndTimestamp   *float64 `json:"endTimestamp"`
 	MsgDesc        string   `json:"msgDesc"`
 	Sauce          string   `json:"sauce"`
 	Baked          bool     `json:"baked"`
@@ -35,7 +36,13 @@ type DoneMessage struct {
 	DoneMsg bool `json:"doneMsg"`
 }
 
-// --------------------------------------------------------
+// -------------------- GLOBAL STATE --------------------
+
+var (
+	ovenBusy    = false
+	freezerBusy = false
+	mu          sync.Mutex
+)
 
 func main() {
 	consumeTopic := "vegetables-machine"
@@ -46,11 +53,11 @@ func main() {
 	produceTopicNextFreezer := "freezer-machine"
 	produceTopicDone := "vegetables-machine-done"
 
-	kafkaAddr := "kafka:29092"
+	kafkaAddr := "kafka:9092"
 
 	msgChan := make(chan Pizza)
-	ovenDoneChan := make(chan DoneMessage)
-	freezerDoneChan := make(chan DoneMessage)
+	ovenDoneChan := make(chan DoneMessage, 1)
+	freezerDoneChan := make(chan DoneMessage, 1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -85,9 +92,8 @@ func main() {
 		case <-ctx.Done():
 			fmt.Println("✔ Clean shutdown")
 			return
-
 		case pizza := <-msgChan:
-			processPizza(ctx, pizza, writerDone, writerOven, writerFreezer, ovenDoneChan, freezerDoneChan)
+			go processPizza(ctx, pizza, writerDone, writerOven, writerFreezer, ovenDoneChan, freezerDoneChan)
 		}
 	}
 }
@@ -112,7 +118,11 @@ func consumePizza(ctx context.Context, broker, topic string, out chan<- Pizza) {
 	for {
 		m, err := reader.ReadMessage(ctx)
 		if err != nil {
-			return
+			if ctx.Err() != nil {
+				return
+			}
+			log.Println("❌ Error reading pizza message:", err)
+			continue
 		}
 		var pizza Pizza
 		if err := json.Unmarshal(m.Value, &pizza); err != nil {
@@ -135,13 +145,27 @@ func consumeDone(ctx context.Context, broker, topic string, out chan<- DoneMessa
 	for {
 		m, err := reader.ReadMessage(ctx)
 		if err != nil {
-			return
+			if ctx.Err() != nil {
+				return
+			}
+			log.Println("❌ Error reading done message:", err)
+			continue
 		}
 		var done DoneMessage
 		if err := json.Unmarshal(m.Value, &done); err != nil {
 			log.Println("⚠️ Bad done JSON:", err)
 			continue
 		}
+
+		// Update busy flags
+		mu.Lock()
+		if topic == "oven-machine-done" {
+			ovenBusy = false
+		} else if topic == "freezer-machine-done" {
+			freezerBusy = false
+		}
+		mu.Unlock()
+
 		out <- done
 	}
 }
@@ -157,7 +181,6 @@ func processPizza(
 ) {
 	fmt.Printf("🥬 Adding veggies to pizza %d\n", pizza.PizzaId)
 	time.Sleep(1 * time.Second)
-
 	pizza.MsgDesc = fmt.Sprintf("Veggies added to pizza %d", pizza.PizzaId)
 
 	// 1️⃣ Send vegetables-machine-done
@@ -169,30 +192,57 @@ func processPizza(
 	sendJSON(ctx, writerDone, pizza.PizzaId, doneMsg)
 	fmt.Println("📤 Sent vegetables-machine-done")
 
-	// 2️⃣ If pizza is baked → next step is OVEN
+	// 2️⃣ Wait for next machine depending on Baked flag
 	if pizza.Baked {
-		fmt.Println("🔥 Pizza needs baking → waiting for oven-machine to be free...")
-		<-ovenDoneChan
-		fmt.Println("🔥 Oven is free → sending pizza")
-
+		waitForMachine("oven", ovenDoneChan)
 		sendJSON(ctx, writerOven, pizza.PizzaId, pizza)
 		fmt.Printf("➡️ Sent pizza %d to oven-machine\n", pizza.PizzaId)
-		return
+	} else {
+		waitForMachine("freezer", freezerDoneChan)
+		sendJSON(ctx, writerFreezer, pizza.PizzaId, pizza)
+		fmt.Printf("➡️ Sent pizza %d to freezer-machine\n", pizza.PizzaId)
+	}
+}
+
+func waitForMachine(machine string, doneChan <-chan DoneMessage) {
+	mu.Lock()
+	var busy bool
+	if machine == "oven" {
+		busy = ovenBusy
+	} else {
+		busy = freezerBusy
+	}
+	mu.Unlock()
+
+	// If busy, wait for done message
+	if busy {
+		fmt.Printf("⏳ Waiting for %s-machine to be free...\n", machine)
+		<-doneChan
 	}
 
-	// 3️⃣ If pizza is NOT baked → goes to FREEZER
-	fmt.Println("❄️ Pizza does NOT need baking → waiting for freezer-machine to be free...")
-	<-freezerDoneChan
-	fmt.Println("❄️ Freezer is free → sending pizza")
-
-	sendJSON(ctx, writerFreezer, pizza.PizzaId, pizza)
-	fmt.Printf("➡️ Sent pizza %d to freezer-machine\n", pizza.PizzaId)
+	// Mark machine busy
+	mu.Lock()
+	if machine == "oven" {
+		ovenBusy = true
+	} else {
+		freezerBusy = true
+	}
+	mu.Unlock()
+	fmt.Printf("✅ %s-machine is now busy\n", machine)
 }
 
 func sendJSON(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
-	b, _ := json.Marshal(value)
-	writer.WriteMessages(ctx, kafka.Message{
+	b, err := json.Marshal(value)
+	if err != nil {
+		log.Println("❌ Failed to marshal JSON:", err)
+		return
+	}
+
+	err = writer.WriteMessages(ctx, kafka.Message{
 		Key:   []byte(fmt.Sprintf("%d", key)),
 		Value: b,
 	})
+	if err != nil {
+		log.Println("❌ Failed to write message:", err)
+	}
 }

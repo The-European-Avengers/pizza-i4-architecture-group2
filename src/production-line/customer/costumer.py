@@ -23,7 +23,7 @@ def shutdown_handler(sig, frame):
 signal.signal(signal.SIGINT, shutdown_handler)
 signal.signal(signal.SIGTERM, shutdown_handler)
 
-KAFKA_BROKER = "kafka:29092"
+KAFKA_BROKER = "kafka:9092"
 
 # Initialize Kafka producer
 producer = KafkaProducer(
@@ -33,20 +33,24 @@ producer = KafkaProducer(
 
 topic = "sauce-machine"
 try:
-    time.sleep(10)
+    # time.sleep(10)
     message = {
-        "id": 0,
-        "order_number": num_pizzas,
-        "timestamp": time.time(),
-        "sauce": "tomato sauce",
+        "pizzaId": 1,
+        "orderId": 12,
+        "orderSize": 2,
+        "startTimestamp": time.time(),
+        "endTimestamp": None,
+        "msgDesc": "Sauce added to pizza",
+        "sauce": "tomato",
         "baked": True,
-        "cheese": ["mozzarella", "parmesan"],
-        "meat": ["pepperoni", "bacon"],
-        "veggies": ["onion", "mushroom"]
+        "cheese": ["mozzarella"],
+        "meat": ["pepperoni", "sausage"],
+        "veggies": ["mushroom", "onion"]
     }
     producer.send(topic, message)
-    producer.flush()
-    message["id"] += 1
+    print(f"✅ Sent: {message} to topic '{topic}'")
+    message["pizzaId"] += 1
+    time.sleep(0.5)
     producer.send(topic, message)
     producer.flush()
     print(f"✅ Sent: {message} to topic '{topic}'")
