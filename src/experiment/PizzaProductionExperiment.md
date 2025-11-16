@@ -30,19 +30,19 @@ To simulate a customer order, run any of the following commands in a new termina
 Start an order for 10 pizzas:
 
 ```bash
-curl -X POST http://localhost:8081/start-order/10
+curl -X POST http://localhost:8082/start-order/10
 ```
 
 Start an order for 50 pizzas:
 
 ```bash
-curl -X POST http://localhost:8081/start-order/50
+curl -X POST http://localhost:8082/start-order/50
 ```
 
 Start an order for 100 pizzas:
 
 ```bash
-curl -X POST http://localhost:8081/start-order/100
+curl -X POST http://localhost:8082/start-order/100
 ```
 
 You can watch the logs in your docker-compose terminal to see the entire production line process the order one pizza at a time.
