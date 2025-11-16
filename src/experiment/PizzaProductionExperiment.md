@@ -263,3 +263,11 @@ Sent to `pizza-done` every time an individual pizza is completed:
   "endTimestamp": 1731571380000
 }
 ```
+
+
+## KSQLDB
+
+```sql
+SELECT * FROM order_latency EMIT CHANGES;
+SELECT * FROM pizza_latency EMIT CHANGES;
+````

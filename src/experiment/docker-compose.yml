@@ -239,6 +239,19 @@ services:
         condition: service_completed_successfully
     networks:
       - kafka-net
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: pizza-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ksqldb-server
+      - kafka
+    networks:
+      - kafka-net
+
 
 
 volumes:
