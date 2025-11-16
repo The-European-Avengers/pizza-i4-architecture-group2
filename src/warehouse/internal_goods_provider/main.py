@@ -1,5 +1,5 @@
 from src.py_helpers.kafka import KafkaClient
-import callbacks
+from callbacks import CallbackHandler
 import signal
 import sys
 
@@ -12,9 +12,10 @@ def shutdown_handler(sig, frame):
     sys.exit(0)
 
 signal.signal(signal.SIGINT, shutdown_handler)
+callback_handler = CallbackHandler(kafka_client)
 
-kafka_client.on_message(consume_topics[0], callbacks.on_supply_event)
-kafka_client.on_message(consume_topics[1], callbacks.on_goods_events)
+kafka_client.on_message(consume_topics[0], callback_handler.on_supply_event)
+kafka_client.on_message(consume_topics[1], callback_handler.on_goods_events)
 
 kafka_client.start()
 print('Internal Goods Provider is running')
