@@ -264,10 +264,184 @@ Sent to `pizza-done` every time an individual pizza is completed:
 }
 ```
 
-
 ## KSQLDB
+
+This section defines the KSQLDB statements used to calculate and monitor end-to-end order and individual pizza latency by joining the **start** and **done** messages from the Kafka topics.
+
+### 1\. Streams and Tables Definitions
+
+These definitions create the necessary streams (raw event sources) and tables (stateful views used for joins) from the Kafka topics.
+
+```sql
+-- -----------------------------
+-- STREAMS
+-- -----------------------------
+
+-- Stream of completed pizza messages from the 'pizza-done' topic
+CREATE STREAM pizza_steps_raw (
+    pizzaId INT,
+    orderId INT,
+    orderSize INT,
+    startTimestamp BIGINT,
+    endTimestamp BIGINT,
+    msgDesc VARCHAR,
+    sauce VARCHAR,
+    baked BOOLEAN,
+    cheese ARRAY<VARCHAR>,
+    meat ARRAY<VARCHAR>,
+    veggies ARRAY<VARCHAR>
+) WITH (
+    KAFKA_TOPIC='pizza-done',
+    VALUE_FORMAT='JSON'
+);
+
+-- Stream for when an order starts processing
+CREATE STREAM order_processing_stream (
+    orderId INT,
+    orderSize INT,
+    startTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='order-processing',
+    VALUE_FORMAT='JSON'
+);
+
+-- Stream for when an order is completed
+CREATE STREAM order_done_stream (
+    orderId INT,
+    endTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='order-done',
+    VALUE_FORMAT='JSON'
+);
+
+-- Stream for the very first step of a pizza (Dough Machine)
+CREATE STREAM dough_stream (
+    pizzaId INT,
+    orderId INT,
+    startTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='dough-machine',
+    VALUE_FORMAT='JSON'
+);
+
+-- Stream rekeyed by pizzaId for efficient joins
+CREATE STREAM dough_stream_rekeyed AS
+SELECT
+    pizzaId,
+    orderId,
+    startTimestamp
+FROM dough_stream
+PARTITION BY pizzaId;
+
+-- -----------------------------
+-- TABLES (Aggregated State for Joins)
+-- -----------------------------
+
+-- Table to track the start time and size of an order
+CREATE TABLE order_processing_table AS
+SELECT
+    orderId,
+    LATEST_BY_OFFSET(orderSize) AS ORDER_SIZE,
+    MIN(startTimestamp) AS start_ts
+FROM order_processing_stream
+GROUP BY orderId
+EMIT CHANGES;
+
+-- Table to track the completion time of an order
+CREATE TABLE order_done_table AS
+SELECT
+    orderId,
+    MAX(endTimestamp) AS end_ts
+FROM order_done_stream
+GROUP BY orderId
+EMIT CHANGES;
+
+-- Table to track the start time of each individual pizza
+CREATE TABLE pizza_start_table AS
+SELECT
+    pizzaId,
+    LATEST_BY_OFFSET(orderId) AS orderId,
+    MIN(startTimestamp) AS startTimestamp
+FROM dough_stream_rekeyed
+GROUP BY pizzaId
+EMIT CHANGES;
+
+-- Table to track the completion time of each individual pizza
+CREATE TABLE pizza_end_table AS
+SELECT
+    pizzaId,
+    LATEST_BY_OFFSET(orderId) AS orderId,
+    MAX(endTimestamp) AS endTimestamp
+FROM pizza_steps_raw
+GROUP BY pizzaId
+EMIT CHANGES;
+```
+
+-----
+
+### 2\. Latency Calculation Tables
+
+These tables join the start and end timestamps to calculate the total latency for both orders and individual pizzas.
+
+```sql
+-- Table: End-to-end latency for each order
+CREATE TABLE order_latency AS
+SELECT
+    p.orderId AS orderId,
+    p.ORDER_SIZE AS orderSize,
+    p.start_ts AS startTimestamp,
+    d.end_ts AS endTimestamp,
+    (d.end_ts - p.start_ts) AS latencyMs
+FROM order_processing_table p
+LEFT JOIN order_done_table d
+    ON p.orderId = d.orderId
+EMIT CHANGES;
+
+-- Table: End-to-end latency for each individual pizza
+CREATE TABLE pizza_latency AS
+SELECT
+    s.pizzaId,
+    s.orderId,
+    s.startTimestamp,
+    e.endTimestamp,
+    (e.endTimestamp - s.startTimestamp) AS latencyMs
+FROM pizza_start_table s
+LEFT JOIN pizza_end_table e
+    ON s.pizzaId = e.pizzaId
+EMIT CHANGES;
+```
+
+-----
+
+### 3\. Monitoring Queries
+
+Use these queries in Redpanda Console or the KSQLDB CLI to monitor latency in real-time.
+
+| Measurement | KSQLDB Query |
+| :--- | :--- |
+| **Order Latency** | `SELECT * FROM order_latency EMIT CHANGES;` |
+| **Pizza Latency** | `SELECT * FROM pizza_latency EMIT CHANGES;` |
+
+**Example Output (Order Latency):**
 
 ```sql
 SELECT * FROM order_latency EMIT CHANGES;
++---------------+---------------+---------------+---------------+---------------+
+|ORDERID        |ORDERSIZE      |STARTTIMESTAMP |ENDTIMESTAMP   |LATENCYMS      |
++---------------+---------------+---------------+---------------+---------------+
+|349            |2              |1763312501613  |null           |null           |
+|349            |2              |1763312501613  |1763312520802  |19189          |
+```
+
+**Example Output (Pizza Latency):**
+
+```sql
 SELECT * FROM pizza_latency EMIT CHANGES;
-````
++---------------+---------------+---------------+---------------+---------------+
+|PIZZAID        |ORDERID        |STARTTIMESTAMP |ENDTIMESTAMP   |LATENCYMS      |
++---------------+---------------+---------------+---------------+---------------+
+|1              |349            |1763312501613  |null           |null           |
+|2              |349            |1763312501613  |null           |null           |
+|1              |349            |1763312501613  |1763312518039  |16426          |
+|2              |349            |1763312501613  |1763312520802  |19189          |
+```
