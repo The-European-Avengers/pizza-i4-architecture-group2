@@ -1,0 +1,3 @@
+# Ignore Maven build artifacts
+target/
+.mvn/
