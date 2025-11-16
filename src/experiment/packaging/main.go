@@ -39,8 +39,15 @@ type PackagingDone struct {
 
 // Final order done message → MUST include endTimestamp
 type OrderDone struct {
-	OrderId      int   `json:"orderId"`
-	EndTimestamp int64 `json:"endTimestamp"`
+	OrderId      int     `json:"orderId"`
+	EndTimestamp float64 `json:"endTimestamp"`
+}
+
+type PizzaDone struct {
+	OrderId      int     `json:"orderId"`
+	OrderSize    int     `json:"orderSize"`
+	PizzaId      int     `json:"pizzaId"`
+	EndTimestamp float64 `json:"endTimestamp"`
 }
 
 // Track pizzas per order safely
@@ -53,6 +60,7 @@ func main() {
 	consumeTopic := "packaging-machine"
 	produceTopicDone := "packaging-machine-done"
 	produceOrderDone := "order-done"
+	producePizzaDone := "pizza-done"
 
 	kafkaAddr := "kafka-experiment:29092"
 
@@ -76,8 +84,11 @@ func main() {
 	// producers
 	writerDone := newWriter(kafkaAddr, produceTopicDone)
 	writerOrderDone := newWriter(kafkaAddr, produceOrderDone)
+	writerPizzaDone := newWriter(kafkaAddr, producePizzaDone)
+
 	defer writerDone.Close()
 	defer writerOrderDone.Close()
+	defer writerPizzaDone.Close()
 
 	fmt.Println("📦 Packaging machine ready")
 
@@ -87,7 +98,7 @@ func main() {
 			fmt.Println("✔ Clean shutdown")
 			return
 		case pizza := <-msgChan:
-			go processPizza(ctx, pizza, writerDone, writerOrderDone)
+			go processPizza(ctx, pizza, writerDone, writerOrderDone, writerPizzaDone)
 		}
 	}
 }
@@ -133,6 +144,7 @@ func processPizza(
 	pizza Pizza,
 	writerDone *kafka.Writer,
 	writerOrderDone *kafka.Writer,
+	writerPizzaDone *kafka.Writer,
 ) {
 	fmt.Printf("📦 Packaging pizza %d (order %d)\n", pizza.PizzaId, pizza.OrderId)
 	time.Sleep(1 * time.Second) // simulate work
@@ -149,6 +161,16 @@ func processPizza(
 	sendJSON(ctx, writerDone, pizza.PizzaId, doneMsg)
 	fmt.Printf("📤 Sent packaging-done for pizza %d\n", pizza.PizzaId)
 
+	end := time.Now().UnixMilli()
+	//Send to pizza-done topic
+	pizzaDoneMsg := PizzaDone{
+		PizzaId:      pizza.PizzaId,
+		OrderId:      pizza.OrderId,
+		EndTimestamp: float64(end),
+	}
+
+	sendJSON(ctx, writerPizzaDone, pizza.PizzaId, pizzaDoneMsg)
+
 	// Thread-safe count update
 	mu.Lock()
 	pizzasCompleted[pizza.OrderId]++
@@ -157,10 +179,10 @@ func processPizza(
 
 	// If all pizzas packaged → send order-done
 	if completed == pizza.OrderSize {
-		end := time.Now().UnixMilli()
+
 		orderDone := OrderDone{
 			OrderId:      pizza.OrderId,
-			EndTimestamp: end,
+			EndTimestamp: float64(end),
 		}
 		sendJSON(ctx, writerOrderDone, pizza.OrderId, orderDone)
 		fmt.Printf("🎉 Order %d completed → sent order-done\n", pizza.OrderId)

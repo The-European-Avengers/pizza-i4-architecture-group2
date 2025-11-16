@@ -75,6 +75,17 @@ services:
     networks:
       - kafka-net
 
+  # ---- Set Up KSQLDB scripts ---
+  ksql-init:
+    image: confluentinc/cp-ksqldb-cli:7.6.0
+    container_name: ksqldb-init
+    depends_on:
+      - ksqldb-server
+    entrypoint: ["/bin/bash", "/ksql-scripts/init.sh"]
+    volumes:
+      - ./ksqlDB:/ksql-scripts
+    networks:
+      - kafka-net
 
   # --- UI for Kafka ---
   redpanda-console:

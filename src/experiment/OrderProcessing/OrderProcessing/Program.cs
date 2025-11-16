@@ -226,6 +226,7 @@ public class OrderProcessingService : BackgroundService
                     var orderProcessingMessage = new OrderProcessingMessage
                     {
                         OrderId = pizza.OrderId,
+                        OrderSize = pizza.OrderSize,
                         StartTimestamp = productionStartTime // Use the real production start time
                     };
                     // Send the message (fire-and-forget, don't block the pizza)
@@ -256,6 +257,7 @@ public class OrderProcessingService : BackgroundService
 public class OrderProcessingMessage
 {
     [JsonPropertyName("orderId")] public int OrderId { get; set; }
+    [JsonPropertyName("orderSize")] public int OrderSize { get; set; }
     [JsonPropertyName("startTimestamp")] public long StartTimestamp { get; set; }
 }
 

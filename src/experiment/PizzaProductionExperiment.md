@@ -87,7 +87,6 @@ To experiment, we intentionally implemented the production line using multiple p
 - **VegetablesSlicer**: Selects and applies vegetable toppings.
 - **Packaging-robot**: Packages finished pizzas into boxes.
 
-
 ## Kafka Topics
 
 These are all Kafka topics used by the system:
@@ -105,7 +104,6 @@ These are all Kafka topics used by the system:
 - `order-stack`
 - `order-processing`
 - `order-done`
-
 
 ## Production Line Topics
 
@@ -133,7 +131,6 @@ The same structure applies to all other machines:
 - **`order-stack`**: Queue of orders waiting to be processed. When multiple orders arrive, they are stored here and processed sequentially. Future enhancements include priority-aware ordering.
 - **`order-processing`**: Emitted when an order starts processing, including its start timestamp.
 - **`order-done`**: Emitted when all pizzas for an order are completed, including the completion timestamp.
-
 
 ## Kafka Messages
 
@@ -196,6 +193,7 @@ Emitted to `order-processing` when an order starts:
 ```json
 {
   "orderId": 123,
+  "orderSize": 3,
   "startTimestamp": 1731571200000
 }
 ```
@@ -251,6 +249,7 @@ Used to store pending orders in `order-stack` (future enhancement):
 Sent to `pizza-done` every time an individual pizza is completed:
 
 - `orderId`
+- `orderSize`
 - `pizzaId`
 - `endTimestamp`
 
@@ -259,6 +258,7 @@ Sent to `pizza-done` every time an individual pizza is completed:
 ```json
 {
   "orderId": 123,
+  "orderSize": 3,
   "pizzaId": 1,
   "endTimestamp": 1731571380000
 }
