@@ -1,154 +1,154 @@
-# Production Line Experiment
+# Production Line Experiment: Real-Time Pizza Factory
+
+This experiment simulates a pizza production line using **Docker** and **Kafka** (specifically **Redpanda**) to model a distributed, event-driven system. Machines implemented in different programming languages communicate exclusively by producing and consuming structured JSON messages from shared Kafka topics.
+
 
 ## Quick Start
 
-### 1. Build and Run All Services
+### 1\. Build and Run All Services 
 
-All services (Kafka, C# machines, Java machines) are containerized. Run the following command from the root experiment folder (where your `docker-compose.yml` is).
+All services (Kafka, KSQLDB, and the polyglot machines) are containerized. Run the following command from the root experiment folder (where your `docker-compose.yml` is). The **`--build`** flag ensures all services are compiled fresh.
 
 ```bash
 docker-compose up --build
 ```
 
 **What to Expect:**
-You will first see the `kafka-init` service start. It will connect to Kafka, create all the necessary topics (e.g., `dough-machine`, `dough-machine-done`), and then exit successfully. Once it is finished, docker-compose will automatically start all the other services (`order-processor`, `dough-machine`, etc.).
 
-Wait for all services to log that they are "subscribed" and "ready."
+  * You will first see the **`kafka-init`** service start. It connects to Kafka, creates all the necessary topics (e.g., `dough-machine`, `dough-machine-done`), and then exits successfully.
+  * Once initialization is finished, Docker Compose automatically starts all other services (`order-processor`, `dough-machine`, etc.).
+  * Wait for all services to log that they are **"subscribed"** and **"ready."**
 
-### 2. Monitor Kafka (Optional)
 
-To monitor Kafka topics in real-time, open Redpanda Console in your browser:
+### 2\. Monitor Kafka
+
+To monitor the flow of messages and status of topics in real-time, open **Redpanda Console** in your browser:
 
 ```
 http://localhost:8090/
 ```
 
-### 3. Run an Order
+### 3\. Run an Order 
 
-To simulate a customer order, run any of the following commands in a new terminal:
+The **OrderProcessing** service exposes an API to inject a new order into the system. Run any of the following commands in a **new terminal** to simulate a customer order:
 
-Start an order for 10 pizzas:
+| Command | Pizzas | Description |
+| :--- | :--- | :--- |
+| `curl -X POST http://localhost:8082/start-order/10` | **10** | A small test order. |
+| `curl -X POST http://localhost:8082/start-order/50` | **50** | A standard-sized order. |
+| `curl -X POST http://localhost:8082/start-order/100` | **100** | A large-scale test order. |
 
-```bash
-curl -X POST http://localhost:8082/start-order/10
-```
+You can watch the logs in your `docker-compose` terminal to see the entire production line process the order one pizza at a time.
 
-Start an order for 50 pizzas:
 
-```bash
-curl -X POST http://localhost:8082/start-order/50
-```
+### 4\. Analyze Data
 
-Start an order for 100 pizzas:
+The KSQLDB tables calculate real-time latency. You can access this data via a simple web API for analysis.
 
-```bash
-curl -X POST http://localhost:8082/start-order/100
-```
+| Data | Endpoint (JSON) | Endpoint (CSV Download) |
+| :--- | :--- | :--- |
+| **Order Latency** | `http://localhost:8000/ksql/order_latency/json` | `http://localhost:8000/ksql/order_latency/download` |
+| **Pizza Latency** | `http://localhost:8000/ksql/pizza_latency/json` | `http://localhost:8000/ksql/pizza_latency/download` |
 
-You can watch the logs in your docker-compose terminal to see the entire production line process the order one pizza at a time.
 
-### 4. Run a New Experiment
+### 5\. Run a Clean Experiment 
 
-This is a critical step. Kafka saves all your messages to a data volume. If you just restart the services, the order-processor will re-read old "done" messages from the last run.
+Kafka saves all messages to a persistent data volume. If you simply restart the containers, the `order-processor` might re-read old "done" messages from the previous run, corrupting the new experiment data.
 
-To run a clean, new experiment, you must first stop and delete the containers AND the Kafka data volume:
+To run a **clean, new experiment**, you must stop and delete the containers **AND** the Kafka data volume:
 
 ```bash
 docker-compose down -v
 ```
 
-After this command finishes, you can go back to Step 1 (`docker-compose up --build`) to start a fresh run.
+After this command finishes, you can safely go back to Step 1 (`docker-compose up --build`) to start a fresh run.
 
-## Folder Structure
 
-Each service lives in its own folder and includes a dedicated `Dockerfile`.
-To experiment, we intentionally implemented the production line using multiple programming languages.
+## Folder Structure and Technology Stack
 
-### C#
+Each service lives in its own folder and includes a dedicated `Dockerfile`. The production line is intentionally implemented using multiple programming languages to demonstrate polyglot microservices integration via Kafka.
 
-- **KafkaInitializer**: Bootstraps the system by creating all required Kafka topics.
-- **OrderProcessing**: Manages incoming orders and dispatches pizzas to the first machine in the production line.
-- **DoughMachine**: Simulates the preparation of raw dough.
-- **DoughShaper**: Simulates shaping the dough into pizza bases.
+### C\# 
 
-### Java
+| Service | Role |
+| :--- | :--- |
+| **KafkaInitializer** | Bootstraps the system by creating all required Kafka topics. |
+| **OrderProcessing** | Manages incoming orders and dispatches pizzas to the first machine (`dough-machine`). |
+| **DoughMachine** | Simulates the preparation of raw dough. |
+| **DoughShaper** | Simulates shaping the dough into pizza bases. |
 
-- **CheeseGrater**: Simulates grating and adding cheese to the pizza.
+### Java 
 
-### Python
+| Service | Role |
+| :--- | :--- |
+| **CheeseGrater** | Simulates grating and adding cheese to the pizza. |
 
-- **SauceMachine**: Chooses and applies the correct sauce to the pizza.
-- **Oven**: Handles the baking process.
-- **Freezer**: Handles the freezing step for pizzas that require freezing.
+### Python 
 
-### Go
+| Service | Role |
+| :--- | :--- |
+| **SauceMachine** | Chooses and applies the correct sauce to the pizza. |
+| **Oven** | Handles the baking process. |
+| **Freezer** | Handles the freezing step for pizzas that require freezing. |
 
-- **MeatSlicer**: Selects and applies meat toppings.
-- **VegetablesSlicer**: Selects and applies vegetable toppings.
-- **Packaging-robot**: Packages finished pizzas into boxes.
+### Go 
 
-## Kafka Topics
+| Service | Role |
+| :--- | :--- |
+| **MeatSlicer** | Selects and applies meat toppings. |
+| **VegetablesSlicer** | Selects and applies vegetable toppings. |
+| **Packaging-robot** | Packages finished pizzas into boxes, signaling **`pizza-done`**. |
 
-These are all Kafka topics used by the system:
 
-- `dough-machine` / `dough-machine-done`
-- `dough-shaper` / `dough-shaper-done`
-- `sauce-machine` / `sauce-machine-done`
-- `cheese-machine` / `cheese-machine-done`
-- `meat-machine` / `meat-machine-done`
-- `vegetables-machine` / `vegetables-machine-done`
-- `freezer-machine` / `freezer-machine-done`
-- `oven-machine` / `oven-machine-done`
-- `packaging-machine` / `packaging-machine-done`
-- `pizza-done`
-- `order-stack`
-- `order-processing`
-- `order-done`
+## Kafka Topics Architecture
 
-## Production Line Topics
+The system uses a set of topics for the main workflow and another set for order tracking and observability.
 
-Each machine communicates exclusively through Kafka.
-A machine **consumes** from its assigned topic and **produces** to the next machine’s topic.
-Additionally, every machine has a `-done` topic that signals it is ready for the next pizza.
+### Production Line Topics (Machine Flow)
 
-- `dough-machine`: Notifies the dough machine about the next pizza to prepare.
-- `dough-machine-done`: Emitted when the dough machine finishes its task.
+Each machine operates as a Consumer-Processor-Producer: it **consumes** from its assigned topic and **produces** to the next machine's topic. Additionally, every machine emits a small message to a dedicated `-done` topic to signal it is ready for the next pizza payload.
 
-The same structure applies to all other machines:
+| Topic Pair | Consuming Machine | Producing Machine (Next Step) |
+| :--- | :--- | :--- |
+| `dough-machine` / `dough-machine-done` | **DoughMachine** | `dough-shaper` |
+| `dough-shaper` / `dough-shaper-done` | **DoughShaper** | `sauce-machine` |
+| `sauce-machine` / `sauce-machine-done` | **SauceMachine** | `cheese-machine` |
+| `cheese-machine` / `cheese-machine-done` | **CheeseGrater** | `meat-machine` |
+| `meat-machine` / `meat-machine-done` | **MeatSlicer** | `vegetables-machine` |
+| `vegetables-machine` / `vegetables-machine-done`| **VegetablesSlicer** | `oven-machine` |
+| `oven-machine` / `oven-machine-done` | **Oven** | `freezer-machine` or `packaging-machine` |
+| `freezer-machine` / `freezer-machine-done` | **Freezer** | `packaging-machine` |
+| `packaging-machine` / `packaging-machine-done`| **Packaging-robot** | **`pizza-done`** |
 
-- `dough-shaper` / `dough-shaper-done`
-- `sauce-machine` / `sauce-machine-done`
-- `cheese-machine` / `cheese-machine-done`
-- `meat-machine` / `meat-machine-done`
-- `vegetables-machine` / `vegetables-machine-done`
-- `freezer-machine` / `freezer-machine-done`
-- `oven-machine` / `oven-machine-done`
-- `packaging-machine` / `packaging-machine-done`
+### Order Tracking and Management Topics
 
-## Order Tracking Topics
+| Topic | Producer(s) | Purpose |
+| :--- | :--- | :--- |
+| **`pizza-done`** | Packaging-robot | Records every completed pizza for latency calculation. |
+| **`order-processing`** | OrderProcessing | Emitted when an order **starts** processing. |
+| **`order-done`** | OrderProcessing | Emitted when *all* pizzas for an order are **completed**. |
+| **`order-stack`** | (Future Enhancement) | Queue of orders waiting to be processed (e.g., for priority queuing). |
 
-- **`pizza-done`**: Produced by the packaging machine to record when a pizza is completed. Used to measure production time.
-- **`order-stack`**: Queue of orders waiting to be processed. When multiple orders arrive, they are stored here and processed sequentially. Future enhancements include priority-aware ordering.
-- **`order-processing`**: Emitted when an order starts processing, including its start timestamp.
-- **`order-done`**: Emitted when all pizzas for an order are completed, including the completion timestamp.
 
-## Kafka Messages
+## Kafka Messages Schema
 
-The following section describes all Kafka message types used throughout the pizza production workflow, detailing the structure and purpose of each message exchanged between services.
+This section describes the four main message types exchanged between services.
 
-### Pizza Order Message
+### 1\. Pizza Order Message (The main payload)
 
-Describes the state of a single pizza and travels through all machines.
+This message describes the **current state of a single pizza** and is the primary payload that travels sequentially through all machines.
 
-- `pizzaId` (int): Unique ID for the pizza.
-- `orderId` (int): ID of the order this pizza belongs to.
-- `orderSize` (int): Total number of pizzas in the order.
-- `startTimestamp` (long): When order processing began.
-- `endTimestamp` (long): When order processing finished (nullable until complete).
-- `msgDesc` (string): Description of the current processing step.
-- `sauce` (string): Sauce type.
-- `baked` (boolean): Whether the pizza has been baked.
-- `cheese`, `meat`, `veggies` (array of strings): Toppings applied so far.
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `pizzaId` | `int` | Unique ID for the pizza. |
+| `orderId` | `int` | ID of the order this pizza belongs to. |
+| `orderSize` | `int` | Total number of pizzas in the order. |
+| `startTimestamp` | `long` | When the overall order processing began. |
+| `endTimestamp` | `long` | When this specific pizza processing finished (nullable until complete). |
+| `msgDesc` | `string` | Description of the current processing step. |
+| `sauce` | `string` | Sauce type applied. |
+| `baked` | `boolean` | Whether the pizza has been baked. |
+| `cheese`, `meat`, `veggies` | `array<string>` | Toppings applied so far. |
 
 **Example:**
 
@@ -168,13 +168,17 @@ Describes the state of a single pizza and travels through all machines.
 }
 ```
 
-### Step Done Message
+### 2\. Step Done Message (Machine Acknowledgement)
 
-Sent by a machine after finishing a task to signal readiness for the next pizza.
+Sent by a machine to its dedicated `-done` topic after successfully processing a `Pizza Order Message`. This signals to the overall flow controller (OrderProcessing logic) that the machine is ready for the next job.
 
-- `pizzaId`
-- `orderId`
-- `doneMsg` (boolean)
+**Topic:** `*-done` (e.g., `dough-machine-done`)
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `pizzaId` | `int` | ID of the pizza just completed. |
+| `orderId` | `int` | ID of the order. |
+| `doneMsg` | `boolean` | Always `true`, signals completion. |
 
 **Example:**
 
@@ -186,72 +190,25 @@ Sent by a machine after finishing a task to signal readiness for the next pizza.
 }
 ```
 
-### Order Processing Message
+### 3\. Order Processing & Done Messages (Order Flow Tracking)
 
-Emitted to `order-processing` when an order starts:
+These simple messages mark the start and end of an entire order, used primarily for end-to-end latency measurement.
 
-```json
-{
-  "orderId": 123,
-  "orderSize": 3,
-  "startTimestamp": 1731571200000
-}
-```
+| Message Type | Topic | Example |
+| :--- | :--- | :--- |
+| **Order Processing (Start)** | `order-processing` | `{"orderId": 123, "orderSize": 3, "startTimestamp": 1731571200000}` |
+| **Order Done (End)** | `order-done` | `{"orderId": 123, "endTimestamp": 1731571380000}` |
 
-### Order Done Message
+### 4\. Pizza Done Message (Final Latency Record)
 
-Emitted to `order-done` when all pizzas for the order are complete:
+Sent to the dedicated `pizza-done` topic by the **Packaging-robot** to finalize the record for an individual pizza's total time.
 
-```json
-{
-  "orderId": 123,
-  "endTimestamp": 1731571380000
-}
-```
-
-### Order Stack Message
-
-Used to store pending orders in `order-stack` (future enhancement):
-
-```json
-{
-  "orderId": 123,
-  "priority": 1,
-  "orderSize": 3,
-  "pizzas": [
-    {
-      "pizzaId": 1,
-      "sauce": "tomato",
-      "cheese": ["mozzarella"],
-      "meat": ["pepperoni"],
-      "veggies": ["mushroom"]
-    },
-    {
-      "pizzaId": 2,
-      "sauce": "pesto",
-      "cheese": ["mozzarella", "parmesan"],
-      "meat": [],
-      "veggies": ["basil", "garlic"]
-    },
-    {
-      "pizzaId": 3,
-      "sauce": "tomato",
-      "cheese": ["mozzarella"],
-      "meat": ["sausage"],
-      "veggies": ["onion", "bell pepper"]
-    }
-  ]
-}
-```
-
-### Pizza Done Message
-
-Sent to `pizza-done` every time an individual pizza is completed:
-
-- `orderId`
-- `orderSize`
-- `pizzaId`
-- `endTimestamp`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `orderId` | `int` | ID of the order. |
+| `orderSize` | `int` | Total number of pizzas in the order. |
+| `pizzaId` | `int` | Unique ID for the pizza. |
+| `endTimestamp` | `long` | The final completion timestamp for this pizza. |
 
 **Example:**
 
@@ -264,72 +221,41 @@ Sent to `pizza-done` every time an individual pizza is completed:
 }
 ```
 
-## KSQLDB
+
+## KSQLDB: Real-Time Observability
 
 This section defines the KSQLDB statements used to calculate and monitor end-to-end order and individual pizza latency by joining the **start** and **done** messages from the Kafka topics.
 
-### 1\. Streams and Tables Definitions
+### 1\. KSQL Streams and Tables Definitions
 
-These definitions create the necessary streams (raw event sources) and tables (stateful views used for joins) from the Kafka topics.
+These statements create the necessary streams (raw event sources) and tables (stateful views used for joins and aggregation) from the Kafka topics.
 
 ```sql
 -- -----------------------------
--- STREAMS
+-- STREAMS (Input Topics)
 -- -----------------------------
 
--- Stream of completed pizza messages from the 'pizza-done' topic
+-- Stream of completed pizza messages (final record)
 CREATE STREAM pizza_steps_raw (
-    pizzaId INT,
-    orderId INT,
-    orderSize INT,
-    startTimestamp BIGINT,
-    endTimestamp BIGINT,
-    msgDesc VARCHAR,
-    sauce VARCHAR,
-    baked BOOLEAN,
-    cheese ARRAY<VARCHAR>,
-    meat ARRAY<VARCHAR>,
-    veggies ARRAY<VARCHAR>
-) WITH (
-    KAFKA_TOPIC='pizza-done',
-    VALUE_FORMAT='JSON'
-);
+    pizzaId INT, orderId INT, orderSize INT, startTimestamp BIGINT, endTimestamp BIGINT,
+    msgDesc VARCHAR, sauce VARCHAR, baked BOOLEAN, cheese ARRAY<VARCHAR>, meat ARRAY<VARCHAR>, veggies ARRAY<VARCHAR>
+) WITH (KAFKA_TOPIC='pizza-done', VALUE_FORMAT='JSON');
 
 -- Stream for when an order starts processing
-CREATE STREAM order_processing_stream (
-    orderId INT,
-    orderSize INT,
-    startTimestamp BIGINT
-) WITH (
-    KAFKA_TOPIC='order-processing',
-    VALUE_FORMAT='JSON'
-);
+CREATE STREAM order_processing_stream (orderId INT, orderSize INT, startTimestamp BIGINT)
+WITH (KAFKA_TOPIC='order-processing', VALUE_FORMAT='JSON');
 
 -- Stream for when an order is completed
-CREATE STREAM order_done_stream (
-    orderId INT,
-    endTimestamp BIGINT
-) WITH (
-    KAFKA_TOPIC='order-done',
-    VALUE_FORMAT='JSON'
-);
+CREATE STREAM order_done_stream (orderId INT, endTimestamp BIGINT)
+WITH (KAFKA_TOPIC='order-done', VALUE_FORMAT='JSON');
 
--- Stream for the very first step of a pizza (Dough Machine)
-CREATE STREAM dough_stream (
-    pizzaId INT,
-    orderId INT,
-    startTimestamp BIGINT
-) WITH (
-    KAFKA_TOPIC='dough-machine',
-    VALUE_FORMAT='JSON'
-);
+-- Stream for the very first step of a pizza ('dough-machine' message)
+CREATE STREAM dough_stream (pizzaId INT, orderId INT, startTimestamp BIGINT)
+WITH (KAFKA_TOPIC='dough-machine', VALUE_FORMAT='JSON');
 
--- Stream rekeyed by pizzaId for efficient joins
+-- Recalculate partitioning key for efficient joins
 CREATE STREAM dough_stream_rekeyed AS
-SELECT
-    pizzaId,
-    orderId,
-    startTimestamp
+SELECT pizzaId, orderId, startTimestamp
 FROM dough_stream
 PARTITION BY pizzaId;
 
@@ -337,7 +263,7 @@ PARTITION BY pizzaId;
 -- TABLES (Aggregated State for Joins)
 -- -----------------------------
 
--- Table to track the start time and size of an order
+-- Table to track the **start time and size** of an order
 CREATE TABLE order_processing_table AS
 SELECT
     orderId,
@@ -347,7 +273,7 @@ FROM order_processing_stream
 GROUP BY orderId
 EMIT CHANGES;
 
--- Table to track the completion time of an order
+-- Table to track the **completion time** of an order
 CREATE TABLE order_done_table AS
 SELECT
     orderId,
@@ -356,32 +282,27 @@ FROM order_done_stream
 GROUP BY orderId
 EMIT CHANGES;
 
--- Table to track the start time of each individual pizza
+-- Table to track the **start time** of each individual pizza
 CREATE TABLE pizza_start_table AS
 SELECT
-    pizzaId,
-    LATEST_BY_OFFSET(orderId) AS orderId,
-    MIN(startTimestamp) AS startTimestamp
+    pizzaId, LATEST_BY_OFFSET(orderId) AS orderId, MIN(startTimestamp) AS startTimestamp
 FROM dough_stream_rekeyed
 GROUP BY pizzaId
 EMIT CHANGES;
 
--- Table to track the completion time of each individual pizza
+-- Table to track the **completion time** of each individual pizza
 CREATE TABLE pizza_end_table AS
 SELECT
-    pizzaId,
-    LATEST_BY_OFFSET(orderId) AS orderId,
-    MAX(endTimestamp) AS endTimestamp
+    pizzaId, LATEST_BY_OFFSET(orderId) AS orderId, MAX(endTimestamp) AS endTimestamp
 FROM pizza_steps_raw
 GROUP BY pizzaId
 EMIT CHANGES;
 ```
 
------
 
 ### 2\. Latency Calculation Tables
 
-These tables join the start and end timestamps to calculate the total latency for both orders and individual pizzas.
+These tables perform a `LEFT JOIN` on the start and end time tables to dynamically calculate the total latency (`latencyMs`).
 
 ```sql
 -- Table: End-to-end latency for each order
@@ -411,9 +332,9 @@ LEFT JOIN pizza_end_table e
 EMIT CHANGES;
 ```
 
------
 
-### 3\. Monitoring Queries
+
+### 3\. Monitoring Queries & Examples
 
 Use these queries in Redpanda Console or the KSQLDB CLI to monitor latency in real-time.
 
@@ -433,15 +354,103 @@ SELECT * FROM order_latency EMIT CHANGES;
 |349            |2              |1763312501613  |1763312520802  |19189          |
 ```
 
-**Example Output (Pizza Latency):**
+## Data Export API (FastAPI)
 
-```sql
-SELECT * FROM pizza_latency EMIT CHANGES;
-+---------------+---------------+---------------+---------------+---------------+
-|PIZZAID        |ORDERID        |STARTTIMESTAMP |ENDTIMESTAMP   |LATENCYMS      |
-+---------------+---------------+---------------+---------------+---------------+
-|1              |349            |1763312501613  |null           |null           |
-|2              |349            |1763312501613  |null           |null           |
-|1              |349            |1763312501613  |1763312518039  |16426          |
-|2              |349            |1763312501613  |1763312520802  |19189          |
+The production data from KSQLDB is exposed via a **FastAPI** service, allowing you to easily query and extract the latency tables in real-time using standard HTTP requests.
+
+### Base URL
+
+When running locally with Docker Compose, the API service is typically accessible on port **8000** (or as defined in your `docker-compose.yml`).
+
 ```
+http://localhost:8000/ksql/
+```
+
+### Available Endpoints
+
+Both endpoints support the `order_latency` and `pizza_latency` tables. The optional `limit` parameter controls the number of records returned.
+
+#### 1\. Get Table as JSON
+
+Retrieves the data as a JSON object, containing separate arrays for column headers and the data rows.
+
+```
+GET /ksql/{table_name}/json?limit={n}
+```
+
+| Parameter | Required/Optional | Description |
+| :--- | :--- | :--- |
+| `table_name` | **Required** | The KSQLDB table to query: `order_latency` or `pizza_latency`. |
+| `limit` | Optional (Default: 100) | Maximum number of rows to return. |
+
+**Example Request:**
+
+```
+GET http://localhost:8000/ksql/pizza_latency/json?limit=50
+```
+
+**Example Response:**
+
+```json
+{
+  "columns": ["PIZZAID", "ORDERID", "STARTTIMESTAMP", "ENDTIMESTAMP", "LATENCYMS"],
+  "rows": [
+    [101, 10, 1763309000000, 1763309025000, 25000],
+    [102, 10, 1763309005000, 1763309030000, 25000]
+  ]
+}
+```
+
+#### 2\. Get Table as CSV
+
+Retrieves the data as plain text with the correct `text/csv` header, making it easy to copy/paste or pipe the output into files or other tools.
+
+```
+GET /ksql/{table_name}/csv?limit={n}
+```
+
+| Parameter | Required/Optional | Description |
+| :--- | :--- | :--- |
+| `table_name` | **Required** | The KSQLDB table to query: `order_latency` or `pizza_latency`. |
+| `limit` | Optional (Default: 100) | Maximum number of rows to return. |
+
+**Example Request:**
+
+```
+GET http://localhost:8000/ksql/order_latency/csv?limit=50
+```
+
+**Response (CSV Content):**
+
+```csv
+ORDERID,ORDERSIZE,STARTTIMESTAMP,ENDTIMESTAMP,LATENCYMS
+10,5,1763308900000,1763308950000,50000
+11,10,1763308910000,1763308975000,65000
+```
+
+-----
+
+## Data Tables Description
+
+This data is sourced directly from the KSQLDB tables defined previously.
+
+### **Order Latency Table (`order_latency`)**
+
+| Column | Description |
+| :--- | :--- |
+| `ORDERID` | Unique ID of the customer order |
+| `ORDERSIZE` | Number of pizzas in the order |
+| `STARTTIMESTAMP` | Timestamp when order processing started |
+| `ENDTIMESTAMP` | Timestamp when order completed |
+| `LATENCYMS` | Total processing time in milliseconds |
+
+### **Pizza Latency Table (`pizza_latency`)**
+
+| Column | Description |
+| :--- | :--- |
+| `PIZZAID` | Unique ID of the pizza |
+| `ORDERID` | ID of the order this pizza belongs to |
+| `STARTTIMESTAMP` | Timestamp when pizza processing started |
+| `ENDTIMESTAMP` | Timestamp when pizza completed |
+| `LATENCYMS` | Total processing time in milliseconds |
+

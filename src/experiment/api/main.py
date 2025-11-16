@@ -26,7 +26,11 @@ def query_ksql(sql: str):
             schema = item["header"]["schema"]
             # schema example: 'STRUCT<PIZZAID INTEGER, ORDERID INTEGER, STARTTIMESTAMP BIGINT>'
             schema = schema.strip("STRUCT<>")
-            columns = [s.split()[0] for s in schema.split(",")]
+            
+            # --- MODIFIED LOGIC HERE ---
+            # Extract column names and strip any surrounding backticks (`)
+            columns = [s.split()[0].strip('`') for s in schema.split(",")]
+            # ---------------------------
             break
 
     # Extract rows
