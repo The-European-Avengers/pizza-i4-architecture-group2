@@ -2,7 +2,7 @@
 -- STREAMS
 -- -----------------------------
 
--- Stream crudo de pasos de pizza
+-- Raw pizza steps stream (Final completion events)
 CREATE STREAM pizza_steps_raw (
     pizzaId INT,
     orderId INT,
@@ -20,7 +20,8 @@ CREATE STREAM pizza_steps_raw (
     VALUE_FORMAT='JSON'
 );
 
--- Streams de órdenes
+
+-- Order processing start stream
 CREATE STREAM order_processing_stream (
     orderId INT,
     orderSize INT,
@@ -30,6 +31,7 @@ CREATE STREAM order_processing_stream (
     VALUE_FORMAT='JSON'
 );
 
+-- Order completion stream
 CREATE STREAM order_done_stream (
     orderId INT,
     endTimestamp BIGINT
@@ -38,7 +40,8 @@ CREATE STREAM order_done_stream (
     VALUE_FORMAT='JSON'
 );
 
--- Stream de dough machine
+
+-- Dough machine stream (First step of pizza processing)
 CREATE STREAM dough_stream (
     pizzaId INT,
     orderId INT,
@@ -48,20 +51,29 @@ CREATE STREAM dough_stream (
     VALUE_FORMAT='JSON'
 );
 
--- Stream rekeyed por pizzaId
+-- Stream rekeyed for pizza start events using the COMPOSITE KEY: (pizzaId, orderId)
+-- Kafka's ROWTIME is used as the actual pizza start time for accurate latency calculation.
 CREATE STREAM dough_stream_rekeyed AS
 SELECT
+    -- Create the composite key by combining the IDs
+    CAST(pizzaId AS VARCHAR) + '_' + CAST(orderId AS VARCHAR) AS PIZZA_ORDER_KEY,
     pizzaId,
     orderId,
-    startTimestamp
+    -- Renaming the field that holds the Order's start time
+    startTimestamp AS ORDER_START_TIME,
+    -- ROWTIME (the event's timestamp) is the accurate Pizza Start Time
+    ROWTIME AS PIZZA_START_TIME
 FROM dough_stream
-PARTITION BY pizzaId;
+PARTITION BY CAST(pizzaId AS VARCHAR) + '_' + CAST(orderId AS VARCHAR);
+
+-- NOTE: Order streams and tables (order_processing_stream, order_done_stream, etc.) are omitted here
+-- but rely on being correctly grouped by orderId only.
 
 -- -----------------------------
--- TABLAS
+-- TABLES
 -- -----------------------------
 
--- Tabla de ordenes: start (CON orderSize)
+-- Order Table: Tracks the consolidated start time and size of an order
 CREATE TABLE order_processing_table AS
 SELECT
     orderId,
@@ -71,7 +83,7 @@ FROM order_processing_stream
 GROUP BY orderId
 EMIT CHANGES;
 
--- Tabla de ordenes: end
+-- Order Table: Tracks the consolidated end time of an order
 CREATE TABLE order_done_table AS
 SELECT
     orderId,
@@ -80,11 +92,11 @@ FROM order_done_stream
 GROUP BY orderId
 EMIT CHANGES;
 
--- Tabla latencia por orden (SIMPLIFICADA - sin order_size_table)
+-- Table: End-to-end latency for each order
 CREATE TABLE order_latency AS
 SELECT
     p.orderId AS orderId,
-    p.ORDER_SIZE AS orderSize,     -- ✅ Viene directamente de order_processing_table
+    p.ORDER_SIZE AS orderSize,
     p.start_ts AS startTimestamp,
     d.end_ts AS endTimestamp,
     (d.end_ts - p.start_ts) AS latencyMs
@@ -93,35 +105,51 @@ LEFT JOIN order_done_table d
     ON p.orderId = d.orderId
 EMIT CHANGES;
 
--- Tabla de inicio de pizza
+
+-- Table: Pizza start time, grouped by PIZZA_ORDER_KEY
+-- Uses PIZZA_START_TIME (ROWTIME) for the individual pizza's start time.
 CREATE TABLE pizza_start_table AS
 SELECT
-    pizzaId,
-    LATEST_BY_OFFSET(orderId) AS orderId,
-    MIN(startTimestamp) AS startTimestamp
+    PIZZA_ORDER_KEY,
+    LATEST_BY_OFFSET(pizzaId) AS PIZZA_ID,
+    LATEST_BY_OFFSET(orderId) AS ORDER_ID,
+    -- Using the calculated PIZZA_START_TIME (from ROWTIME)
+    MIN(PIZZA_START_TIME) AS STARTTIMESTAMP 
 FROM dough_stream_rekeyed
-GROUP BY pizzaId
+GROUP BY PIZZA_ORDER_KEY
 EMIT CHANGES;
 
--- Tabla de fin de pizza
+-- Stream rekeyed for end events (pizza_steps_raw)
+CREATE STREAM pizza_steps_raw_rekeyed AS
+SELECT
+    CAST(pizzaId AS VARCHAR) + '_' + CAST(orderId AS VARCHAR) AS PIZZA_ORDER_KEY,
+    pizzaId,
+    orderId,
+    endTimestamp
+FROM pizza_steps_raw
+PARTITION BY CAST(pizzaId AS VARCHAR) + '_' + CAST(orderId AS VARCHAR);
+
+-- Pizza end table: Grouped by PIZZA_ORDER_KEY
 CREATE TABLE pizza_end_table AS
 SELECT
-    pizzaId,
-    LATEST_BY_OFFSET(orderId) AS orderId,
-    MAX(endTimestamp) AS endTimestamp
-FROM pizza_steps_raw
-GROUP BY pizzaId
+    PIZZA_ORDER_KEY,
+    LATEST_BY_OFFSET(pizzaId) AS PIZZA_ID,
+    LATEST_BY_OFFSET(orderId) AS ORDER_ID,
+    MAX(endTimestamp) AS ENDTIMESTAMP
+FROM pizza_steps_raw_rekeyed
+GROUP BY PIZZA_ORDER_KEY
 EMIT CHANGES;
 
--- Tabla latencia por pizza
+-- Table: End-to-end latency for each individual pizza, joined by PIZZA_ORDER_KEY
 CREATE TABLE pizza_latency AS
 SELECT
-    s.pizzaId,
-    s.orderId,
-    s.startTimestamp,
-    e.endTimestamp,
-    (e.endTimestamp - s.startTimestamp) AS latencyMs
+    s.PIZZA_ORDER_KEY,
+    s.PIZZA_ID,
+    s.ORDER_ID,
+    s.STARTTIMESTAMP, -- Now the accurate pizza start time
+    e.ENDTIMESTAMP,
+    (e.ENDTIMESTAMP - s.STARTTIMESTAMP) AS LATENCYMS
 FROM pizza_start_table s
 LEFT JOIN pizza_end_table e
-    ON s.pizzaId = e.pizzaId
+    ON s.PIZZA_ORDER_KEY = e.PIZZA_ORDER_KEY
 EMIT CHANGES;
