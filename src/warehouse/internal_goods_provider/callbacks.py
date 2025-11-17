@@ -1,5 +1,5 @@
 from src.py_helpers.kafka import KafkaClient
-
+from datetime import datetime
 
 class CallbackHandler:
 
@@ -16,3 +16,9 @@ class CallbackHandler:
             'order_id': 'random-uuid'
         })
 
+    def on_order_done(self, message):
+        print(f'Topic: {message.topic} Msg: {message.value}')
+        self.client.send('order-dispatch', {
+            'order_id': message.value['orderId'],
+            'endTimestamp': datetime.now().replace(microsecond=0)
+        })
