@@ -76,11 +76,6 @@ Each service lives in its own folder and includes a dedicated `Dockerfile`. The 
 | **OrderProcessing** | Manages incoming orders and dispatches pizzas to the first machine (`dough-machine`). |
 | **DoughMachine** | Simulates the preparation of raw dough. |
 | **DoughShaper** | Simulates shaping the dough into pizza bases. |
-
-### Java 
-
-| Service | Role |
-| :--- | :--- |
 | **CheeseGrater** | Simulates grating and adding cheese to the pizza. |
 
 ### Python 
@@ -230,109 +225,9 @@ This section defines the KSQLDB statements used to calculate and monitor end-to-
 
 These statements create the necessary streams (raw event sources) and tables (stateful views used for joins and aggregation) from the Kafka topics.
 
-```sql
--- -----------------------------
--- STREAMS (Input Topics)
--- -----------------------------
-
--- Stream of completed pizza messages (final record)
-CREATE STREAM pizza_steps_raw (
-    pizzaId INT, orderId INT, orderSize INT, startTimestamp BIGINT, endTimestamp BIGINT,
-    msgDesc VARCHAR, sauce VARCHAR, baked BOOLEAN, cheese ARRAY<VARCHAR>, meat ARRAY<VARCHAR>, veggies ARRAY<VARCHAR>
-) WITH (KAFKA_TOPIC='pizza-done', VALUE_FORMAT='JSON');
-
--- Stream for when an order starts processing
-CREATE STREAM order_processing_stream (orderId INT, orderSize INT, startTimestamp BIGINT)
-WITH (KAFKA_TOPIC='order-processing', VALUE_FORMAT='JSON');
-
--- Stream for when an order is completed
-CREATE STREAM order_done_stream (orderId INT, endTimestamp BIGINT)
-WITH (KAFKA_TOPIC='order-done', VALUE_FORMAT='JSON');
-
--- Stream for the very first step of a pizza ('dough-machine' message)
-CREATE STREAM dough_stream (pizzaId INT, orderId INT, startTimestamp BIGINT)
-WITH (KAFKA_TOPIC='dough-machine', VALUE_FORMAT='JSON');
-
--- Recalculate partitioning key for efficient joins
-CREATE STREAM dough_stream_rekeyed AS
-SELECT pizzaId, orderId, startTimestamp
-FROM dough_stream
-PARTITION BY pizzaId;
-
--- -----------------------------
--- TABLES (Aggregated State for Joins)
--- -----------------------------
-
--- Table to track the **start time and size** of an order
-CREATE TABLE order_processing_table AS
-SELECT
-    orderId,
-    LATEST_BY_OFFSET(orderSize) AS ORDER_SIZE,
-    MIN(startTimestamp) AS start_ts
-FROM order_processing_stream
-GROUP BY orderId
-EMIT CHANGES;
-
--- Table to track the **completion time** of an order
-CREATE TABLE order_done_table AS
-SELECT
-    orderId,
-    MAX(endTimestamp) AS end_ts
-FROM order_done_stream
-GROUP BY orderId
-EMIT CHANGES;
-
--- Table to track the **start time** of each individual pizza
-CREATE TABLE pizza_start_table AS
-SELECT
-    pizzaId, LATEST_BY_OFFSET(orderId) AS orderId, MIN(startTimestamp) AS startTimestamp
-FROM dough_stream_rekeyed
-GROUP BY pizzaId
-EMIT CHANGES;
-
--- Table to track the **completion time** of each individual pizza
-CREATE TABLE pizza_end_table AS
-SELECT
-    pizzaId, LATEST_BY_OFFSET(orderId) AS orderId, MAX(endTimestamp) AS endTimestamp
-FROM pizza_steps_raw
-GROUP BY pizzaId
-EMIT CHANGES;
-```
-
-
 ### 2\. Latency Calculation Tables
 
 These tables perform a `LEFT JOIN` on the start and end time tables to dynamically calculate the total latency (`latencyMs`).
-
-```sql
--- Table: End-to-end latency for each order
-CREATE TABLE order_latency AS
-SELECT
-    p.orderId AS orderId,
-    p.ORDER_SIZE AS orderSize,
-    p.start_ts AS startTimestamp,
-    d.end_ts AS endTimestamp,
-    (d.end_ts - p.start_ts) AS latencyMs
-FROM order_processing_table p
-LEFT JOIN order_done_table d
-    ON p.orderId = d.orderId
-EMIT CHANGES;
-
--- Table: End-to-end latency for each individual pizza
-CREATE TABLE pizza_latency AS
-SELECT
-    s.pizzaId,
-    s.orderId,
-    s.startTimestamp,
-    e.endTimestamp,
-    (e.endTimestamp - s.startTimestamp) AS latencyMs
-FROM pizza_start_table s
-LEFT JOIN pizza_end_table e
-    ON s.pizzaId = e.pizzaId
-EMIT CHANGES;
-```
-
-
 
 ### 3\. Monitoring Queries & Examples
 
@@ -353,6 +248,25 @@ SELECT * FROM order_latency EMIT CHANGES;
 |349            |2              |1763312501613  |null           |null           |
 |349            |2              |1763312501613  |1763312520802  |19189          |
 ```
+
+**Example Output (Pizza Latency)**
+```sql
+SELECT * FROM pizza_latency;
++---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+
+|S_PIZZA_ORDER_KEY          |S_PIZZA_ID                 |S_ORDER_ID                 |STARTTIMESTAMP             |ENDTIMESTAMP               |LATENCYMS                  |
++---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+
+|1_181                      |1                          |181                        |1763367145274              |1763367162756              |17482                      |
+|1_440                      |1                          |440                        |1763367138905              |1763367154218              |15313                      |
+|2_181                      |2                          |181                        |1763367145274              |1763367166045              |20771                      |
+|2_440                      |2                          |440                        |1763367138905              |1763367156896              |17991                      |
+|3_181                      |3                          |181                        |1763367145274              |1763367169768              |24494                      |
+|3_440                      |3                          |440                        |1763367138905              |1763367159538              |20633                      |
+|4_181                      |4                          |181                        |1763367145274              |1763367172284              |27010                      |
+|5_181                      |5                          |181                        |1763367145274              |1763367175402              |30128                      |
+|6_181                      |6                          |181                        |1763367145274              |1763367178524              |33250                      |
+````
+
+
 
 ## Data Export API (FastAPI)
 
