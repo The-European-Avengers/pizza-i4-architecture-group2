@@ -22,7 +22,7 @@ var topicsToCreate = new[]
     "freezer-machine", "freezer-machine-done",
     "oven-machine", "oven-machine-done",
     "packaging-machine", "packaging-machine-done",
-    "order-stack", "order-processing", "order-done"
+    "order-stack", "order-processing", "order-done", "pizza-done"
 };
 
 var adminConfig = new AdminClientConfig { BootstrapServers = kafkaBootstrapServers };

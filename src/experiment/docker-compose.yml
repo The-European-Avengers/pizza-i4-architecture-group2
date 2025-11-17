@@ -28,6 +28,65 @@ services:
     networks:
       - kafka-net
 
+  # --- Schema Registry (required by ksqlDB) ---
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.0
+    container_name: schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "kafka-experiment:29092"
+      SCHEMA_REGISTRY_HOST_NAME: "schema-registry"
+    networks:
+      - kafka-net
+
+  # --- ksqlDB Server ---
+  ksqldb-server:
+    image: confluentinc/cp-ksqldb-server:7.6.0
+    container_name: ksqldb-server
+    hostname: ksqldb-server
+    depends_on:
+      - kafka
+      - schema-registry
+    ports:
+      - "8088:8088"
+    environment:
+      KSQL_BOOTSTRAP_SERVERS: "kafka-experiment:29092"
+      KSQL_LISTENERS: "http://0.0.0.0:8088"
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      KSQL_KSQL_CONNECT_URL: ""
+      KSQL_CACHE_MAX_BYTES_BUFFERING: 0
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - kafka-net
+
+  # --- ksqlDB CLI ---
+  ksqldb-cli:
+    image: confluentinc/cp-ksqldb-cli:7.6.0
+    container_name: ksqldb-cli
+    depends_on:
+      - ksqldb-server
+    entrypoint: /bin/sh
+    tty: true
+    networks:
+      - kafka-net
+
+  # ---- Set Up KSQLDB scripts ---
+  ksql-init:
+    image: confluentinc/cp-ksqldb-cli:7.6.0
+    container_name: ksqldb-init
+    depends_on:
+      - ksqldb-server
+    entrypoint: ["/bin/bash", "/ksql-scripts/init.sh"]
+    volumes:
+      - ./ksqlDB:/ksql-scripts
+    networks:
+      - kafka-net
+
   # --- UI for Kafka ---
   redpanda-console:
     image: docker.redpanda.com/redpandadata/console:latest
@@ -57,11 +116,11 @@ services:
   # --- C# Services (Separate Solutions) ---
   order-processor:
     build:
-      context: ./OrderProcessingSolution
+      context: ./OrderProcessing
       dockerfile: ./OrderProcessing/Dockerfile
     container_name: order-processor
     ports:
-      - "8081:8080" # Host:Container
+      - "8082:8080" # Host:Container
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
@@ -72,7 +131,7 @@ services:
 
   dough-machine:
     build:
-      context: ./DoughMachineSolution
+      context: ./DoughMachine
       dockerfile: ./DoughMachine/Dockerfile
     container_name: dough-machine
     environment:
@@ -85,7 +144,7 @@ services:
 
   dough-shaper:
     build:
-      context: ./DoughShaperSolution
+      context: ./DoughShaper
       dockerfile: ./DoughShaper/Dockerfile
     container_name: dough-shaper
     environment:
@@ -180,6 +239,19 @@ services:
         condition: service_completed_successfully
     networks:
       - kafka-net
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: pizza-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ksqldb-server
+      - kafka
+    networks:
+      - kafka-net
+
 
 
 volumes:
