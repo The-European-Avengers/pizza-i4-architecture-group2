@@ -18,34 +18,34 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 
 # Initialize Kafka producer
 producer = KafkaProducer(
-    bootstrap_servers='127.0.0.1:9092',
+    bootstrap_servers='kafka:9092',
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
-topic = "test-topic"
+topic = "sauce-machine"
 counter = 0
 
 print(f"🚀 Producing messages to topic '{topic}' (Ctrl+C to stop)\n")
 
 try:
-    while running:
-        if counter % 2 == 0:
-            value = 'I need supplies!'
-            topic = 'supply-events.request'
-        else:
-            value = 'Please pick up the pizza!'
-            topic = 'goods-events.pickup'
+    i = 0
+    while i < 2 and running:
         message = {
             "id": counter,
-            "value": value,
-            "timestamp": time.time()
+            "timestamp": time.time(),
+            "sauce": "tomato sauce",
+            "baked": True,
+            "cheese": "mozzarella",
+            "meat": ["pepperoni", "bacon"],
+            "veggies": ["onion", "mushroom"]
         }
         producer.send(topic, message)
-        print(f"✅ Sent: {message}")
+        print(f"✅ Sent: {message} to topic '{topic}'")
         counter += 1
+        i += 1
 
         # Random delay between 0.5 and 2 seconds
-        time.sleep(random.uniform(0.5, 2.0))
+        time.sleep(5)
 
 except Exception as e:
     print(f"❌ Error: {e}")
