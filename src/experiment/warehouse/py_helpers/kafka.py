@@ -9,7 +9,7 @@ def get_consumer(topics: Union[list, str]) -> KafkaConsumer:
     """Helper function for getting Kafka Consumer object"""
     group_id = f"test-group-{uuid.uuid4()}"
     consumer = KafkaConsumer(
-        bootstrap_servers='127.0.0.1:9092',
+        bootstrap_servers='kafka-experiment:29092',
         auto_offset_reset='earliest',  # start from the earliest message
         enable_auto_commit=True,
         group_id=group_id,
@@ -22,7 +22,7 @@ def get_consumer(topics: Union[list, str]) -> KafkaConsumer:
 def get_producer():
     """Helper function for getting Kafka Producer object"""
     return KafkaProducer(
-        bootstrap_servers='127.0.0.1:9092',
+        bootstrap_servers='kafka-experiment:29092',
         value_serializer=lambda v: json.dumps(v).encode('utf-8')
     )
 
@@ -36,7 +36,7 @@ class KafkaClient:
     def __init__(
             self,
             topics: Union[list, str],
-            bootstrap_servers: str = '127.0.0.1:9092',
+            bootstrap_servers: str = 'kafka-experiment:29092',
             group_id: str = None
     ):
         """

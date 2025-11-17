@@ -1,4 +1,4 @@
-from src.py_helpers.kafka import KafkaClient
+from py_helpers.kafka import KafkaClient
 from datetime import datetime
 
 class CallbackHandler:

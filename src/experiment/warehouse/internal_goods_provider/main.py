@@ -1,5 +1,5 @@
-from src.py_helpers.kafka import KafkaClient
-from callbacks import CallbackHandler
+from py_helpers.kafka import KafkaClient
+from internal_goods_provider.callbacks import CallbackHandler
 import signal
 import sys
 
