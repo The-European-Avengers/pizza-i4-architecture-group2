@@ -1,4 +1,3 @@
-
 ## Deliverable 1: Experiment Design Document (Async-Only Latency)
 
 ### 1\. Selected Quality Attributes
