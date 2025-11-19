@@ -29,7 +29,8 @@ var topicsToCreate = new[]
     "sauce-machine-restock", "sauce-machine-restock-done",
     "cheese-machine-restock", "cheese-machine-restock-done",
     "meat-machine-restock", "meat-machine-restock-done",
-    "vegetables-machine-restock", "vegetables-machine-restock-done"
+    "vegetables-machine-restock", "vegetables-machine-restock-done", 
+    "packaging-machine-restock", "packaging-machine-restock-done"
 };
 
 var adminConfig = new AdminClientConfig { BootstrapServers = kafkaBootstrapServers };
