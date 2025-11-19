@@ -6,6 +6,8 @@ interface EnvVars {
   PORT: number;
   AUTH_MICROSERVICE_HOST: string;
   AUTH_MICROSERVICE_PORT: number;
+  ORDERING_MICROSERVICE_HOST: string;
+  ORDERING_MICROSERVICE_PORT: number;
 }
 
 const envsSchema = joi
@@ -13,6 +15,11 @@ const envsSchema = joi
     PORT: joi.number().required(),
     AUTH_MICROSERVICE_HOST: joi.string().required(),
     AUTH_MICROSERVICE_PORT: joi.number().required(),
+
+  // Added ordering microservice env var
+    ORDERING_MICROSERVICE_HOST: joi.string().required(),
+    ORDERING_MICROSERVICE_PORT: joi.number().required(),
+  
   })
   .unknown(true);
 
@@ -28,4 +35,6 @@ export const envs = {
   port: envVars.PORT,
   authMicroserviceHost: envVars.AUTH_MICROSERVICE_HOST,
   authMicroservicePort: envVars.AUTH_MICROSERVICE_PORT,
+  orderingMicroserviceHost: envVars.ORDERING_MICROSERVICE_HOST,
+  orderingMicroservicePort: envVars.ORDERING_MICROSERVICE_PORT,
 };

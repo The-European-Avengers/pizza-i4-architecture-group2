@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { OrdersService } from './orders.service';
-import { OrdersController } from './orders.controller';
+
+import { OrderStackController } from './order-stack.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({
-  controllers: [OrdersController],
-  providers: [OrdersService],
+  controllers: [OrderStackController],
+  providers: [],
   imports: [
     ClientsModule.register([
       {
@@ -13,14 +13,15 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
         transport: Transport.KAFKA,
         options: {
           client: {
+            clientId: 'client-gateway',
             brokers: ['localhost:9092'],
           },
           consumer: {
-            groupId: 'ordering-ms-consumer', // o uno dinámico si quieres varios instancias
+            groupId: 'order-stack',
           },
         },
       },
     ]),
   ],
 })
-export class OrdersModule {}
+export class OrderStackModule {}
