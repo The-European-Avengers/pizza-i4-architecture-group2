@@ -63,12 +63,12 @@ const MAX_STOCK = 100
 
 // Meat stock levels
 var meatStock = map[string]int{
-	"pepperoni":       100,
-	"sausage":         100,
-	"ham":             100,
-	"grilled chicken": 100,
-	"bacon":           100,
-	"ground beef":     100,
+	"pepperoni":       11,
+	"sausage":         11,
+	"ham":             11,
+	"grilled chicken": 11,
+	"bacon":           11,
+	"ground beef":     11,
 }
 
 var restockInProgress = false

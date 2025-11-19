@@ -52,8 +52,8 @@ app.MapPost("/start-order/{count:int}",
                 Sauce = "tomato",
                 Baked = (i % 2 == 0),
                 Cheese = ["mozzarella", "feta"],
-                Meat = ["salami"],
-                Veggies = ["peppers"]
+                Meat = ["ham"],
+                Veggies = ["mushroom", "spinach"]
             });
         }
     

@@ -57,21 +57,21 @@ var (
 
 	// Stock of all veggies
 	veggieStock = map[string]int{
-		"basil":             100,
-		"mushroom":          100,
-		"onion":             100,
-		"green pepper":      100,
-		"black olive":       100,
-		"red onion":         100,
-		"spinach":           100,
-		"truffle":           100,
-		"sun-dried tomato":  100,
-		"artichoke heart":   100,
-		"pineapple":         100,
-		"jalapeño":          100,
-		"red bell pepper":   100,
-		"scrambled egg":     100,
-		"chives":            100,
+		"basil":             11,
+		"mushroom":          11,
+		"onion":             11,
+		"green pepper":      11,
+		"black olive":       11,
+		"red onion":         11,
+		"spinach":           11,
+		"truffle":           11,
+		"sun-dried tomato":  11,
+		"artichoke heart":   11,
+		"pineapple":         11,
+		"jalapeño":          11,
+		"red bell pepper":   11,
+		"scrambled egg":     11,
+		"chives":            11,
 	}
 
 	restockInProgress = false

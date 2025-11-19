@@ -11,13 +11,13 @@ MAX_STOCK = 100
 
 # Sauce stock levels
 sauce_stock = {
-    "tomato": 100,
-    "BBQ Sauce": 100,
-    "Pesto": 100,
-    "Olive Oil": 100,
-    "Sriracha-Tomato Blend": 100,
-    "White Garlic Cream": 100,
-    "Hollandaise Sauce": 100
+    "tomato": 11,
+    "BBQ Sauce": 11,
+    "Pesto": 11,
+    "Olive Oil": 11,
+    "Sriracha-Tomato Blend": 11,
+    "White Garlic Cream": 1,
+    "Hollandaise Sauce": 11
 }
 
 def shutdown_handler(sig, frame):
@@ -213,7 +213,7 @@ async def process_pizza(pizza):
     producer.send(produce_topic_done, done_msg)
     producer.flush()
 
-    print(f"📤 Done event sent -> {produce_topic_done}")
+    print(f"📤 Done event sent -> {produce_topic_done} for pizza {pizza_id}")
 
     # Wait for next machine
     while next_machine_busy:
