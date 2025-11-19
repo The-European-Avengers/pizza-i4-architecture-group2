@@ -103,7 +103,7 @@ services:
   # --- NEW: Kafka Initializer Service ---
   kafka-init:
     build:
-      context: ./KafkaInitializerSolution
+      context: ./kafka-initializer
       dockerfile: ./KafkaInitializer/Dockerfile
     container_name: kafka-init
     environment:
@@ -116,7 +116,7 @@ services:
   # --- C# Services (Separate Solutions) ---
   order-processor:
     build:
-      context: ./OrderProcessing
+      context: ./order-processing
       dockerfile: ./OrderProcessing/Dockerfile
     container_name: order-processor
     ports:
@@ -131,7 +131,7 @@ services:
 
   dough-machine:
     build:
-      context: ./DoughMachine
+      context: ./sough-machine
       dockerfile: ./DoughMachine/Dockerfile
     container_name: dough-machine
     environment:
@@ -144,7 +144,7 @@ services:
 
   dough-shaper:
     build:
-      context: ./DoughShaper
+      context: ./dough-shaper
       dockerfile: ./DoughShaper/Dockerfile
     container_name: dough-shaper
     environment:
@@ -157,7 +157,7 @@ services:
 
   cheese-grater:
     build:
-      context: ./CheeseGraterSolution 
+      context: ./cheese 
       dockerfile: ./CheeseGrater/Dockerfile
     container_name: cheese-grater
     environment:
