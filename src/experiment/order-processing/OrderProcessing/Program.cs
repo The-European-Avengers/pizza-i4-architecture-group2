@@ -10,64 +10,163 @@ var builder = WebApplication.CreateBuilder(args);
 var kafkaBootstrapServers = Environment.GetEnvironmentVariable("KAFKA_BOOTSTRAP_SERVERS") ?? "localhost:9092";
 
 // --- Shared State ---
-// We create a single shared state object, just like the other services.
 builder.Services.AddSingleton<OrderState>();
+builder.Services.AddSingleton<RecipeRepository>();
 
 // --- Register Background Services ---
 builder.Services.AddSingleton<KafkaProducerService>(sp => 
     new KafkaProducerService(kafkaBootstrapServers, sp.GetRequiredService<ILogger<KafkaProducerService>>()));
 
-// Service 1: Listens for "done" signals from DoughMachine
+// Service 1: Listens for incoming orders from order-stack
+builder.Services.AddHostedService<OrderStackConsumer>();
+// Service 2: Listens for "done" signals from DoughMachine
 builder.Services.AddHostedService<DoughMachineSignalConsumer>();
-// Service 2: The main processing loop that sends pizzas
+// Service 3: The main processing loop that sends pizzas
 builder.Services.AddHostedService<OrderProcessingService>();
-
-builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
-// --- API Endpoints ---
-app.MapPost("/start-order/{count:int}", 
-    (int count, OrderState state, KafkaProducerService producer, ILogger<Program> logger) =>
-    {
-        if (count <= 0)
-        {
-            return Results.BadRequest("Order count must be greater than 0.");
-        }
-    
-        logger.LogInformation("🚀 Order received for {Count} pizzas! Adding to queue...", count);
-    
-        int orderId = new Random().Next(100, 1000);
-
-        // 1. Load all pizzas into the shared processing queue
-        for (int i = 1; i <= count; i++)
-        {
-            state.PizzaQueue.Add(new PizzaOrderMessage
-            {
-                PizzaId = i,
-                OrderId = orderId,
-                OrderSize = count,
-                StartTimestamp = null, 
-                MsgDesc = "Order received",
-                Sauce = "tomato",
-                Baked = (i % 2 == 0),
-                Cheese = ["mozzarella", "feta"],
-                Meat = ["ham"],
-                Veggies = ["mushroom", "spinach"]
-            });
-        }
-    
-        logger.LogInformation("✅ Added {Count} pizzas for Order {OrderId} to the queue.", count, orderId);
-        return Results.Ok($"Order {orderId} for {count} pizzas added to queue.");
-    });
+app.MapGet("/", () => "Order Processing Service is running.");
 
 app.Run();
 
-// --- Shared State (like DoughShaperState) ---
+// --- Recipe Repository ---
+public class RecipeRepository
+{
+    private readonly Dictionary<string, PizzaRecipe> _recipes;
+    private readonly ILogger<RecipeRepository> _logger;
+
+    public RecipeRepository(ILogger<RecipeRepository> logger)
+    {
+        _logger = logger;
+        _recipes = new Dictionary<string, PizzaRecipe>(StringComparer.OrdinalIgnoreCase)
+        {
+            {
+                "Margherita",
+                new PizzaRecipe
+                {
+                    Name = "Margherita",
+                    Sauce = "tomato",
+                    Cheese = new List<string> { "mozzarella" },
+                    Meat = new List<string>(),
+                    Veggies = new List<string> { "basil" }
+                }
+            },
+            {
+                "Pepperoni Classic",
+                new PizzaRecipe
+                {
+                    Name = "Pepperoni Classic",
+                    Sauce = "tomato",
+                    Cheese = new List<string> { "mozzarella" },
+                    Meat = new List<string> { "pepperoni" },
+                    Veggies = new List<string>()
+                }
+            },
+            {
+                "Supreme Deluxe",
+                new PizzaRecipe
+                {
+                    Name = "Supreme Deluxe",
+                    Sauce = "tomato",
+                    Cheese = new List<string> { "mozzarella", "cheddar" },
+                    Meat = new List<string> { "pepperoni", "sausage", "ham" },
+                    Veggies = new List<string> { "mushroom", "onion", "green pepper", "black olive" }
+                }
+            },
+            {
+                "BBQ Chicken Ranch",
+                new PizzaRecipe
+                {
+                    Name = "BBQ Chicken Ranch",
+                    Sauce = "BBQ Sauce",
+                    Cheese = new List<string> { "mozzarella", "smoked provolone" },
+                    Meat = new List<string> { "grilled chicken" },
+                    Veggies = new List<string> { "red onion" }
+                }
+            },
+            {
+                "Vegetarian Pesto",
+                new PizzaRecipe
+                {
+                    Name = "Vegetarian Pesto",
+                    Sauce = "Pesto",
+                    Cheese = new List<string> { "mozzarella", "feta" },
+                    Meat = new List<string>(),
+                    Veggies = new List<string> { "spinach", "sun-dried tomato", "artichoke heart" }
+                }
+            },
+            {
+                "Four Cheese (Quattro Formaggi)",
+                new PizzaRecipe
+                {
+                    Name = "Four Cheese (Quattro Formaggi)",
+                    Sauce = "Olive Oil",
+                    Cheese = new List<string> { "mozzarella", "provolone", "parmesan", "gorgonzola" },
+                    Meat = new List<string>(),
+                    Veggies = new List<string>()
+                }
+            },
+            {
+                "Hawaiian Delight",
+                new PizzaRecipe
+                {
+                    Name = "Hawaiian Delight",
+                    Sauce = "tomato",
+                    Cheese = new List<string> { "mozzarella" },
+                    Meat = new List<string> { "ham", "bacon" },
+                    Veggies = new List<string> { "pineapple" }
+                }
+            },
+            {
+                "Spicy Sriracha Beef",
+                new PizzaRecipe
+                {
+                    Name = "Spicy Sriracha Beef",
+                    Sauce = "Sriracha-Tomato Blend",
+                    Cheese = new List<string> { "mozzarella", "jalapeño jack" },
+                    Meat = new List<string> { "ground beef" },
+                    Veggies = new List<string> { "jalapeño", "red bell pepper" }
+                }
+            },
+            {
+                "Truffle Mushroom",
+                new PizzaRecipe
+                {
+                    Name = "Truffle Mushroom",
+                    Sauce = "White Garlic Cream",
+                    Cheese = new List<string> { "mozzarella" },
+                    Meat = new List<string>(),
+                    Veggies = new List<string> { "mushroom", "truffle" }
+                }
+            },
+            {
+                "Breakfast Pizza",
+                new PizzaRecipe
+                {
+                    Name = "Breakfast Pizza",
+                    Sauce = "Hollandaise Sauce",
+                    Cheese = new List<string> { "mozzarella", "cheddar" },
+                    Meat = new List<string> { "sausage", "bacon" },
+                    Veggies = new List<string> { "scrambled egg", "chives" }
+                }
+            }
+        };
+
+        _logger.LogInformation("Loaded {Count} pizza recipes", _recipes.Count);
+    }
+
+    public PizzaRecipe? GetRecipe(string pizzaName)
+    {
+        return _recipes.TryGetValue(pizzaName, out var recipe) ? recipe : null;
+    }
+}
+
+// --- Shared State ---
 public class OrderState
 {
     public BlockingCollection<PizzaOrderMessage> PizzaQueue { get; } = new();
-    public AutoResetEvent IsDoughMachineReady { get; } = new(true); // Start ready
+    public AutoResetEvent IsDoughMachineReady { get; } = new(true);
 }
 
 // --- Kafka Producer (as a dedicated service) ---
@@ -111,8 +210,128 @@ public class KafkaProducerService : IDisposable
     }
 }
 
+// --- Service 1: Listens for incoming orders from order-stack ---
+public class OrderStackConsumer : BackgroundService
+{
+    private readonly OrderState _state;
+    private readonly RecipeRepository _recipeRepo;
+    private readonly ILogger<OrderStackConsumer> _logger;
+    private readonly ConsumerConfig _consumerConfig;
+    private const string ORDER_STACK_TOPIC = "order-stack";
 
-// --- Service 1: Listens for "done" signals ---
+    public OrderStackConsumer(
+        OrderState state, 
+        RecipeRepository recipeRepo,
+        IConfiguration config, 
+        ILogger<OrderStackConsumer> logger)
+    {
+        _state = state;
+        _recipeRepo = recipeRepo;
+        _logger = logger;
+        var kafkaBootstrapServers = config["KAFKA_BOOTSTRAP_SERVERS"] ?? "localhost:9092";
+        _consumerConfig = new ConsumerConfig
+        {
+            BootstrapServers = kafkaBootstrapServers,
+            GroupId = "order-processor-stack-group",
+            AutoOffsetReset = AutoOffsetReset.Latest
+        };
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Order Stack Consumer running. Waiting for orders from order-stack topic...");
+        
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                using var consumer = new ConsumerBuilder<string, string>(_consumerConfig).Build();
+                consumer.Subscribe(ORDER_STACK_TOPIC);
+                _logger.LogInformation("Order Stack Consumer subscribed to {Topic}", ORDER_STACK_TOPIC);
+
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var consumeResult = await Task.Run(() => consumer.Consume(stoppingToken), stoppingToken);
+                    
+                    if (consumeResult?.Message == null) continue;
+
+                    try
+                    {
+                        var orderMessage = JsonSerializer.Deserialize<OrderStackMessage>(consumeResult.Message.Value);
+                        if (orderMessage == null)
+                        {
+                            _logger.LogWarning("Failed to deserialize order message");
+                            continue;
+                        }
+
+                        _logger.LogInformation("📦 Received order {OrderId} with {Count} pizza types", 
+                            orderMessage.OrderId, orderMessage.Pizzas.Count);
+
+                        // Convert string OrderId to int (for now)
+                        int orderId = orderMessage.OrderId.GetHashCode();
+                        int totalPizzas = orderMessage.Pizzas.Sum(p => p.Value);
+                        int pizzaCounter = 1;
+
+                        // Create pizza objects based on recipes
+                        foreach (var pizzaEntry in orderMessage.Pizzas)
+                        {
+                            var recipe = _recipeRepo.GetRecipe(pizzaEntry.Key);
+                            if (recipe == null)
+                            {
+                                _logger.LogWarning("Unknown pizza type: {PizzaType}. Skipping.", pizzaEntry.Key);
+                                continue;
+                            }
+
+                            // Create the specified quantity of this pizza type
+                            for (int i = 0; i < pizzaEntry.Value; i++)
+                            {
+                                var pizza = new PizzaOrderMessage
+                                {
+                                    PizzaId = pizzaCounter++,
+                                    OrderId = orderId,
+                                    OrderSize = totalPizzas,
+                                    StartTimestamp = null,
+                                    MsgDesc = "Order received",
+                                    Sauce = recipe.Sauce,
+                                    Baked = orderMessage.IsBaked,
+                                    Cheese = new List<string>(recipe.Cheese),
+                                    Meat = new List<string>(recipe.Meat),
+                                    Veggies = new List<string>(recipe.Veggies)
+                                };
+
+                                _state.PizzaQueue.Add(pizza, stoppingToken);
+                                _logger.LogInformation("  ➕ Added {PizzaType} (Pizza {PizzaId}/{Total})", 
+                                    recipe.Name, pizza.PizzaId, totalPizzas);
+                            }
+                        }
+
+                        _logger.LogInformation("✅ Order {OrderId} queued: {Total} pizzas total", 
+                            orderMessage.OrderId, totalPizzas);
+                    }
+                    catch (JsonException jsonEx)
+                    {
+                        _logger.LogError(jsonEx, "Failed to deserialize order: {Message}", consumeResult.Message.Value);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing order");
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Order Stack Consumer stopping.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Order Stack Consumer error. Retrying in 5s.");
+                await Task.Delay(5000, stoppingToken);
+            }
+        }
+    }
+}
+
+// --- Service 2: Listens for "done" signals ---
 public class DoughMachineSignalConsumer : BackgroundService
 {
     private readonly OrderState _state;
@@ -128,12 +347,11 @@ public class DoughMachineSignalConsumer : BackgroundService
         _consumerConfig = new ConsumerConfig
         {
             BootstrapServers = kafkaBootstrapServers,
-            GroupId = "order-processor-group-main", // Static Group ID
+            GroupId = "order-processor-group-main",
             AutoOffsetReset = AutoOffsetReset.Latest
         };
     }
 
-    // --- THIS IS THE CORRECT, SIMPLE LOGIC FOR THIS CLASS ---
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Dough Machine Signal Consumer running...");
@@ -153,7 +371,7 @@ public class DoughMachineSignalConsumer : BackgroundService
                     {
                         _logger.LogInformation("<-- [Dough Machine Ready] signal received for Pizza {PizzaId} (Order: {OrderId}).",
                             doneMessage.PizzaId, doneMessage.OrderId);
-                        _state.IsDoughMachineReady.Set(); // Just signal that the machine is free
+                        _state.IsDoughMachineReady.Set();
                     }
                 }
                 catch (JsonException jsonEx)
@@ -169,7 +387,7 @@ public class DoughMachineSignalConsumer : BackgroundService
     }
 }
 
-// --- Service 2: Main Processing Loop (sends pizzas) ---
+// --- Service 3: Main Processing Loop (sends pizzas) ---
 public class OrderProcessingService : BackgroundService
 {
     private readonly OrderState _state;
@@ -185,7 +403,6 @@ public class OrderProcessingService : BackgroundService
         _logger = logger;
     }
 
-    // --- THIS IS WHERE THE TIMESTAMP LOGIC BELONGS ---
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Main Order Processing Service running. Waiting for pizzas in queue...");
@@ -202,10 +419,7 @@ public class OrderProcessingService : BackgroundService
                     pizza.PizzaId, pizza.OrderId);
                 await Task.Run(() => _state.IsDoughMachineReady.WaitOne(), stoppingToken);
 
-                
-                // --- NEW TIMESTAMP LOGIC ---
-                // GetOrAdd is atomic. It will only execute the factory function
-                // the very first time an orderId is seen.
+                // 3. Set production start timestamp
                 long productionStartTime = _orderStartTimes.GetOrAdd(pizza.OrderId, (orderId) => {
                     long newTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     _logger.LogInformation("🎉 Production starting for Order {OrderId} at {Timestamp}!", 
@@ -213,32 +427,28 @@ public class OrderProcessingService : BackgroundService
                     return newTimestamp;
                 });
                 
-                // Set the timestamp for the current pizza
                 pizza.StartTimestamp = productionStartTime;
-                // --- END NEW LOGIC ---
 
-                // --- COMBINED LOGIC BLOCK ---
+                // 4. Send order-processing message for first pizza
                 if (pizza.PizzaId == 1)
                 {
                     _logger.LogInformation("First pizza in order - consumed initial 'ready' signal.");
 
-                    // Send the "order-processing" topic message *now*
                     var orderProcessingMessage = new OrderProcessingMessage
                     {
                         OrderId = pizza.OrderId,
                         OrderSize = pizza.OrderSize,
-                        StartTimestamp = productionStartTime // Use the real production start time
+                        StartTimestamp = productionStartTime
                     };
-                    // Send the message (fire-and-forget, don't block the pizza)
                     _ = _producer.ProduceOrderProcessingMessage(orderProcessingMessage);
                 }
 
-                // 3. Send the pizza
+                // 5. Send the pizza
                 _logger.LogInformation("--> Sending Pizza {PizzaId} (Order: {OrderId}). Remaining in queue: {Count}",
                     pizza.PizzaId, pizza.OrderId, _state.PizzaQueue.Count);
                 
                 await _producer.ProducePizzaMessage(pizza);
-                _producer.Flush(); // Ensure it's sent
+                _producer.Flush();
             }
         }
         catch (OperationCanceledException)
@@ -252,8 +462,28 @@ public class OrderProcessingService : BackgroundService
     }
 }
 
-
 // --- Data Models ---
+public class PizzaRecipe
+{
+    public string Name { get; set; } = "";
+    public string Sauce { get; set; } = "";
+    public List<string> Cheese { get; set; } = new();
+    public List<string> Meat { get; set; } = new();
+    public List<string> Veggies { get; set; } = new();
+}
+
+public class OrderStackMessage
+{
+    [JsonPropertyName("orderID")]
+    public string OrderId { get; set; } = "";
+    
+    [JsonPropertyName("pizzas")]
+    public Dictionary<string, int> Pizzas { get; set; } = new();
+    
+    [JsonPropertyName("isBaked")]
+    public bool IsBaked { get; set; }
+}
+
 public class OrderProcessingMessage
 {
     [JsonPropertyName("orderId")] public int OrderId { get; set; }
