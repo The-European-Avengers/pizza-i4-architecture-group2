@@ -153,3 +153,90 @@ FROM pizza_start_table s
 LEFT JOIN pizza_end_table e
     ON s.PIZZA_ORDER_KEY = e.PIZZA_ORDER_KEY
 EMIT CHANGES;
+
+
+-- -----------------------------
+-- RESTOCKING STREAMS & TABLES
+-- -----------------------------
+
+-- Restock request stream
+CREATE STREAM restock_request_stream (
+    machineId VARCHAR,
+    items ARRAY<STRUCT<itemType VARCHAR, currentStock INT, requestedAmount INT>>,
+    requestTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='*-restock',
+    VALUE_FORMAT='JSON'
+);
+
+-- Restock done stream
+CREATE STREAM restock_done_stream (
+    machineId VARCHAR,
+    items ARRAY<STRUCT<itemType VARCHAR, deliveredAmount INT>>,
+    completedTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='*-restock-done',
+    VALUE_FORMAT='JSON'
+);
+
+
+-- Example: Explode restock items for latency calculation
+CREATE STREAM restock_request_exploded AS
+SELECT
+    machineId,
+    EXPLODE(items) AS item,
+    requestTimestamp
+FROM restock_request_stream;
+
+CREATE STREAM restock_done_exploded AS
+SELECT
+    machineId,
+    EXPLODE(items) AS item,
+    completedTimestamp
+FROM restock_done_stream;
+
+-- Restock latency table
+CREATE TABLE restock_latency AS
+SELECT
+    r.machineId,
+    r.item->itemType AS itemType,
+    r.requestTimestamp,
+    d.completedTimestamp,
+    (d.completedTimestamp - r.requestTimestamp) AS latencyMs
+FROM restock_request_exploded r
+LEFT JOIN restock_done_exploded d
+    ON r.machineId = d.machineId
+   AND r.item->itemType = d.item->itemType
+EMIT CHANGES;
+
+
+CREATE STREAM order_dispatched_stream (
+    orderId VARCHAR,
+    orderSize INT,
+    msgDesc VARCHAR,
+    dispatchedTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='order-dispatched',
+    VALUE_FORMAT='JSON'
+);
+
+
+CREATE TABLE order_dispatch_latency AS
+SELECT
+    p.orderId,
+    p.ORDER_SIZE,
+    p.start_ts AS startTimestamp,
+    d.dispatchedTimestamp AS dispatchedTimestamp,
+    (d.dispatchedTimestamp - p.start_ts) AS latencyMs
+FROM order_processing_table p
+LEFT JOIN order_dispatched_stream d
+    ON p.orderId = d.orderId
+EMIT CHANGES;
+
+
+CREATE TABLE avg_restock_latency AS
+SELECT machineId,
+       AVG(latencyMs) AS avgLatency
+FROM restock_latency
+GROUP BY machineId
+EMIT CHANGES;

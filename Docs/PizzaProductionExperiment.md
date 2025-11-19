@@ -372,17 +372,99 @@ SELECT * FROM pizza_latency;
 |5_181                      |5                          |181                        |1763367145274              |1763367175402              |30128                      |
 |6_181                      |6                          |181                        |1763367145274              |1763367178524              |33250                      |
 ```
-> ### TO REVIEW
->### 4\. Restock Latency Calculation
->
->To calculate the time it takes for an internal restock, KSQLDB can join the `restock-request` and `restock-done` streams based on the `machineId`.
->
->Measure Restock Latency (`completedTimestamp - requestTimestamp`). This can be further aggregated to measure the average restocking time against total production time.
->
->### 5\. Order Dispatch Latency Calculation
->
->Measure the delay between an order starting (`order-processing` topic) and the last pizza produced being dispatched (`order-dispatched` topic). This is key for measuring the whole process from order receipt to warehouse dispatch.
->
+
+### 4\. Restock Latency Calculation
+
+To calculate the time it takes for an internal restock, KSQLDB can join the `restock-request` and `restock-done` streams based on the `machineId`.
+
+Measure Restock Latency (`completedTimestamp - requestTimestamp`). This can be further aggregated to measure the average restocking time against total production time.
+
+### 5\. Order Dispatch Latency Calculation
+
+Measure the delay between an order starting (`order-processing` topic) and the last pizza produced being dispatched (`order-dispatched` topic). This is key for measuring the whole process from order receipt to warehouse dispatch.
+
+### Example Query:
+
+
+#### 1. **Order Latency**
+
+```sql
+SELECT *
+FROM order_latency
+EMIT CHANGES;
+```
+
+This returns each order with its size, start/end timestamps, and total processing time in milliseconds.
+
+
+#### 2. **Pizza Latency**
+
+```sql
+SELECT *
+FROM pizza_latency
+EMIT CHANGES;
+```
+
+Shows each pizza’s start/end timestamps and processing time.
+
+
+#### 3. **Restock Latency (Per Machine & Item)**
+
+```sql
+SELECT machineId, itemType, requestTimestamp, completedTimestamp, latencyMs
+FROM restock_latency
+EMIT CHANGES;
+```
+
+This streams the time it took to complete restocking for each item on each machine.
+
+
+#### 4. **Average Restock Latency Per Machine**
+
+```sql
+SELECT machineId, AVG(latencyMs) AS avgLatency
+FROM restock_latency
+GROUP BY machineId
+EMIT CHANGES;
+```
+
+Aggregates restock latency per machine in real time.
+
+
+#### 5. **Order Dispatch Latency**
+
+```sql
+SELECT orderId, ORDER_SIZE, startTimestamp, dispatchedTimestamp, latencyMs
+FROM order_dispatch_latency
+EMIT CHANGES;
+```
+
+Measures how long it took from order start to warehouse dispatch.
+
+
+#### 6. **Optional: Latest Completed Orders**
+
+If you just want the **most recent N completed orders**:
+
+```sql
+SELECT *
+FROM order_latency
+WHERE END_TIMESTAMP IS NOT NULL
+EMIT CHANGES
+LIMIT 50;
+```
+
+
+#### 7. Latest Completed Pizzas**
+
+```sql
+SELECT *
+FROM pizza_latency
+WHERE ENDTIMESTAMP IS NOT NULL
+EMIT CHANGES
+LIMIT 50;
+```
+
 ## Data Export API (FastAPI)
 
 The production data from KSQLDB is exposed via a FastAPI service, allowing you to easily query and extract the latency tables in real-time using standard HTTP requests.
