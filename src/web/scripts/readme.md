@@ -40,10 +40,10 @@ cd src/web/experiment
 npm install
 ```
 
-3. Run the script with `npx` (no global install needed):
+3. Run the script with `npx` (no global install needed), with the amount of pizzas in the order(N):
 
 ```powershell
-npx tsx newOrders.ts
+npx tsx newOrders.ts N
 ```
 
 Run from project root
@@ -51,22 +51,8 @@ Run from project root
 Instead of changing directories, you can run the script directly from the repository root:
 
 ```powershell
-npx tsx src/web/experiment/newOrders.ts
+npx tsx src/web/experiment/newOrders.ts N
 ```
-
-Optional: install `tsx` globally
-
-```powershell
-npm install -g tsx
-tsx src/web/experiment/newOrders.ts
-```
-
-Add an npm script
-
-To make repeated runs easier, add a script to `src/web/experiment/package.json` or the workspace `package.json`:
-
-Then run:
-
 
 Notes and troubleshooting
 
@@ -84,4 +70,29 @@ Example output
 }
 ```
 
-If you want, I can add the suggested `package.json` script for you and run the script to show the actual output.
+Example response from the client gateway
+
+```json
+{
+  "success": true,
+  "message": "Order sent to Kafka topic: order-stack",
+  "newOrder": {
+    "OrderId": "uuid4",
+    "items": [
+      {
+        "pizzaName": "Margherita",
+        "quantity": 3
+      },
+      {
+        "pizzaName": "Truffle Mushroom",
+        "quantity": 1
+      },
+      {
+        "pizzaName": "Four Cheese (Quattro Formaggi)",
+        "quantity": 5
+      }
+    ],
+    "createdAt": "2025-11-19T15:10:26.577Z"
+  }
+}
+```
