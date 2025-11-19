@@ -10,7 +10,7 @@ def get_consumer(topics: Union[list, str]) -> KafkaConsumer:
     group_id = f"test-group-{uuid.uuid4()}"
     consumer = KafkaConsumer(
         bootstrap_servers='kafka-experiment:29092',
-        auto_offset_reset='earliest',  # start from the earliest message
+        auto_offset_reset='latest',  # start from the earliest message
         enable_auto_commit=True,
         group_id=group_id,
         value_deserializer=lambda v: json.loads(v.decode('utf-8'))

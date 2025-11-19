@@ -4,7 +4,7 @@ import signal
 import sys
 
 consume_topics = ['dough-machine-restock', 'sauce-machine-restock', 'cheese-machine-restock', 'meat-machine-restock',
-                  'vegetables-machine-restock']
+                  'vegetables-machine-restock', 'packaging-robot-restock']
 kafka_client = KafkaClient(consume_topics)
 
 def shutdown_handler(sig, frame):
@@ -20,6 +20,7 @@ kafka_client.on_message(consume_topics[1], callback_handler.on_sauce_machine)
 kafka_client.on_message(consume_topics[2], callback_handler.on_cheese_machine)
 kafka_client.on_message(consume_topics[3], callback_handler.on_meat_machine)
 kafka_client.on_message(consume_topics[4], callback_handler.on_vegetables_machine)
+kafka_client.on_message(consume_topics[5], callback_handler.on_packaging_robot)
 
 kafka_client.start()
 print('Internal Goods Provider is running')

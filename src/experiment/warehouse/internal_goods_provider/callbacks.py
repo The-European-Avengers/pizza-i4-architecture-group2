@@ -33,6 +33,11 @@ class CallbackHandler:
         sleep(1)
         self.client.send('vegetables-machine-restock-done', self.create_restock_msg(message))
 
+    def on_packaging_robot(self, message):
+        print(f'Topic: {message.topic} Msg: {message.value}')
+        sleep(1)
+        self.client.send('packaging-robot-restock-done', self.create_restock_msg(message))
+
     @staticmethod
     def create_restock_msg(message):
         items = list()
