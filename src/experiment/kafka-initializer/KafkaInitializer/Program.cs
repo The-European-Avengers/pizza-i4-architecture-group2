@@ -23,7 +23,7 @@ var topicsToCreate = new[]
     "oven-machine", "oven-machine-done",
     "packaging-machine", "packaging-machine-done",
     "order-stack", "order-processing", "order-done", "pizza-done",
-    "order-dispatch"
+    "order-dispatch",
     // Restock topics
     "dough-machine-restock", "dough-machine-restock-done",
     "sauce-machine-restock", "sauce-machine-restock-done",

@@ -51,7 +51,7 @@ app.MapPost("/start-order/{count:int}",
                 MsgDesc = "Order received",
                 Sauce = "tomato",
                 Baked = (i % 2 == 0),
-                Cheese = ["mozzarella"],
+                Cheese = ["mozzarella", "feta"],
                 Meat = ["salami"],
                 Veggies = ["peppers"]
             });
