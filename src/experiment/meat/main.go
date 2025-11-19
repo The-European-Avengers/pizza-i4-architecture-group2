@@ -266,7 +266,6 @@ func processPizza(
 	doneChan <-chan DoneMessage,
 ) {
 	fmt.Printf("🍖 Start meat processing for pizza %d\n", pizza.PizzaId)
-	time.Sleep(1 * time.Second)
 
 	// Determine required meats
 	for _, meat := range pizza.Meat {
@@ -290,6 +289,10 @@ func processPizza(
 		fmt.Println("Restock request sent")
 	}
 
+	numberMeat := len(pizza.Meat)
+	workTime := time.Duration(numberMeat*500) * time.Millisecond // 500ms per meat (0.5s)
+	time.Sleep(workTime)
+	fmt.Printf("🍖 Meat added to pizza %d\n", pizza.PizzaId)
 	// Update message
 	pizza.MsgDesc = fmt.Sprintf("Meat added to pizza %d", pizza.PizzaId)
 
