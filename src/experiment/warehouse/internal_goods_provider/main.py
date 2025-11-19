@@ -8,7 +8,7 @@ import sys
 logger = get_logger("internal-goods-provider", level=logging.INFO, json_format=False)
 
 consume_topics = ['dough-machine-restock', 'sauce-machine-restock', 'cheese-machine-restock', 'meat-machine-restock',
-                  'vegetables-machine-restock', 'packaging-robot-restock']
+                  'vegetables-machine-restock', 'packaging-machine-restock']
 kafka_client = KafkaClient(consume_topics)
 
 def shutdown_handler(sig, frame):

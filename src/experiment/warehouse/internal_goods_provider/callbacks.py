@@ -50,7 +50,7 @@ class CallbackHandler:
     def on_packaging_robot(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
-        self.client.send('packaging-robot-restock-done', self.create_restock_msg(message))
+        self.client.send('packaging-machine-restock-done', self.create_restock_msg(message))
         self.client.producer.flush()  # ✅ FLUSH
         logger.info('PACKAGING RESTOCK COMPLETED')
 

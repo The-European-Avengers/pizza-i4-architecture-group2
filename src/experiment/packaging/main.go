@@ -63,15 +63,25 @@ type RestockRequest struct {
 	RequestTimestamp int64         `json:"requestTimestamp"`
 }
 
+// ADDED: Type for restock response, using delivered amount
+type RestockDoneItem struct {
+	ItemType        string `json:"itemType"`
+	DeliveredAmount int    `json:"deliveredAmount"` // Should use delivered, not requested
+}
+
+type RestockDoneMessage struct {
+	Items []RestockDoneItem `json:"items"`
+}
+
+const MAX_STOCK = 100 // Define max stock for safety
+
 // Track pizzas per order safely
 var (
 	pizzasCompleted = make(map[int]int)
 	boxStock        = map[string]int{
-		"small-box":  100,
-		"medium-box": 100,
-		"large-box":  100,
+		"box": 10,
 	}
-	mu              sync.Mutex
+	mu                sync.Mutex
 	restockInProgress = false
 )
 
@@ -85,6 +95,8 @@ func main() {
 
 	kafkaAddr := "kafka-experiment:29092"
 	msgChan := make(chan Pizza)
+	restockDoneChan := make(chan RestockDoneMessage) // Channel to pass restock data to a handler
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -99,7 +111,7 @@ func main() {
 
 	// consumer
 	go consumePizza(ctx, kafkaAddr, consumeTopic, msgChan)
-	go consumeRestockDone(ctx, kafkaAddr, consumeRestockDoneTopic)
+	go consumeRestockDone(ctx, kafkaAddr, consumeRestockDoneTopic, restockDoneChan) // Pass restockDoneChan
 
 	// producers
 	writerDone := newWriter(kafkaAddr, produceTopicDone)
@@ -118,6 +130,10 @@ func main() {
 		case <-ctx.Done():
 			fmt.Println("✔ Clean shutdown")
 			return
+		
+		case doneRestock := <-restockDoneChan: // Handle restock done in the main loop
+			handleRestockDone(doneRestock)
+
 		case pizza := <-msgChan:
 			go processPizza(ctx, pizza, writerDone, writerOrderDone, writerPizzaDone, writerRestock)
 		}
@@ -160,7 +176,8 @@ func consumePizza(ctx context.Context, broker, topic string, out chan<- Pizza) {
 	}
 }
 
-func consumeRestockDone(ctx context.Context, broker, topic string) {
+// CHANGED: Function signature to use RestockDoneMessage channel
+func consumeRestockDone(ctx context.Context, broker, topic string, out chan<- RestockDoneMessage) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     []string{broker},
 		Topic:       topic,
@@ -174,21 +191,35 @@ func consumeRestockDone(ctx context.Context, broker, topic string) {
 		if err != nil {
 			return
 		}
-		var payload struct {
-			Items []RestockItem `json:"items"`
-		}
-		if err := json.Unmarshal(m.Value, &payload); err != nil {
+		// CHANGED: Use the defined RestockDoneMessage structure
+		var msg RestockDoneMessage 
+		if err := json.Unmarshal(m.Value, &msg); err != nil {
 			log.Println("⚠️ Bad restock-done JSON:", err)
 			continue
 		}
-		mu.Lock()
-		for _, item := range payload.Items {
-			boxStock[item.ItemType] += item.RequestedAmount
-		}
-		restockInProgress = false
-		mu.Unlock()
-		fmt.Println("📦 Boxes restocked")
+		
+		out <- msg // Send to main loop for thread-safe processing
 	}
+}
+
+// ADDED: Thread-safe handler for updating stock
+func handleRestockDone(msg RestockDoneMessage) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	for _, item := range msg.Items {
+		if _, ok := boxStock[item.ItemType]; ok {
+			// FIXED: Use DeliveredAmount instead of RequestedAmount
+			boxStock[item.ItemType] += item.DeliveredAmount 
+			if boxStock[item.ItemType] > MAX_STOCK {
+				boxStock[item.ItemType] = MAX_STOCK
+			}
+			fmt.Printf("Restock received for %s: +%d (now %d)\n",
+				item.ItemType, item.DeliveredAmount, boxStock[item.ItemType])
+		}
+	}
+	restockInProgress = false
+	fmt.Println("📦 Boxes restocked")
 }
 
 func processPizza(
@@ -199,7 +230,7 @@ func processPizza(
 	writerPizzaDone *kafka.Writer,
 	writerRestock *kafka.Writer,
 ) {
-	boxType := "medium-box" // Example: choose box type dynamically if needed
+	boxType := "box" // Example: choose box type dynamically if needed
 
 	// Check stock & request restock if low
 	checkBoxStock(ctx, boxType, writerRestock)
@@ -262,14 +293,15 @@ func checkBoxStock(ctx context.Context, boxType string, writer *kafka.Writer) {
 	if restockInProgress {
 		return
 	}
-	if boxStock[boxType] <= 10 { // 10% of 100
+	// Assuming box stock threshold is 10 boxes (10% of 100 max stock)
+	if boxStock[boxType] <= 10 { 
 		req := RestockRequest{
-			MachineId:        "packaging-machine",
+			MachineId: "packaging-machine",
 			Items: []RestockItem{
 				{
 					ItemType:        boxType,
 					CurrentStock:    boxStock[boxType],
-					RequestedAmount: 100 - boxStock[boxType],
+					RequestedAmount: MAX_STOCK - boxStock[boxType], // Request up to MAX_STOCK
 				},
 			},
 			RequestTimestamp: time.Now().UnixMilli(),
