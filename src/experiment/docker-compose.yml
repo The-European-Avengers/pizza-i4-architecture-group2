@@ -58,8 +58,8 @@ services:
       KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
       KSQL_KSQL_CONNECT_URL: ""
       KSQL_CACHE_MAX_BYTES_BUFFERING: 0
-      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
-      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - kafka-net
@@ -83,7 +83,7 @@ services:
       - ksqldb-server
     entrypoint: ["/bin/bash", "/ksql-scripts/init.sh"]
     volumes:
-      - ./ksqlDB:/ksql-scripts
+      - ./KsqlDB:/ksql-scripts
     networks:
       - kafka-net
 
@@ -99,11 +99,11 @@ services:
       - kafka # Only depends on Kafka
     networks:
       - kafka-net
-      
+
   # --- NEW: Kafka Initializer Service ---
   kafka-init:
     build:
-      context: ./kafka-initializer
+      context: ./KafkaInitializerSolution
       dockerfile: ./KafkaInitializer/Dockerfile
     container_name: kafka-init
     environment:
@@ -116,7 +116,7 @@ services:
   # --- C# Services (Separate Solutions) ---
   order-processor:
     build:
-      context: ./order-processing
+      context: ./OrderProcessing
       dockerfile: ./OrderProcessing/Dockerfile
     container_name: order-processor
     ports:
@@ -124,124 +124,150 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: # <-- FIX: Wait for topics to be created
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
 
   dough-machine:
     build:
-      context: ./sough-machine
+      context: ./DoughMachine
       dockerfile: ./DoughMachine/Dockerfile
     container_name: dough-machine
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: # <-- FIX: Wait for topics to be created
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
 
   dough-shaper:
     build:
-      context: ./dough-shaper
+      context: ./DoughShaper
       dockerfile: ./DoughShaper/Dockerfile
     container_name: dough-shaper
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: # <-- FIX: Wait for topics to be created
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
 
   cheese-grater:
     build:
-      context: ./cheese 
+      context: ./CheeseGrater
       dockerfile: ./CheeseGrater/Dockerfile
     container_name: cheese-grater
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: 
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
-      
+
+  internal-goods-provider:
+    build:
+      context: ./warehouse
+      dockerfile: ./internal_goods_provider/Dockerfile
+    container_name: internal-goods-provider
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
+
+  order-dispatcher:
+    build:
+      context: ./warehouse
+      dockerfile: ./order_dispatcher/Dockerfile
+    container_name: order-dispatcher
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
+
   oven:
     build:
-      context: ./oven
+      context: ./Oven
       dockerfile: Dockerfile
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: 
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
-      
+
   freezer:
     build:
-      context: ./freezer
+      context: ./Freezer
       dockerfile: Dockerfile
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: 
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
-      
+
   vegetables:
     build:
-      context: ./vegetables
+      context: ./Vegetables
       dockerfile: Dockerfile
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: 
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
 
   meat:
     build:
-      context: ./meat
+      context: ./Meat
       dockerfile: Dockerfile
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: 
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
 
   sauce:
     build:
-      context: ./sauce
+      context: ./Sauce
       dockerfile: Dockerfile
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: 
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
 
   packaging:
     build:
-      context: ./packaging
+      context: ./Packaging
       dockerfile: Dockerfile
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
-      kafka-init: 
+      kafka-init:
         condition: service_completed_successfully
     networks:
       - kafka-net
   api:
     build:
-      context: ./api
+      context: ./Api
       dockerfile: Dockerfile
     container_name: pizza-api
     ports:
@@ -251,8 +277,6 @@ services:
       - kafka
     networks:
       - kafka-net
-
-
 
 volumes:
   kafka-data:

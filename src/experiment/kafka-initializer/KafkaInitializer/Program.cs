@@ -10,7 +10,7 @@ var loggerFactory = LoggerFactory.Create(builder =>
 });
 var logger = loggerFactory.CreateLogger<Program>();
 
-// --- All topics defined in your markdown + new restock topics ---
+// --- All topics defined in your markdown ---
 var topicsToCreate = new[]
 {
     "dough-machine", "dough-machine-done",
@@ -23,6 +23,7 @@ var topicsToCreate = new[]
     "oven-machine", "oven-machine-done",
     "packaging-machine", "packaging-machine-done",
     "order-stack", "order-processing", "order-done", "pizza-done",
+    "order-dispatch"
     // Restock topics
     "dough-machine-restock", "dough-machine-restock-done",
     "sauce-machine-restock", "sauce-machine-restock-done",
