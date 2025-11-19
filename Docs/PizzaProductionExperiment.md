@@ -99,7 +99,7 @@ Each service lives in its own folder and includes a dedicated `Dockerfile`. The 
 
 The system uses a set of topics for the main workflow and another set for order tracking and observability.
 
-### Production Line Topics (Machine Flow)
+### Production Line Topics
 
 Each machine operates as a Consumer-Processor-Producer: it **consumes** from its assigned topic and **produces** to the next machine's topic. Additionally, every machine emits a small message to a dedicated `-done` topic to signal it is ready for the next pizza payload.
 
@@ -110,10 +110,10 @@ Each machine operates as a Consumer-Processor-Producer: it **consumes** from its
 | `sauce-machine` / `sauce-machine-done` | **SauceMachine** | `cheese-machine` |
 | `cheese-machine` / `cheese-machine-done` | **CheeseGrater** | `meat-machine` |
 | `meat-machine` / `meat-machine-done` | **MeatSlicer** | `vegetables-machine` |
-| `vegetables-machine` / `vegetables-machine-done`| **VegetablesSlicer** | `oven-machine` |
+| `vegetables-machine` / `vegetables-machine-done` | **VegetablesSlicer** | `oven-machine` |
 | `oven-machine` / `oven-machine-done` | **Oven** | `freezer-machine` or `packaging-machine` |
 | `freezer-machine` / `freezer-machine-done` | **Freezer** | `packaging-machine` |
-| `packaging-machine` / `packaging-machine-done`| **Packaging-robot** | **`pizza-done`** |
+| `packaging-machine` / `packaging-machine-done` | **Packaging-robot** | **`pizza-done`** |
 
 ### Order Tracking and Management Topics
 
@@ -123,6 +123,23 @@ Each machine operates as a Consumer-Processor-Producer: it **consumes** from its
 | **`order-processing`** | OrderProcessing | Emitted when an order **starts** processing. |
 | **`order-done`** | OrderProcessing | Emitted when *all* pizzas for an order are **completed**. |
 | **`order-stack`** | (Future Enhancement) | Queue of orders waiting to be processed (e.g., for priority queuing). |
+
+
+### Restock Topics
+
+These dedicated topics simulate machine **restocking** and allow for granular measurement of **Restock Latency** for each individual production step.
+
+| Topic Pair | Request Producer | Acknowledgment Consumer | Purpose |
+| :--- | :--- | :--- | :--- |
+| `dough-machine-restock` / `dough-machine-restock-done` | **DoughMachine** | **DoughMachine** | Track dough ingredient replenishment latency. |
+| `dough-shaper-restock` / `dough-shaper-restock-done` | **DoughShaper** | **DoughShaper** | Track dough shaping tool/material replenishment latency. |
+| `sauce-machine-restock` / `sauce-machine-restock-done` | **SauceMachine** | **SauceMachine** | Track sauce replenishment latency. |
+| `cheese-machine-restock` / `cheese-machine-restock-done` | **CheeseGrater** | **CheeseGrater** | Track cheese ingredient replenishment latency. |
+| `meat-machine-restock` / `meat-machine-restock-done` | **MeatSlicer** | **MeatSlicer** | Track meat topping replenishment latency. |
+| `vegetables-machine-restock` / `vegetables-machine-restock-done`| **VegetablesSlicer** | **VegetablesSlicer** | Track vegetable topping replenishment latency. |
+| `oven-machine-restock` / `oven-machine-restock-done` | **Oven** | **Oven** | Track oven consumable/tool replenishment latency. |
+| `freezer-machine-restock` / `freezer-machine-restock-done` | **Freezer** | **Freezer** | Track freezer consumable/tool replenishment latency. |
+| `packaging-machine-restock` / `packaging-machine-restock-done`| **Packaging-robot** | **Packaging-robot** | Track packaging material replenishment latency. |
 
 
 ## Kafka Messages Schema
@@ -216,6 +233,98 @@ Sent to the dedicated `pizza-done` topic by the **Packaging-robot** to finalize 
 }
 ```
 
+### 5\. Restock Request Message
+
+This message is sent by a production machine when its internal stock of one or more ingredients is running low. It is intended for a simulated **Internal Goods Provider** to track restocking needs and latency.
+
+**Topic:** `restock-request`
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `machineId` | `string` | The ID of the machine requesting the restock (e.g., `"cheese-machine"`). |
+| `items` | `array<object>` | List of items that need restocking. |
+| `items[].itemType` | `string` | The specific ingredient type (e.g., `"mozzarella"`). |
+| `items[].currentStock` | `int` | The current stock level of the item. |
+| `items[].requestedAmount`| `int` | The amount requested in the restock order. |
+| `requestTimestamp` | `long` | Timestamp when the request was made. |
+
+**Example:**
+
+```json
+{
+  "machineId": "cheese-machine",
+  "items": [
+    {
+      "itemType": "mozzarella",
+      "currentStock": 10,
+      "requestedAmount": 90
+    },
+    {
+      "itemType": "gorgonzola",
+      "currentStock": 17,
+      "requestedAmount": 83
+    }
+  ],
+  "requestTimestamp": 1731571200000
+}
+```
+
+### 6\. Restock Done Message
+
+This message is sent by the **Internal Goods Provider** (simulated) upon the completion of a restock delivery to the requesting machine. It is used to measure the **Restock Latency** (from `requestTimestamp` to `completedTimestamp`).
+
+**Topic:** `restock-done`
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `machineId` | `string` | The ID of the machine that received the restock. |
+| `items` | `array<object>` | List of items delivered. |
+| `items[].itemType` | `string` | The specific ingredient type. |
+| `items[].deliveredAmount` | `int` | The amount of the item delivered. |
+| `completedTimestamp` | `long` | Timestamp when the restock was completed at the machine. |
+
+**Example:**
+
+```json
+{
+  "machineId": "cheese-machine",
+  "items": [
+    {
+      "itemType": "mozzarella",
+      "deliveredAmount": 90
+    },
+    {
+      "itemType": "gorgonzola",
+      "deliveredAmount": 83
+    }
+  ],
+  "completedTimestamp": 1731571260000
+}
+```
+
+### 7\. Order Dispatched Message
+
+Sent by the **OrderProcessing** service when an order has been produced and dispatched to the warehouse to be stored. This message is useful for measuring the latency between order start and dispatch.
+
+**Topic:** `order-dispatched`
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `orderId` | `string` | Unique ID of the customer order (UUID is suggested for robustness). |
+| `orderSize` | `int` | Total number of pizzas in the order. |
+| `msgDesc` | `string` | Description of the dispatch event. |
+| `dispatchedTimestamp` | `long` | Timestamp when the order was dispatched. |
+
+**Example:**
+
+```json
+{
+    "orderId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+    "orderSize": 10,
+    "msgDesc": "10 pizzas dispatched to warehouse",
+    "dispatchedTimestamp": 1731571230000
+}
+```
 
 ## KSQLDB: Real-Time Observability
 
@@ -264,17 +373,25 @@ SELECT * FROM pizza_latency;
 |4_181                      |4                          |181                        |1763367145274              |1763367172284              |27010                      |
 |5_181                      |5                          |181                        |1763367145274              |1763367175402              |30128                      |
 |6_181                      |6                          |181                        |1763367145274              |1763367178524              |33250                      |
-````
-
-
-
+```
+> ### TO REVIEW
+>### 4\. Restock Latency Calculation
+>
+>To calculate the time it takes for an internal restock, KSQLDB can join the `restock-request` and `restock-done` streams based on the `machineId`.
+>
+>Measure Restock Latency (`completedTimestamp - requestTimestamp`). This can be further aggregated to measure the average restocking time against total production time.
+>
+>### 5\. Order Dispatch Latency Calculation
+>
+>Measure the delay between an order starting (`order-processing` topic) and the last pizza produced being dispatched (`order-dispatched` topic). This is key for measuring the whole process from order receipt to warehouse dispatch.
+>
 ## Data Export API (FastAPI)
 
-The production data from KSQLDB is exposed via a **FastAPI** service, allowing you to easily query and extract the latency tables in real-time using standard HTTP requests.
+The production data from KSQLDB is exposed via a FastAPI service, allowing you to easily query and extract the latency tables in real-time using standard HTTP requests.
 
 ### Base URL
 
-When running locally with Docker Compose, the API service is typically accessible on port **8000** (or as defined in your `docker-compose.yml`).
+When running locally with Docker Compose, the API service is typically accessible on port `8000` (or as defined in your `docker-compose.yml`).
 
 ```
 http://localhost:8000/ksql/
@@ -342,7 +459,6 @@ ORDERID,ORDERSIZE,STARTTIMESTAMP,ENDTIMESTAMP,LATENCYMS
 11,10,1763308910000,1763308975000,65000
 ```
 
------
 
 ## Data Tables Description
 
@@ -368,3 +484,4 @@ This data is sourced directly from the KSQLDB tables defined previously.
 | `ENDTIMESTAMP` | Timestamp when pizza completed |
 | `LATENCYMS` | Total processing time in milliseconds |
 
+> TO REVIEW IF WE HAVE TO ADD MORE TABLES AND ENDPOINT TO EXPORT DATA
