@@ -24,6 +24,12 @@ var topicsToCreate = new[]
     "packaging-machine", "packaging-machine-done",
     "order-stack", "order-processing", "order-done", "pizza-done",
     "order-dispatch"
+    // Restock topics
+    "dough-machine-restock", "dough-machine-restock-done",
+    "sauce-machine-restock", "sauce-machine-restock-done",
+    "cheese-machine-restock", "cheese-machine-restock-done",
+    "meat-machine-restock", "meat-machine-restock-done",
+    "vegetables-machine-restock", "vegetables-machine-restock-done"
 };
 
 var adminConfig = new AdminClientConfig { BootstrapServers = kafkaBootstrapServers };
