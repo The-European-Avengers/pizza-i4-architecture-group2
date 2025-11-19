@@ -168,11 +168,24 @@ services:
     networks:
       - kafka-net
 
-  warehouse:
+  internal-goods-provider:
     build:
       context: ./warehouse
-      dockerfile: ./Dockerfile
+      dockerfile: ./internal_goods_provider/Dockerfile
     container_name: internal-goods-provider
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - kafka-net
+
+  order-dispatcher:
+    build:
+      context: ./warehouse
+      dockerfile: ./order_dispatcher/Dockerfile
+    container_name: order-dispatcher
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-experiment:29092
     depends_on:
