@@ -1,7 +1,11 @@
 from py_helpers.kafka import KafkaClient
 from internal_goods_provider.callbacks import CallbackHandler
+from py_helpers.logger import get_logger
+import logging
 import signal
 import sys
+
+logger = get_logger("internal-goods-provider", level=logging.INFO, json_format=False)
 
 consume_topics = ['dough-machine-restock', 'sauce-machine-restock', 'cheese-machine-restock', 'meat-machine-restock',
                   'vegetables-machine-restock', 'packaging-robot-restock']
@@ -23,7 +27,7 @@ kafka_client.on_message(consume_topics[4], callback_handler.on_vegetables_machin
 kafka_client.on_message(consume_topics[5], callback_handler.on_packaging_robot)
 
 kafka_client.start()
-print('Internal Goods Provider is running')
+logger.info('Internal Goods Provider is running')
 
 try:
     while True:
