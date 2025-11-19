@@ -3,6 +3,7 @@ from kafka import KafkaConsumer, KafkaProducer
 import json
 import uuid
 import threading
+import queue
 
 
 def get_consumer(topics: Union[list, str]) -> KafkaConsumer:
@@ -56,6 +57,8 @@ class KafkaClient:
         self.callbacks: Dict[str, Callable] = {}
         self._running = False
         self._thread = None
+        self._message_queue = queue.Queue()
+        self._worker_thread = None
 
     def send(self, topic: str, message: Dict[str, Any], wait: bool = False):
         """
@@ -93,7 +96,9 @@ class KafkaClient:
         self._running = True
         self._thread = threading.Thread(target=self._consume_loop, daemon=True)
         self._thread.start()
-        print("Started consuming from topics")
+
+        self._worker_thread = threading.Thread(target=self._process_queue_loop, daemon=True)
+        self._worker_thread.start()
 
     def _consume_loop(self):
         """Internal loop that processes messages and triggers callbacks."""
@@ -103,15 +108,27 @@ class KafkaClient:
                     if not self._running:
                         break
 
-                    topic = message.topic
-                    if topic in self.callbacks:
-                        try:
-                            self.callbacks[topic](message)
-                        except Exception as e:
-                            print(f"❌ Error in callback for topic '{topic}': {e}")
+                    self._message_queue.put(message)
+
             except Exception as e:
                 if self._running:
                     print(f"❌ Error in consume loop: {e}")
+
+    def _process_queue_loop(self):
+        """Worker thread pulls from queue and calls callbacks."""
+        while self._running or not self._message_queue.empty():
+            try:
+                message = self._message_queue.get(timeout=1)
+            except queue.Empty:
+                continue
+
+            topic = message.topic
+            if topic in self.callbacks:
+                try:
+                    self.callbacks[topic](message)
+                except Exception as e:
+                    print(f"Error in callback for topic '{topic}': {e}")
+            self._message_queue.task_done()
 
     def stop(self):
         """Stop consuming messages and close all connections."""
@@ -120,6 +137,9 @@ class KafkaClient:
 
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=5)
+
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.join(timeout=5)
 
         self.consumer.close()
         self.producer.flush()
