@@ -16,7 +16,7 @@ sauce_stock = {
     "Pesto": 11,
     "Olive Oil": 11,
     "Sriracha-Tomato Blend": 11,
-    "White Garlic Cream": 1,
+    "White Garlic Cream": 11,
     "Hollandaise Sauce": 11
 }
 
@@ -174,7 +174,7 @@ async def process_pizza(pizza):
     global next_machine_busy, sauce_stock, restock_in_progress
 
     pizza_id = pizza["pizzaId"]
-    sauce_type = pizza.get("sauceType")
+    sauce_type = pizza.get("sauce")
 
     if sauce_type not in sauce_stock:
         print(f"Error: unknown sauce '{sauce_type}'")
