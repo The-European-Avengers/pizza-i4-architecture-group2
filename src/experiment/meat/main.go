@@ -59,16 +59,16 @@ type RestockDoneMessage struct {
 // track if the next machine is busy
 var nextMachineBusy = false
 
-const MAX_STOCK = 100
+const MAX_STOCK = 10
 
 // Meat stock levels
 var meatStock = map[string]int{
-	"pepperoni":       11,
-	"sausage":         11,
-	"ham":             11,
-	"grilled chicken": 11,
-	"bacon":           11,
-	"ground beef":     11,
+	"pepperoni":       2,
+	"sausage":         2,
+	"ham":             2,
+	"grilled chicken": 2,
+	"bacon":           2,
+	"ground beef":     2,
 }
 
 var restockInProgress = false

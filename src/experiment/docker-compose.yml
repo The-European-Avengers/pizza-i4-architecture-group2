@@ -43,49 +43,49 @@ services:
       - kafka-net
 
   # --- ksqlDB Server ---
-  # ksqldb-server:
-  #   image: confluentinc/cp-ksqldb-server:7.6.0
-  #   container_name: ksqldb-server
-  #   hostname: ksqldb-server
-  #   depends_on:
-  #     - kafka
-  #     - schema-registry
-  #   ports:
-  #     - "8088:8088"
-  #   environment:
-  #     KSQL_BOOTSTRAP_SERVERS: "kafka-experiment:29092"
-  #     KSQL_LISTENERS: "http://0.0.0.0:8088"
-  #     KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
-  #     KSQL_KSQL_CONNECT_URL: ""
-  #     KSQL_CACHE_MAX_BYTES_BUFFERING: 0
-  #     KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
-  #     KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
-  #     KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
-  #   networks:
-  #     - kafka-net
+  ksqldb-server:
+    image: confluentinc/cp-ksqldb-server:7.6.0
+    container_name: ksqldb-server
+    hostname: ksqldb-server
+    depends_on:
+      - kafka
+      - schema-registry
+    ports:
+      - "8088:8088"
+    environment:
+      KSQL_BOOTSTRAP_SERVERS: "kafka-experiment:29092"
+      KSQL_LISTENERS: "http://0.0.0.0:8088"
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      KSQL_KSQL_CONNECT_URL: ""
+      KSQL_CACHE_MAX_BYTES_BUFFERING: 0
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - kafka-net
 
-  # # --- ksqlDB CLI ---
-  # ksqldb-cli:
-  #   image: confluentinc/cp-ksqldb-cli:7.6.0
-  #   container_name: ksqldb-cli
-  #   depends_on:
-  #     - ksqldb-server
-  #   entrypoint: /bin/sh
-  #   tty: true
-  #   networks:
-  #     - kafka-net
+  # --- ksqlDB CLI ---
+  ksqldb-cli:
+    image: confluentinc/cp-ksqldb-cli:7.6.0
+    container_name: ksqldb-cli
+    depends_on:
+      - ksqldb-server
+    entrypoint: /bin/sh
+    tty: true
+    networks:
+      - kafka-net
 
-  # # ---- Set Up KSQLDB scripts ---
-  # ksql-init:
-  #   image: confluentinc/cp-ksqldb-cli:7.6.0
-  #   container_name: ksqldb-init
-  #   depends_on:
-  #     - ksqldb-server
-  #   entrypoint: ["/bin/bash", "/ksql-scripts/init.sh"]
-  #   volumes:
-  #     - ./ksqlDB:/ksql-scripts
-  #   networks:
-  #     - kafka-net
+  # ---- Set Up KSQLDB scripts ---
+  ksql-init:
+    image: confluentinc/cp-ksqldb-cli:7.6.0
+    container_name: ksqldb-init
+    depends_on:
+      - ksqldb-server
+    entrypoint: ["/bin/bash", "/ksql-scripts/init.sh"]
+    volumes:
+      - ./ksqlDB:/ksql-scripts
+    networks:
+      - kafka-net
 
   # --- UI for Kafka ---
   redpanda-console:
@@ -251,7 +251,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      # - ksqldb-server
+      - ksqldb-server
       - kafka
     networks:
       - kafka-net

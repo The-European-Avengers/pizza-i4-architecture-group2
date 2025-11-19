@@ -132,13 +132,10 @@ These dedicated topics simulate machine **restocking** and allow for granular me
 | Topic Pair | Request Producer | Acknowledgment Consumer | Purpose |
 | :--- | :--- | :--- | :--- |
 | `dough-machine-restock` / `dough-machine-restock-done` | **DoughMachine** | **DoughMachine** | Track dough ingredient replenishment latency. |
-| `dough-shaper-restock` / `dough-shaper-restock-done` | **DoughShaper** | **DoughShaper** | Track dough shaping tool/material replenishment latency. |
 | `sauce-machine-restock` / `sauce-machine-restock-done` | **SauceMachine** | **SauceMachine** | Track sauce replenishment latency. |
 | `cheese-machine-restock` / `cheese-machine-restock-done` | **CheeseGrater** | **CheeseGrater** | Track cheese ingredient replenishment latency. |
 | `meat-machine-restock` / `meat-machine-restock-done` | **MeatSlicer** | **MeatSlicer** | Track meat topping replenishment latency. |
 | `vegetables-machine-restock` / `vegetables-machine-restock-done`| **VegetablesSlicer** | **VegetablesSlicer** | Track vegetable topping replenishment latency. |
-| `oven-machine-restock` / `oven-machine-restock-done` | **Oven** | **Oven** | Track oven consumable/tool replenishment latency. |
-| `freezer-machine-restock` / `freezer-machine-restock-done` | **Freezer** | **Freezer** | Track freezer consumable/tool replenishment latency. |
 | `packaging-machine-restock` / `packaging-machine-restock-done`| **Packaging-robot** | **Packaging-robot** | Track packaging material replenishment latency. |
 
 
@@ -383,87 +380,6 @@ Measure Restock Latency (`completedTimestamp - requestTimestamp`). This can be f
 
 Measure the delay between an order starting (`order-processing` topic) and the last pizza produced being dispatched (`order-dispatched` topic). This is key for measuring the whole process from order receipt to warehouse dispatch.
 
-### Example Query:
-
-
-#### 1. **Order Latency**
-
-```sql
-SELECT *
-FROM order_latency
-EMIT CHANGES;
-```
-
-This returns each order with its size, start/end timestamps, and total processing time in milliseconds.
-
-
-#### 2. **Pizza Latency**
-
-```sql
-SELECT *
-FROM pizza_latency
-EMIT CHANGES;
-```
-
-Shows each pizza’s start/end timestamps and processing time.
-
-
-#### 3. **Restock Latency (Per Machine & Item)**
-
-```sql
-SELECT machineId, itemType, requestTimestamp, completedTimestamp, latencyMs
-FROM restock_latency
-EMIT CHANGES;
-```
-
-This streams the time it took to complete restocking for each item on each machine.
-
-
-#### 4. **Average Restock Latency Per Machine**
-
-```sql
-SELECT machineId, AVG(latencyMs) AS avgLatency
-FROM restock_latency
-GROUP BY machineId
-EMIT CHANGES;
-```
-
-Aggregates restock latency per machine in real time.
-
-
-#### 5. **Order Dispatch Latency**
-
-```sql
-SELECT orderId, ORDER_SIZE, startTimestamp, dispatchedTimestamp, latencyMs
-FROM order_dispatch_latency
-EMIT CHANGES;
-```
-
-Measures how long it took from order start to warehouse dispatch.
-
-
-#### 6. **Optional: Latest Completed Orders**
-
-If you just want the **most recent N completed orders**:
-
-```sql
-SELECT *
-FROM order_latency
-WHERE END_TIMESTAMP IS NOT NULL
-EMIT CHANGES
-LIMIT 50;
-```
-
-
-#### 7. Latest Completed Pizzas**
-
-```sql
-SELECT *
-FROM pizza_latency
-WHERE ENDTIMESTAMP IS NOT NULL
-EMIT CHANGES
-LIMIT 50;
-```
 
 ## Data Export API (FastAPI)
 
@@ -481,38 +397,7 @@ http://localhost:8000/ksql/
 
 Both endpoints support the `order_latency` and `pizza_latency` tables. The optional `limit` parameter controls the number of records returned.
 
-#### 1\. Get Table as JSON
-
-Retrieves the data as a JSON object, containing separate arrays for column headers and the data rows.
-
-```
-GET /ksql/{table_name}/json?limit={n}
-```
-
-| Parameter | Required/Optional | Description |
-| :--- | :--- | :--- |
-| `table_name` | **Required** | The KSQLDB table to query: `order_latency` or `pizza_latency`. |
-| `limit` | Optional (Default: 100) | Maximum number of rows to return. |
-
-**Example Request:**
-
-```
-GET http://localhost:8000/ksql/pizza_latency/json?limit=50
-```
-
-**Example Response:**
-
-```json
-{
-  "columns": ["PIZZAID", "ORDERID", "STARTTIMESTAMP", "ENDTIMESTAMP", "LATENCYMS"],
-  "rows": [
-    [101, 10, 1763309000000, 1763309025000, 25000],
-    [102, 10, 1763309005000, 1763309030000, 25000]
-  ]
-}
-```
-
-#### 2\. Get Table as CSV
+#### 1\. Get Table as CSV
 
 Retrieves the data as plain text with the correct `text/csv` header, making it easy to copy/paste or pipe the output into files or other tools.
 
@@ -528,7 +413,7 @@ GET /ksql/{table_name}/csv?limit={n}
 **Example Request:**
 
 ```
-GET http://localhost:8000/ksql/order_latency/csv?limit=50
+GET http://localhost:8000/ksql/order_latency/
 ```
 
 **Response (CSV Content):**
