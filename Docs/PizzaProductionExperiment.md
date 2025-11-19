@@ -237,8 +237,6 @@ Sent to the dedicated `pizza-done` topic by the **Packaging-robot** to finalize 
 
 This message is sent by a production machine when its internal stock of one or more ingredients is running low. It is intended for a simulated **Internal Goods Provider** to track restocking needs and latency.
 
-**Topic:** `restock-request`
-
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `machineId` | `string` | The ID of the machine requesting the restock (e.g., `"cheese-machine"`). |
