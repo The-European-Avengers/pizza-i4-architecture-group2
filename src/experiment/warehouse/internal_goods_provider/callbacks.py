@@ -1,67 +1,58 @@
 from py_helpers.kafka import KafkaClient
+from py_helpers.logger import get_logger
+import logging
 from datetime import datetime
 from time import sleep
+
+logger = get_logger("internal-goods-provider", level=logging.INFO, json_format=False)
 
 class CallbackHandler:
 
     def __init__(self, client: KafkaClient):
         super().__init__()
         self.client = client
-        print("✅ CallbackHandler initialized")
 
     def on_dough_machine(self, message):
-        print('=' * 80)
-        print(f'🔔 DOUGH RESTOCK REQUEST RECEIVED!')
-        print(f'   Topic: {message.topic}')
-        print(f'   Message: {message.value}')
-        print('=' * 80)
-        
+        logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)  # Simulate processing time
-        
-        response = self.create_restock_msg(message)
-        print(f'📤 SENDING RESTOCK RESPONSE TO: dough-machine-restock-done')
-        print(f'   Response: {response}')
-        
-        self.client.send('dough-machine-restock-done', response)
-        # ✅ CRITICAL FIX: Flush the producer to ensure message is sent immediately
+        self.client.send('dough-machine-restock-done', self.create_restock_msg(message))
         self.client.producer.flush()
-        print(f'✅ DOUGH RESTOCK RESPONSE SENT AND FLUSHED')
-        print('=' * 80)
+        logger.info('DOUGH RESTOCK COMPLETED')
 
     def on_sauce_machine(self, message):
-        print(f'🔔 SAUCE RESTOCK REQUEST: {message.topic} - {message.value}')
+        logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
         self.client.send('sauce-machine-restock-done', self.create_restock_msg(message))
         self.client.producer.flush()  # ✅ FLUSH
-        print(f'✅ SAUCE RESTOCK COMPLETED')
+        logger.info('SAUCE RESTOCK COMPLETED')
 
     def on_cheese_machine(self, message):
-        print(f'🔔 CHEESE RESTOCK REQUEST: {message.topic} - {message.value}')
+        logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
         self.client.send('cheese-machine-restock-done', self.create_restock_msg(message))
         self.client.producer.flush()  # ✅ FLUSH
-        print(f'✅ CHEESE RESTOCK COMPLETED')
+        logger.info('CHEESE RESTOCK COMPLETED')
 
     def on_meat_machine(self, message):
-        print(f'🔔 MEAT RESTOCK REQUEST: {message.topic} - {message.value}')
+        logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
         self.client.send('meat-machine-restock-done', self.create_restock_msg(message))
         self.client.producer.flush()  # ✅ FLUSH
-        print(f'✅ MEAT RESTOCK COMPLETED')
+        logger.info('MEAT RESTOCK COMPLETED')
 
     def on_vegetables_machine(self, message):
-        print(f'🔔 VEGETABLES RESTOCK REQUEST: {message.topic} - {message.value}')
+        logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
         self.client.send('vegetables-machine-restock-done', self.create_restock_msg(message))
         self.client.producer.flush()  # ✅ FLUSH
-        print(f'✅ VEGETABLES RESTOCK COMPLETED')
+        logger.info('VEGETABLES RESTOCK COMPLETED')
 
     def on_packaging_robot(self, message):
-        print(f'🔔 PACKAGING RESTOCK REQUEST: {message.topic} - {message.value}')
+        logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
         self.client.send('packaging-robot-restock-done', self.create_restock_msg(message))
         self.client.producer.flush()  # ✅ FLUSH
-        print(f'✅ PACKAGING RESTOCK COMPLETED')
+        logger.info('PACKAGING RESTOCK COMPLETED')
 
     @staticmethod
     def create_restock_msg(message):
