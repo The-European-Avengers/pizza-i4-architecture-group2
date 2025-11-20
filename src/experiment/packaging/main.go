@@ -130,7 +130,7 @@ func main() {
 		case <-ctx.Done():
 			fmt.Println("✔ Clean shutdown")
 			return
-		
+
 		case doneRestock := <-restockDoneChan: // Handle restock done in the main loop
 			handleRestockDone(doneRestock)
 
@@ -192,12 +192,12 @@ func consumeRestockDone(ctx context.Context, broker, topic string, out chan<- Re
 			return
 		}
 		// CHANGED: Use the defined RestockDoneMessage structure
-		var msg RestockDoneMessage 
+		var msg RestockDoneMessage
 		if err := json.Unmarshal(m.Value, &msg); err != nil {
 			log.Println("⚠️ Bad restock-done JSON:", err)
 			continue
 		}
-		
+
 		out <- msg // Send to main loop for thread-safe processing
 	}
 }
@@ -210,7 +210,7 @@ func handleRestockDone(msg RestockDoneMessage) {
 	for _, item := range msg.Items {
 		if _, ok := boxStock[item.ItemType]; ok {
 			// FIXED: Use DeliveredAmount instead of RequestedAmount
-			boxStock[item.ItemType] += item.DeliveredAmount 
+			boxStock[item.ItemType] += item.DeliveredAmount
 			if boxStock[item.ItemType] > MAX_STOCK {
 				boxStock[item.ItemType] = MAX_STOCK
 			}
@@ -294,7 +294,7 @@ func checkBoxStock(ctx context.Context, boxType string, writer *kafka.Writer) {
 		return
 	}
 	// Assuming box stock threshold is 10 boxes (10% of 100 max stock)
-	if boxStock[boxType] <= 10 { 
+	if boxStock[boxType] <= 10 {
 		req := RestockRequest{
 			MachineId: "packaging-machine",
 			Items: []RestockItem{
@@ -308,7 +308,7 @@ func checkBoxStock(ctx context.Context, boxType string, writer *kafka.Writer) {
 		}
 		b, _ := json.Marshal(req)
 		writer.WriteMessages(ctx, kafka.Message{
-			Key:   []byte("restock"),
+			Key:   []byte("packaging-machine"),
 			Value: b,
 		})
 		restockInProgress = true

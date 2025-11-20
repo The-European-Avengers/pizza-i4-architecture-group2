@@ -174,6 +174,38 @@ LEFT JOIN pizza_end_table e
 EMIT CHANGES;
 
 
+CREATE TABLE order_stack_table AS
+SELECT
+    orderId,
+    LATEST_BY_OFFSET(orderSize) AS orderSize,
+    MIN(startTimestamp) AS start_ts
+FROM order_stack_stream
+GROUP BY orderId
+EMIT CHANGES;
+
+
+CREATE TABLE order_dispatched_table AS
+SELECT
+    orderId,
+    MAX(endTimestamp) AS end_ts
+FROM order_dispatched_stream
+GROUP BY orderId
+EMIT CHANGES;
+
+
+CREATE TABLE order_dispatch_latency AS
+SELECT
+    s.orderId AS orderId,
+    s.orderSize AS orderSize,
+    s.start_ts AS startTimestamp,
+    d.end_ts AS endTimestamp,
+    (d.end_ts - s.start_ts) AS latencyMs
+FROM order_stack_table s
+LEFT JOIN order_dispatched_table d
+    ON s.orderId = d.orderId
+EMIT CHANGES;
+
+
 -- ----------------------------------------------------
 -- RESTOCK REQUEST STREAM
 -- ----------------------------------------------------

@@ -36,20 +36,20 @@ type DoneMessage struct {
 }
 
 type RestockItem struct {
-	ItemType string `json:"itemType"`
-	CurrentStock int `json:"currentStock"`
-	RequestedAmount int `json:"requestedAmount"`
+	ItemType        string `json:"itemType"`
+	CurrentStock    int    `json:"currentStock"`
+	RequestedAmount int    `json:"requestedAmount"`
 }
 
 type RestockRequest struct {
-	MachineId string `json:"machineId"`
-	Items []RestockItem `json:"items"`
-	RequestTimestamp int64 `json:"requestTimestamp"`
+	MachineId        string        `json:"machineId"`
+	Items            []RestockItem `json:"items"`
+	RequestTimestamp int64         `json:"requestTimestamp"`
 }
 
 type RestockDoneItem struct {
-	ItemType string `json:"itemType"`
-	DeliveredAmount int `json:"deliveredAmount"`
+	ItemType        string `json:"itemType"`
+	DeliveredAmount int    `json:"deliveredAmount"`
 }
 
 type RestockDoneMessage struct {
@@ -66,21 +66,21 @@ var (
 
 	// Stock of all veggies
 	veggieStock = map[string]int{
-		"basil":             11,
-		"mushroom":          11,
-		"onion":             11,
-		"green pepper":      11,
-		"black olive":       11,
-		"red onion":         11,
-		"spinach":           11,
-		"truffle":           11,
-		"sun-dried tomato":  11,
-		"artichoke heart":   11,
-		"pineapple":         11,
-		"jalapeño":          11,
-		"red bell pepper":   11,
-		"scrambled egg":     11,
-		"chives":            11,
+		"basil":            11,
+		"mushroom":         11,
+		"onion":            11,
+		"green pepper":     11,
+		"black olive":      11,
+		"red onion":        11,
+		"spinach":          11,
+		"truffle":          11,
+		"sun-dried tomato": 11,
+		"artichoke heart":  11,
+		"pineapple":        11,
+		"jalapeño":         11,
+		"red bell pepper":  11,
+		"scrambled egg":    11,
+		"chives":           11,
 	}
 
 	restockInProgress = false
@@ -121,7 +121,7 @@ func main() {
 
 	// consumers
 	go consumePizza(ctx, kafkaAddr, consumeTopic, msgChan)
-	go consumeDone(ctx, kafkaAddr, consumeTopicOvenDone, "oven", ovenDoneChan) // Pass machine type
+	go consumeDone(ctx, kafkaAddr, consumeTopicOvenDone, "oven", ovenDoneChan)          // Pass machine type
 	go consumeDone(ctx, kafkaAddr, consumeTopicFreezerDone, "freezer", freezerDoneChan) // Pass machine type
 
 	// restock done listener
@@ -145,13 +145,13 @@ func main() {
 		case <-ctx.Done():
 			fmt.Println("✔ Clean shutdown")
 			return
-		
+
 		case doneRestock := <-restockDoneChan: // Handle restock done
 			handleRestockDone(doneRestock)
 
 		case pizza := <-msgChan:
 			// Removed 'go' keyword for sequential processing
-			processPizza(ctx, pizza, writerDone, writerOven, writerFreezer, writerRestock, ovenDoneChan, freezerDoneChan) 
+			processPizza(ctx, pizza, writerDone, writerOven, writerFreezer, writerRestock, ovenDoneChan, freezerDoneChan)
 		}
 	}
 }
@@ -224,7 +224,7 @@ func consumeDone(ctx context.Context, broker, topic, machineType string, out cha
 			freezerBusy = false
 		}
 		fmt.Printf("✅ %s machine free (pizzaId=%d)\n", machineType, done.PizzaId)
-		
+
 		// Send to the channel for the blocking wait in processPizza
 		out <- done
 	}
@@ -289,7 +289,7 @@ func processPizza(
 	if !restockInProgress && checkRestockNeeded(pizza.Veggies) {
 		req := buildRestockRequest(pizza.Veggies)
 		data, _ := json.Marshal(req)
-		writerRestock.WriteMessages(ctx, kafka.Message{Value: data})
+		writerRestock.WriteMessages(ctx, kafka.Message{Value: data, Key: []byte("vegetables-machine")})
 		restockInProgress = true
 		fmt.Println("Restock request sent")
 	}
@@ -384,23 +384,23 @@ func buildRestockRequest(currentVeggies []string) RestockRequest {
 		// Veggie required for current pizza and dangerously low (<= 10)
 		if contains(currentVeggies, v) && stock <= threshold10 {
 			items = append(items, RestockItem{
-				ItemType: v,
-				CurrentStock: stock,
+				ItemType:        v,
+				CurrentStock:    stock,
 				RequestedAmount: MAX_STOCK - stock,
 			})
-		// Any veggie low (<= 20)
+			// Any veggie low (<= 20)
 		} else if stock <= threshold20 {
 			items = append(items, RestockItem{
-				ItemType: v,
-				CurrentStock: stock,
+				ItemType:        v,
+				CurrentStock:    stock,
 				RequestedAmount: MAX_STOCK - stock,
 			})
 		}
 	}
 
 	return RestockRequest{
-		MachineId: "vegetables-machine",
-		Items: items,
+		MachineId:        "vegetables-machine",
+		Items:            items,
 		RequestTimestamp: time.Now().UnixMilli(),
 	}
 }
@@ -416,7 +416,7 @@ func waitForMachine(machine string, doneChan <-chan DoneMessage, ctx context.Con
 
 	if *busy {
 		fmt.Printf("⏳ Waiting for %s-machine to be free...\n", machine)
-		
+
 		// Block and wait for the done message from the consumer
 		select {
 		case <-doneChan:
