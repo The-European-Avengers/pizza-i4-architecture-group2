@@ -16,13 +16,19 @@ export class OrderStackController {
 
   @Post('order')
   async sendOrder(@Body() message: any) {
-    
-    this.kafkaClient.emit('order-stack', message);
-
-    return {
-      success: true,
-      message: 'Order sent to Kafka topic: order-stack',
-      newOrder: message,
-    };
+    try {
+      this.kafkaClient.emit('order-stack', message);
+      return {
+        success: true,
+        message: 'Order sent to Kafka topic: order-stack',
+        newOrder: message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to send order to Kafka topic: order-stack',
+        error: error.message,
+      };
+    }
   }
 }
