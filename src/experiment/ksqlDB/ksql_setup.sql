@@ -40,6 +40,25 @@ CREATE STREAM order_done_stream (
     VALUE_FORMAT='JSON'
 );
 
+-- Order processing start stream
+CREATE STREAM order_stack_stream (
+    orderId INT,
+    orderSize INT,
+    startTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='order-stack',
+    VALUE_FORMAT='JSON'
+);
+
+-- Order completion stream
+CREATE STREAM order_dispatched_stream (
+    orderId INT,
+    endTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='order-dispatched',
+    VALUE_FORMAT='JSON'
+);
+
 
 -- Dough machine stream (First step of pizza processing)
 CREATE STREAM dough_stream (
@@ -153,3 +172,286 @@ FROM pizza_start_table s
 LEFT JOIN pizza_end_table e
     ON s.PIZZA_ORDER_KEY = e.PIZZA_ORDER_KEY
 EMIT CHANGES;
+
+
+CREATE TABLE order_stack_table AS
+SELECT
+    orderId,
+    LATEST_BY_OFFSET(orderSize) AS orderSize,
+    MIN(startTimestamp) AS start_ts
+FROM order_stack_stream
+GROUP BY orderId
+EMIT CHANGES;
+
+
+CREATE TABLE order_dispatched_table AS
+SELECT
+    orderId,
+    MAX(endTimestamp) AS end_ts
+FROM order_dispatched_stream
+GROUP BY orderId
+EMIT CHANGES;
+
+
+CREATE TABLE order_dispatch_latency AS
+SELECT
+    s.orderId AS orderId,
+    s.orderSize AS orderSize,
+    s.start_ts AS startTimestamp,
+    d.end_ts AS endTimestamp,
+    (d.end_ts - s.start_ts) AS latencyMs
+FROM order_stack_table s
+LEFT JOIN order_dispatched_table d
+    ON s.orderId = d.orderId
+EMIT CHANGES;
+
+
+-- ----------------------------------------------------
+-- RESTOCK REQUEST STREAM
+-- ----------------------------------------------------
+--------------------------------------------------------------------------------
+-- DOUGH MACHINE
+--------------------------------------------------------------------------------
+
+CREATE STREAM dough_machine_restock (
+    machineId STRING KEY,
+    requestTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='dough-machine-restock',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE STREAM dough_machine_restock_done (
+    machineId STRING KEY,
+    completedTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='dough-machine-restock-done',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE TABLE dough_machine_restock_t AS
+SELECT machineId AS machineId,
+       LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
+FROM dough_machine_restock
+GROUP BY machineId;
+
+CREATE TABLE dough_machine_restock_done_t AS
+SELECT machineId AS machineId,
+       LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
+FROM dough_machine_restock_done
+GROUP BY machineId;
+
+CREATE TABLE dough_machine_restock_latency AS
+SELECT
+    r.machineId AS machineId,
+    (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
+FROM dough_machine_restock_t r
+JOIN dough_machine_restock_done_t d
+ON r.machineId = d.machineId;
+
+
+
+--------------------------------------------------------------------------------
+-- SAUCE MACHINE
+--------------------------------------------------------------------------------
+
+CREATE STREAM sauce_machine_restock (
+    machineId STRING KEY,
+    requestTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='sauce-machine-restock',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE STREAM sauce_machine_restock_done (
+    machineId STRING KEY,
+    completedTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='sauce-machine-restock-done',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE TABLE sauce_machine_restock_t AS
+SELECT machineId,
+       LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
+FROM sauce_machine_restock
+GROUP BY machineId;
+
+CREATE TABLE sauce_machine_restock_done_t AS
+SELECT machineId,
+       LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
+FROM sauce_machine_restock_done
+GROUP BY machineId;
+
+CREATE TABLE sauce_machine_restock_latency AS
+SELECT
+    r.machineId AS machineId,
+    (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
+FROM sauce_machine_restock_t r
+JOIN sauce_machine_restock_done_t d
+ON r.machineId = d.machineId;
+
+
+
+--------------------------------------------------------------------------------
+-- CHEESE MACHINE
+--------------------------------------------------------------------------------
+
+CREATE STREAM cheese_machine_restock (
+    machineId STRING KEY,
+    requestTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='cheese-machine-restock',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE STREAM cheese_machine_restock_done (
+    machineId STRING KEY,
+    completedTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='cheese-machine-restock-done',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE TABLE cheese_machine_restock_t AS
+SELECT machineId,
+       LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
+FROM cheese_machine_restock
+GROUP BY machineId;
+
+CREATE TABLE cheese_machine_restock_done_t AS
+SELECT machineId,
+       LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
+FROM cheese_machine_restock_done
+GROUP BY machineId;
+
+CREATE TABLE cheese_machine_restock_latency AS
+SELECT
+    r.machineId AS machineId,
+    (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
+FROM cheese_machine_restock_t r
+JOIN cheese_machine_restock_done_t d
+ON r.machineId = d.machineId;
+
+
+--------------------------------------------------------------------------------
+-- MEAT MACHINE
+--------------------------------------------------------------------------------
+
+
+CREATE STREAM meat_machine_restock (
+    machineId STRING KEY,
+    requestTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='meat-machine-restock',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE STREAM meat_machine_restock_done (
+    machineId STRING KEY,
+    completedTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='meat-machine-restock-done',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE TABLE meat_machine_restock_t AS
+SELECT machineId,
+       LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
+FROM meat_machine_restock
+GROUP BY machineId;
+
+CREATE TABLE meat_machine_restock_done_t AS
+SELECT machineId,
+       LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
+FROM meat_machine_restock_done
+GROUP BY machineId;
+
+CREATE TABLE meat_machine_restock_latency AS
+SELECT
+    r.machineId AS machineId,
+    (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
+FROM meat_machine_restock_t r
+JOIN meat_machine_restock_done_t d
+ON r.machineId = d.machineId;
+
+--------------------------------------------------------------------------------
+-- VEGETABLES MACHINE
+--------------------------------------------------------------------------------
+
+CREATE STREAM vegetables_machine_restock (
+    machineId STRING KEY,
+    requestTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='vegetables-machine-restock',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE STREAM vegetables_machine_restock_done (
+    machineId STRING KEY,
+    completedTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='vegetables-machine-restock-done',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE TABLE vegetables_machine_restock_t AS
+SELECT machineId AS machineId,
+       LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
+FROM vegetables_machine_restock
+GROUP BY machineId;
+
+CREATE TABLE vegetables_machine_restock_done_t AS
+SELECT machineId,
+       LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
+FROM vegetables_machine_restock_done
+GROUP BY machineId;
+
+CREATE TABLE vegetables_machine_restock_latency AS
+SELECT
+    r.machineId AS machineId,
+    (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
+FROM vegetables_machine_restock_t r
+JOIN vegetables_machine_restock_done_t d
+ON r.machineId = d.machineId;
+
+
+--------------------------------------------------------------------------------
+-- PACKAGING MACHINE
+--------------------------------------------------------------------------------
+
+CREATE STREAM packaging_machine_restock (
+    machine STRING KEY,
+    requestTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='packaging-machine-restock',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE STREAM packaging_machine_restock_done (
+    machine STRING KEY,
+    completedTimestamp BIGINT
+) WITH (
+    KAFKA_TOPIC='packaging-machine-restock-done',
+    VALUE_FORMAT='JSON'
+);
+
+CREATE TABLE packaging_machine_restock_t AS
+SELECT machine,
+       LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
+FROM packaging_machine_restock
+GROUP BY machine;
+
+CREATE TABLE packaging_machine_restock_done_t AS
+SELECT machine,
+       LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
+FROM packaging_machine_restock_done
+GROUP BY machine;
+
+CREATE TABLE packaging_machine_restock_latency AS
+SELECT
+    r.machine AS machine,
+    (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
+FROM packaging_machine_restock_t r
+JOIN packaging_machine_restock_done_t d
+ON r.machine = d.machine;
