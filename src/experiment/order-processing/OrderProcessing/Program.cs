@@ -482,6 +482,9 @@ public class OrderStackMessage
     
     [JsonPropertyName("isBaked")]
     public bool IsBaked { get; set; }
+    [JsonPropertyName("startTimestamp")] 
+    public long StartTimestamp { get; set; }
+    
 }
 
 public class OrderProcessingMessage
