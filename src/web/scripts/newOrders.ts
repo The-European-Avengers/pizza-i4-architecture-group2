@@ -84,7 +84,7 @@ const getRandomInt = (min: number, max: number): number => {
 };
 
 //Select the amount of pizzas in the order
-const createRandomOrder = (numberOfTypes: number): Order => {
+const createRandomOrder = (numberOfTypes: number,isBaked: boolean): Order => {
   const MAX_TOTAL_PIZZAS = 100;
 
   const shuffledMenu = [...MENU].sort(() => 0.5 - Math.random());
@@ -127,7 +127,7 @@ const createRandomOrder = (numberOfTypes: number): Order => {
   return {
     OrderId: uuidv4(),
     pizzas: pizzasRecord,
-    isBaked: true,
+    isBaked,
     //total: parseFloat(calculatedTotal.toFixed(2)),
     startTimestamp: new Date().getTime(),
   };
@@ -144,11 +144,12 @@ const startOrderGeneration = async () => {
     process.exit(1);
   }
   const amount = parseInt(process.argv[2]);
+  const isbaked= process.argv[3] === "true" ? true : false;
 
   try {
     console.log("--- Random Order ---");
 
-    const myOrder = createRandomOrder(amount);
+    const myOrder = createRandomOrder(amount, isbaked);
 
     console.log(JSON.stringify(myOrder, null, 2));
 
