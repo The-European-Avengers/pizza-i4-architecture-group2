@@ -11,7 +11,7 @@ type Order = {
   //   quantity: number;
   // }[];
   isBaked?: boolean;
-  createdAt: Date;
+  startTimestamp: number;
 }
 
 type Pizza = {
@@ -117,6 +117,7 @@ const createRandomOrder = (numberOfTypes: number): Order => {
   console.log("-----------------");
 
   const pizzasRecord: Record<string, number> = {};
+
   orderItems.forEach(item => {
     if (item) {
       pizzasRecord[item.pizzaName] = item.quantity;
@@ -128,7 +129,7 @@ const createRandomOrder = (numberOfTypes: number): Order => {
     pizzas: pizzasRecord,
     isBaked: true,
     //total: parseFloat(calculatedTotal.toFixed(2)),
-    createdAt: new Date(),
+    startTimestamp: new Date().getTime(),
   };
 };
 
