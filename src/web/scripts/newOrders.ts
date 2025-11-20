@@ -84,45 +84,70 @@ const getRandomInt = (min: number, max: number): number => {
 };
 
 //Select the amount of pizzas in the order
-const createRandomOrder = (numberOfTypes: number,isBaked: boolean): Order => {
-  const MAX_TOTAL_PIZZAS = 100;
+const createRandomOrder = (numberOfPizza: number,isBaked: boolean): Order => {
+  // const MAX_TOTAL_PIZZAS = numberOfPizza;;
 
-  const shuffledMenu = [...MENU].sort(() => 0.5 - Math.random());
+  // const shuffledMenu = [...MENU].sort(() => 0.5 - Math.random());
 
-  const selectedPizzas = shuffledMenu.slice(0, numberOfTypes);
+  // const selectedPizzas = shuffledMenu.slice(0, 10);
 
-  let calculatedTotal = 0;
-  let currentPizzaCount = 0;
+  // let calculatedTotal = 0;
+  // let currentPizzaCount = 0;
 
-  const orderItems = selectedPizzas
-    .map((pizza) => {
-      const remainingSpace = MAX_TOTAL_PIZZAS - currentPizzaCount;
+  // const orderItems = selectedPizzas
+  //   .map((pizza) => {
+  //     const remainingSpace = MAX_TOTAL_PIZZAS - currentPizzaCount;
 
-      if (remainingSpace <= 0) return null;
+  //     if (remainingSpace <= 0) return null;
 
-      const maxQuantity = Math.min(5, remainingSpace);
-      const quantity = getRandomInt(1, maxQuantity);
+  //     const maxQuantity = Math.min(5, remainingSpace);
+  //     const quantity = getRandomInt(1, maxQuantity);
 
-      currentPizzaCount += quantity;
-      calculatedTotal += pizza.price * quantity;
+  //     currentPizzaCount += quantity;
+  //     calculatedTotal += pizza.price * quantity;
 
-      return {
-        pizzaName: pizza.name,
-        quantity: quantity,
-      };
-    })
-    .filter((item) => item !== null);
+  //     return {
+  //       pizzaName: pizza.name,
+  //       quantity: quantity,
+  //     };
+  //   })
+  //   .filter((item) => item !== null);
 
-  console.log(`Total Pizzas in Order: ${currentPizzaCount}`);
+  //Array of number of pizzas, which each value is a pizza type
+  const orderItems = [];
+  for (let i = 0; i < numberOfPizza ; i++) {
+    const pizzaType = MENU[getRandomInt(0, MENU.length - 1)];
+    orderItems.push({
+      pizzaName: pizzaType.name,
+    });
+  }
+
+
+  const orderSummary = orderItems.map(item => item.pizzaName).reduce((acc: Record<string, number>, pizzaName: string) => {
+    if (acc[pizzaName]) {
+      acc[pizzaName] += 1;
+    } else {
+      acc[pizzaName] = 1;
+    }
+    return acc;
+  }, {});
+  console.log("Order Summary:");
+  for (const [pizzaName, quantity] of Object.entries(orderSummary)) {
+    console.log(`${pizzaName}: ${quantity}`);
+  }
+
+  console.log(`Total Pizzas in Order: ${numberOfPizza}`);
   console.log("-----------------");
 
   const pizzasRecord: Record<string, number> = {};
-
   orderItems.forEach(item => {
-    if (item) {
-      pizzasRecord[item.pizzaName] = item.quantity;
+    if (pizzasRecord[item.pizzaName]) {
+      pizzasRecord[item.pizzaName] += 1;
+    } else {
+      pizzasRecord[item.pizzaName] = 1;
     }
   });
+
 
   return {
     OrderId: uuidv4(),
@@ -134,7 +159,7 @@ const createRandomOrder = (numberOfTypes: number,isBaked: boolean): Order => {
 };
 
 const startOrderGeneration = async () => {
-  if (process.argv[2] > MENU.length || process.argv[2] < 1) {
+  if ( process.argv[2] < 1) {
     console.error("Please provide a correct number of pizzas");
     process.exit(1);
   }

@@ -192,7 +192,7 @@ public class ProcessingService : BackgroundService
                 // Step 4: Send pizza to Sauce Machine
                 var nextMessage = new Message<string, string>
                 {
-                    Key = pizza.OrderId.ToString(),
+                    Key = pizza.OrderId,
                     Value = JsonSerializer.Serialize(pizza)
                 };
                 await producer.ProduceAsync(NEXT_TOPIC, nextMessage, stoppingToken);
@@ -200,7 +200,7 @@ public class ProcessingService : BackgroundService
                 // Step 5: Send "done" signal back to DoughMachine
                 var doneMessage = new Message<string, string>
                 {
-                    Key = pizza.OrderId.ToString(),
+                    Key = pizza.OrderId,
                     Value = JsonSerializer.Serialize(new PizzaDoneMessage
                     {
                         PizzaId = pizza.PizzaId,
@@ -229,7 +229,7 @@ public class PizzaOrderMessage
     [JsonPropertyName("pizzaId")]
     public int PizzaId { get; set; }
     [JsonPropertyName("orderId")]
-    public int OrderId { get; set; }
+    public string OrderId { get; set; }
     [JsonPropertyName("orderSize")]
     public int OrderSize { get; set; }
     [JsonPropertyName("startTimestamp")]
@@ -255,7 +255,7 @@ public class PizzaDoneMessage
     [JsonPropertyName("pizzaId")]
     public int PizzaId { get; set; }
     [JsonPropertyName("orderId")]
-    public int OrderId { get; set; }
+    public string OrderId { get; set; }
     [JsonPropertyName("doneMsg")]
     public bool DoneMsg { get; set; } = true;
 }

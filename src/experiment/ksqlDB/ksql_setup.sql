@@ -5,7 +5,7 @@
 -- Raw pizza steps stream (Final completion events)
 CREATE STREAM pizza_steps_raw (
     pizzaId INT,
-    orderId INT,
+    orderId VARCHAR,
     orderSize INT,
     startTimestamp BIGINT,
     endTimestamp BIGINT,
@@ -23,7 +23,7 @@ CREATE STREAM pizza_steps_raw (
 
 -- Order processing start stream
 CREATE STREAM order_processing_stream (
-    orderId INT,
+    orderId VARCHAR,
     orderSize INT,
     startTimestamp BIGINT
 ) WITH (
@@ -33,7 +33,7 @@ CREATE STREAM order_processing_stream (
 
 -- Order completion stream
 CREATE STREAM order_done_stream (
-    orderId INT,
+    orderId VARCHAR,
     endTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='order-done',
@@ -42,7 +42,7 @@ CREATE STREAM order_done_stream (
 
 -- Order processing start stream
 CREATE STREAM order_stack_stream (
-    orderId INT,
+    orderId VARCHAR,
     orderSize INT,
     startTimestamp BIGINT
 ) WITH (
@@ -52,7 +52,7 @@ CREATE STREAM order_stack_stream (
 
 -- Order completion stream
 CREATE STREAM order_dispatched_stream (
-    orderId INT,
+    orderId VARCHAR,
     endTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='order-dispatched',
@@ -63,7 +63,7 @@ CREATE STREAM order_dispatched_stream (
 -- Dough machine stream (First step of pizza processing)
 CREATE STREAM dough_stream (
     pizzaId INT,
-    orderId INT,
+    orderId VARCHAR,
     startTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='dough-machine',
@@ -75,7 +75,7 @@ CREATE STREAM dough_stream (
 CREATE STREAM dough_stream_rekeyed AS
 SELECT
     -- Create the composite key by combining the IDs
-    CAST(pizzaId AS VARCHAR) + '_' + CAST(orderId AS VARCHAR) AS PIZZA_ORDER_KEY,
+    CAST(pizzaId AS VARCHAR) + '_' + orderId AS PIZZA_ORDER_KEY,
     pizzaId,
     orderId,
     -- Renaming the field that holds the Order's start time
@@ -83,7 +83,7 @@ SELECT
     -- ROWTIME (the event's timestamp) is the accurate Pizza Start Time
     ROWTIME AS PIZZA_START_TIME
 FROM dough_stream
-PARTITION BY CAST(pizzaId AS VARCHAR) + '_' + CAST(orderId AS VARCHAR);
+PARTITION BY (CAST(pizzaId AS VARCHAR) + '_' + orderId);
 
 -- NOTE: Order streams and tables (order_processing_stream, order_done_stream, etc.) are omitted here
 -- but rely on being correctly grouped by orderId only.
@@ -141,12 +141,12 @@ EMIT CHANGES;
 -- Stream rekeyed for end events (pizza_steps_raw)
 CREATE STREAM pizza_steps_raw_rekeyed AS
 SELECT
-    CAST(pizzaId AS VARCHAR) + '_' + CAST(orderId AS VARCHAR) AS PIZZA_ORDER_KEY,
+    CAST(pizzaId AS VARCHAR) + '_' + orderId AS PIZZA_ORDER_KEY,
     pizzaId,
     orderId,
     endTimestamp
 FROM pizza_steps_raw
-PARTITION BY CAST(pizzaId AS VARCHAR) + '_' + CAST(orderId AS VARCHAR);
+PARTITION BY (CAST(pizzaId AS VARCHAR) + '_' + orderId);
 
 -- Pizza end table: Grouped by PIZZA_ORDER_KEY
 CREATE TABLE pizza_end_table AS
@@ -205,7 +205,6 @@ LEFT JOIN order_dispatched_table d
     ON s.orderId = d.orderId
 EMIT CHANGES;
 
-
 -- ----------------------------------------------------
 -- RESTOCK REQUEST STREAM
 -- ----------------------------------------------------
@@ -214,7 +213,7 @@ EMIT CHANGES;
 --------------------------------------------------------------------------------
 
 CREATE STREAM dough_machine_restock (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     requestTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='dough-machine-restock',
@@ -222,7 +221,7 @@ CREATE STREAM dough_machine_restock (
 );
 
 CREATE STREAM dough_machine_restock_done (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     completedTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='dough-machine-restock-done',
@@ -230,16 +229,20 @@ CREATE STREAM dough_machine_restock_done (
 );
 
 CREATE TABLE dough_machine_restock_t AS
-SELECT machineId AS machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
 FROM dough_machine_restock
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE dough_machine_restock_done_t AS
-SELECT machineId AS machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
 FROM dough_machine_restock_done
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE dough_machine_restock_latency AS
 SELECT
@@ -247,16 +250,15 @@ SELECT
     (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
 FROM dough_machine_restock_t r
 JOIN dough_machine_restock_done_t d
-ON r.machineId = d.machineId;
-
-
+ON r.machineId = d.machineId
+EMIT CHANGES;
 
 --------------------------------------------------------------------------------
 -- SAUCE MACHINE
 --------------------------------------------------------------------------------
 
 CREATE STREAM sauce_machine_restock (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     requestTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='sauce-machine-restock',
@@ -264,7 +266,7 @@ CREATE STREAM sauce_machine_restock (
 );
 
 CREATE STREAM sauce_machine_restock_done (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     completedTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='sauce-machine-restock-done',
@@ -272,16 +274,20 @@ CREATE STREAM sauce_machine_restock_done (
 );
 
 CREATE TABLE sauce_machine_restock_t AS
-SELECT machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
 FROM sauce_machine_restock
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE sauce_machine_restock_done_t AS
-SELECT machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
 FROM sauce_machine_restock_done
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE sauce_machine_restock_latency AS
 SELECT
@@ -289,16 +295,15 @@ SELECT
     (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
 FROM sauce_machine_restock_t r
 JOIN sauce_machine_restock_done_t d
-ON r.machineId = d.machineId;
-
-
+ON r.machineId = d.machineId
+EMIT CHANGES;
 
 --------------------------------------------------------------------------------
 -- CHEESE MACHINE
 --------------------------------------------------------------------------------
 
 CREATE STREAM cheese_machine_restock (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     requestTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='cheese-machine-restock',
@@ -306,7 +311,7 @@ CREATE STREAM cheese_machine_restock (
 );
 
 CREATE STREAM cheese_machine_restock_done (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     completedTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='cheese-machine-restock-done',
@@ -314,16 +319,20 @@ CREATE STREAM cheese_machine_restock_done (
 );
 
 CREATE TABLE cheese_machine_restock_t AS
-SELECT machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
 FROM cheese_machine_restock
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE cheese_machine_restock_done_t AS
-SELECT machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
 FROM cheese_machine_restock_done
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE cheese_machine_restock_latency AS
 SELECT
@@ -331,16 +340,15 @@ SELECT
     (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
 FROM cheese_machine_restock_t r
 JOIN cheese_machine_restock_done_t d
-ON r.machineId = d.machineId;
-
+ON r.machineId = d.machineId
+EMIT CHANGES;
 
 --------------------------------------------------------------------------------
 -- MEAT MACHINE
 --------------------------------------------------------------------------------
 
-
 CREATE STREAM meat_machine_restock (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     requestTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='meat-machine-restock',
@@ -348,7 +356,7 @@ CREATE STREAM meat_machine_restock (
 );
 
 CREATE STREAM meat_machine_restock_done (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     completedTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='meat-machine-restock-done',
@@ -356,16 +364,20 @@ CREATE STREAM meat_machine_restock_done (
 );
 
 CREATE TABLE meat_machine_restock_t AS
-SELECT machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
 FROM meat_machine_restock
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE meat_machine_restock_done_t AS
-SELECT machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
 FROM meat_machine_restock_done
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE meat_machine_restock_latency AS
 SELECT
@@ -373,14 +385,15 @@ SELECT
     (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
 FROM meat_machine_restock_t r
 JOIN meat_machine_restock_done_t d
-ON r.machineId = d.machineId;
+ON r.machineId = d.machineId
+EMIT CHANGES;
 
 --------------------------------------------------------------------------------
 -- VEGETABLES MACHINE
 --------------------------------------------------------------------------------
 
 CREATE STREAM vegetables_machine_restock (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     requestTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='vegetables-machine-restock',
@@ -388,7 +401,7 @@ CREATE STREAM vegetables_machine_restock (
 );
 
 CREATE STREAM vegetables_machine_restock_done (
-    machineId STRING KEY,
+    machineId VARCHAR KEY,
     completedTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='vegetables-machine-restock-done',
@@ -396,16 +409,20 @@ CREATE STREAM vegetables_machine_restock_done (
 );
 
 CREATE TABLE vegetables_machine_restock_t AS
-SELECT machineId AS machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
 FROM vegetables_machine_restock
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE vegetables_machine_restock_done_t AS
-SELECT machineId,
+SELECT 
+       machineId,
        LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
 FROM vegetables_machine_restock_done
-GROUP BY machineId;
+GROUP BY machineId
+EMIT CHANGES;
 
 CREATE TABLE vegetables_machine_restock_latency AS
 SELECT
@@ -413,15 +430,15 @@ SELECT
     (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
 FROM vegetables_machine_restock_t r
 JOIN vegetables_machine_restock_done_t d
-ON r.machineId = d.machineId;
-
+ON r.machineId = d.machineId
+EMIT CHANGES;
 
 --------------------------------------------------------------------------------
 -- PACKAGING MACHINE
 --------------------------------------------------------------------------------
 
 CREATE STREAM packaging_machine_restock (
-    machine STRING KEY,
+    machine VARCHAR KEY,
     requestTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='packaging-machine-restock',
@@ -429,7 +446,7 @@ CREATE STREAM packaging_machine_restock (
 );
 
 CREATE STREAM packaging_machine_restock_done (
-    machine STRING KEY,
+    machine VARCHAR KEY,
     completedTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='packaging-machine-restock-done',
@@ -437,16 +454,20 @@ CREATE STREAM packaging_machine_restock_done (
 );
 
 CREATE TABLE packaging_machine_restock_t AS
-SELECT machine,
+SELECT 
+       machine,
        LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp
 FROM packaging_machine_restock
-GROUP BY machine;
+GROUP BY machine
+EMIT CHANGES;
 
 CREATE TABLE packaging_machine_restock_done_t AS
-SELECT machine,
+SELECT 
+       machine,
        LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp
 FROM packaging_machine_restock_done
-GROUP BY machine;
+GROUP BY machine
+EMIT CHANGES;
 
 CREATE TABLE packaging_machine_restock_latency AS
 SELECT
@@ -454,4 +475,5 @@ SELECT
     (d.completedTimestamp - r.requestTimestamp) AS restockLatencyMs
 FROM packaging_machine_restock_t r
 JOIN packaging_machine_restock_done_t d
-ON r.machine = d.machine;
+ON r.machine = d.machine
+EMIT CHANGES;

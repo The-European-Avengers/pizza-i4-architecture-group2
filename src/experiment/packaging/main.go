@@ -18,7 +18,7 @@ import (
 
 type Pizza struct {
 	PizzaId        int      `json:"pizzaId"`
-	OrderId        int      `json:"orderId"`
+	OrderId        string      `json:"orderId"`
 	OrderSize      int      `json:"orderSize"`
 	StartTimestamp float64  `json:"startTimestamp"`
 	EndTimestamp   *float64 `json:"endTimestamp"`
@@ -33,18 +33,18 @@ type Pizza struct {
 // Packaging machine per-pizza done event
 type PackagingDone struct {
 	PizzaId int  `json:"pizzaId"`
-	OrderId int  `json:"orderId"`
+	OrderId string  `json:"orderId"`
 	DoneMsg bool `json:"doneMsg"`
 }
 
 // Final order done message → MUST include endTimestamp
 type OrderDone struct {
-	OrderId      int     `json:"orderId"`
+	OrderId      string     `json:"orderId"`
 	EndTimestamp float64 `json:"endTimestamp"`
 }
 
 type PizzaDone struct {
-	OrderId      int     `json:"orderId"`
+	OrderId      string     `json:"orderId"`
 	OrderSize    int     `json:"orderSize"`
 	PizzaId      int     `json:"pizzaId"`
 	EndTimestamp float64 `json:"endTimestamp"`
@@ -77,7 +77,7 @@ const MAX_STOCK = 100 // Define max stock for safety
 
 // Track pizzas per order safely
 var (
-	pizzasCompleted = make(map[int]int)
+	pizzasCompleted = make(map[string]int)
 	boxStock        = map[string]int{
 		"box": 10,
 	}
@@ -253,7 +253,7 @@ func processPizza(
 		OrderId: pizza.OrderId,
 		DoneMsg: true,
 	}
-	sendJSON(ctx, writerDone, pizza.PizzaId, doneMsg)
+	sendJSONPizza(ctx, writerDone, pizza.PizzaId, doneMsg)
 	fmt.Printf("📤 Sent packaging-done for pizza %d\n", pizza.PizzaId)
 
 	end := time.Now().UnixMilli()
@@ -263,7 +263,7 @@ func processPizza(
 		OrderId:      pizza.OrderId,
 		EndTimestamp: float64(end),
 	}
-	sendJSON(ctx, writerPizzaDone, pizza.PizzaId, pizzaDoneMsg)
+	sendJSONPizza(ctx, writerPizzaDone, pizza.PizzaId, pizzaDoneMsg)
 
 	// Thread-safe count update
 	mu.Lock()
@@ -277,7 +277,7 @@ func processPizza(
 			OrderId:      pizza.OrderId,
 			EndTimestamp: float64(end),
 		}
-		sendJSON(ctx, writerOrderDone, pizza.OrderId, orderDone)
+		sendJSONOrder(ctx, writerOrderDone, pizza.OrderId, orderDone)
 		fmt.Printf("🎉 Order %d completed → sent order-done\n", pizza.OrderId)
 
 		mu.Lock()
@@ -328,8 +328,19 @@ func waitForBoxes(ctx context.Context, boxType string) {
 	}
 }
 
-func sendJSON(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
+func sendJSONOrder(ctx context.Context, writer *kafka.Writer, key string, value interface{}) {
 	b, err := json.Marshal(value)
+	if err != nil {
+		log.Println("❌ Failed to marshal JSON:", err)
+		return
+	}
+	writer.WriteMessages(ctx, kafka.Message{
+		Key:   []byte(key),
+		Value: b,
+	})
+}
+func sendJSONPizza(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
+		b, err := json.Marshal(value)
 	if err != nil {
 		log.Println("❌ Failed to marshal JSON:", err)
 		return

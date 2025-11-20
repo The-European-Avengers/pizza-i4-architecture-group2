@@ -17,7 +17,7 @@ import (
 
 type Pizza struct {
 	PizzaId        int      `json:"pizzaId"`
-	OrderId        int      `json:"orderId"`
+	OrderId        string      `json:"orderId"`
 	OrderSize      int      `json:"orderSize"`
 	StartTimestamp float64  `json:"startTimestamp"`
 	EndTimestamp   *float64 `json:"endTimestamp"`
@@ -31,7 +31,7 @@ type Pizza struct {
 
 type DoneMessage struct {
 	PizzaId int  `json:"pizzaId"`
-	OrderId int  `json:"orderId"`
+	OrderId string  `json:"orderId"`
 	DoneMsg bool `json:"doneMsg"`
 }
 
@@ -319,18 +319,18 @@ func processPizza(
 		OrderId: pizza.OrderId,
 		DoneMsg: true,
 	}
-	sendJSON(ctx, writerDone, pizza.PizzaId, doneMsg)
+	sendJSONPizza(ctx, writerDone, pizza.PizzaId, doneMsg)
 	fmt.Println("📤 Sent vegetables-machine-done")
 
 	// Route to correct machine
 	if pizza.Baked {
 		waitForMachine("oven", ovenDoneChan, ctx)
-		sendJSON(ctx, writerOven, pizza.PizzaId, pizza)
+		sendJSONPizza(ctx, writerOven, pizza.PizzaId, pizza)
 		fmt.Printf("➡️ Sent pizza %d to oven-machine\n", pizza.PizzaId)
 		ovenBusy = true
 	} else {
 		waitForMachine("freezer", freezerDoneChan, ctx)
-		sendJSON(ctx, writerFreezer, pizza.PizzaId, pizza)
+		sendJSONPizza(ctx, writerFreezer, pizza.PizzaId, pizza)
 		fmt.Printf("➡️ Sent pizza %d to freezer-machine\n", pizza.PizzaId)
 		freezerBusy = true
 	}
@@ -429,21 +429,29 @@ func waitForMachine(machine string, doneChan <-chan DoneMessage, ctx context.Con
 	}
 }
 
-func sendJSON(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
+func sendJSONOrder(ctx context.Context, writer *kafka.Writer, key string, value interface{}) {
 	b, err := json.Marshal(value)
 	if err != nil {
 		log.Println("❌ Failed to marshal JSON:", err)
 		return
 	}
-
-	err = writer.WriteMessages(ctx, kafka.Message{
+	writer.WriteMessages(ctx, kafka.Message{
+		Key:   []byte(key),
+		Value: b,
+	})
+}
+func sendJSONPizza(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
+		b, err := json.Marshal(value)
+	if err != nil {
+		log.Println("❌ Failed to marshal JSON:", err)
+		return
+	}
+	writer.WriteMessages(ctx, kafka.Message{
 		Key:   []byte(fmt.Sprintf("%d", key)),
 		Value: b,
 	})
-	if err != nil {
-		log.Println("❌ Failed to write message:", err)
-	}
 }
+
 
 // -------------------- UTILS --------------------
 

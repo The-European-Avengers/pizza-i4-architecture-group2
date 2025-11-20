@@ -267,8 +267,8 @@ public class OrderStackConsumer : BackgroundService
                         _logger.LogInformation("📦 Received order {OrderId} with {Count} pizza types", 
                             orderMessage.OrderId, orderMessage.Pizzas.Count);
 
-                        // Convert string OrderId to int (for now)
-                        int orderId = orderMessage.OrderId.GetHashCode();
+                        
+                        string orderId = orderMessage.OrderId;
                         int totalPizzas = orderMessage.Pizzas.Sum(p => p.Value);
                         int pizzaCounter = 1;
 
@@ -394,7 +394,7 @@ public class OrderProcessingService : BackgroundService
     private readonly KafkaProducerService _producer;
     private readonly ILogger<OrderProcessingService> _logger;
 
-    private readonly ConcurrentDictionary<int, long> _orderStartTimes = new();
+    private readonly ConcurrentDictionary<string, long> _orderStartTimes = new();
 
     public OrderProcessingService(OrderState state, KafkaProducerService producer, ILogger<OrderProcessingService> logger)
     {
@@ -474,7 +474,7 @@ public class PizzaRecipe
 
 public class OrderStackMessage
 {
-    [JsonPropertyName("orderID")]
+    [JsonPropertyName("OrderId")]
     public string OrderId { get; set; } = "";
     
     [JsonPropertyName("pizzas")]
@@ -489,7 +489,7 @@ public class OrderStackMessage
 
 public class OrderProcessingMessage
 {
-    [JsonPropertyName("orderId")] public int OrderId { get; set; }
+    [JsonPropertyName("orderId")] public string OrderId { get; set; }
     [JsonPropertyName("orderSize")] public int OrderSize { get; set; }
     [JsonPropertyName("startTimestamp")] public long StartTimestamp { get; set; }
 }
@@ -497,14 +497,14 @@ public class OrderProcessingMessage
 public class PizzaDoneMessage
 {
     [JsonPropertyName("pizzaId")] public int PizzaId { get; set; }
-    [JsonPropertyName("orderId")] public int OrderId { get; set; }
+    [JsonPropertyName("orderId")] public string OrderId { get; set; }
     [JsonPropertyName("doneMsg")] public bool DoneMsg { get; set; }
 }
 
 public class PizzaOrderMessage
 {
     [JsonPropertyName("pizzaId")] public int PizzaId { get; set; }
-    [JsonPropertyName("orderId")] public int OrderId { get; set; }
+    [JsonPropertyName("orderId")] public string OrderId { get; set; }
     [JsonPropertyName("orderSize")] public int OrderSize { get; set; }
     [JsonPropertyName("startTimestamp")] public long? StartTimestamp { get; set; }
     [JsonPropertyName("endTimestamp")] public long? EndTimestamp { get; set; }

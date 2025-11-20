@@ -15,7 +15,7 @@ import (
 
 type Pizza struct {
 	PizzaId        int      `json:"pizzaId"`
-	OrderId        int      `json:"orderId"`
+	OrderId        string      `json:"orderId"`
 	OrderSize      int      `json:"orderSize"`
 	StartTimestamp float64  `json:"startTimestamp"`
 	EndTimestamp   *float64 `json:"endTimestamp"`
@@ -29,7 +29,7 @@ type Pizza struct {
 
 type DoneMessage struct {
 	PizzaId int  `json:"pizzaId"`
-	OrderId int  `json:"orderId"`
+	OrderId string  `json:"orderId"`
 	DoneMsg bool `json:"doneMsg"`
 }
 
@@ -302,7 +302,7 @@ func processPizza(
 		OrderId: pizza.OrderId,
 		DoneMsg: true,
 	}
-	sendJSON(ctx, writerDone, pizza.PizzaId, done)
+	sendJSONPizza(ctx, writerDone, pizza.PizzaId, done)
 	fmt.Println("📤 Sent done message")
 
 	// Wait for next machine
@@ -323,7 +323,7 @@ func processPizza(
 	}
 
 	// Send pizza to next machine
-	sendJSON(ctx, writerNext, pizza.PizzaId, pizza)
+	sendJSONPizza(ctx, writerNext, pizza.PizzaId, pizza)
 	fmt.Printf("➡️ Sent pizza %d to vegetables machine\n", pizza.PizzaId)
 
 	nextMachineBusy = true
@@ -331,8 +331,23 @@ func processPizza(
 
 // ------------------ Utility --------------------
 
-func sendJSON(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
-	b, _ := json.Marshal(value)
+func sendJSONOrder(ctx context.Context, writer *kafka.Writer, key string, value interface{}) {
+	b, err := json.Marshal(value)
+	if err != nil {
+		log.Println("❌ Failed to marshal JSON:", err)
+		return
+	}
+	writer.WriteMessages(ctx, kafka.Message{
+		Key:   []byte(key),
+		Value: b,
+	})
+}
+func sendJSONPizza(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
+		b, err := json.Marshal(value)
+	if err != nil {
+		log.Println("❌ Failed to marshal JSON:", err)
+		return
+	}
 	writer.WriteMessages(ctx, kafka.Message{
 		Key:   []byte(fmt.Sprintf("%d", key)),
 		Value: b,
