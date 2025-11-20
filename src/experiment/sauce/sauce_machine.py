@@ -24,10 +24,22 @@ def shutdown_handler(sig, frame):
     global running
     print("\nStopping service...")
     running = False
-    consumer.close()
-    consumer_done.close()
-    consumer_restock_done.close()
-    producer.close()
+    try:
+        consumer.close()
+    except Exception:
+        pass
+    try:
+        consumer_done.close()
+    except Exception:
+        pass
+    try:
+        consumer_restock_done.close()
+    except Exception:
+        pass
+    try:
+        producer.close()
+    except Exception:
+        pass
 
 signal.signal(signal.SIGINT, shutdown_handler)
 signal.signal(signal.SIGTERM, shutdown_handler)
@@ -44,15 +56,16 @@ restock_done_topic = "sauce-machine-restock-done"
 
 KAFKA_BROKER = "kafka-experiment:29092"
 
-# Producer
+# Producer with a key serializer (keys sent as UTF-8 bytes)
 producer = KafkaProducer(
     bootstrap_servers=KAFKA_BROKER,
-    value_serializer=lambda v: json.dumps(v).encode("utf-8")
+    value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+    key_serializer=lambda k: k.encode("utf-8") if isinstance(k, str) else k
 )
 
 group_id = "sauce-machine-group"
 
-# Pizza consumer
+# Pizza consumer (consumes incoming pizzas to sauce machine)
 consumer = KafkaConsumer(
     consume_topic,
     bootstrap_servers=KAFKA_BROKER,
@@ -62,7 +75,7 @@ consumer = KafkaConsumer(
     value_deserializer=lambda v: json.loads(v.decode("utf-8"))
 )
 
-# Done consumer
+# Done consumer (listens for next machine 'done' messages)
 consumer_done = KafkaConsumer(
     consume_topic_done,
     bootstrap_servers=KAFKA_BROKER,
@@ -72,7 +85,7 @@ consumer_done = KafkaConsumer(
     value_deserializer=lambda v: json.loads(v.decode("utf-8"))
 )
 
-# Restock-done consumer
+# Restock-done consumer (listens for restock completion)
 consumer_restock_done = KafkaConsumer(
     restock_done_topic,
     bootstrap_servers=KAFKA_BROKER,
@@ -123,7 +136,8 @@ def trigger_restock_request():
 
     print("Restock request sent:", request)
 
-    producer.send(restock_request_topic, request)
+    # IMPORTANT: set the Kafka record key to the machineId so ksqlDB tables that GROUP BY machineId will match
+    producer.send(restock_request_topic, key=request["machineId"], value=request)
     producer.flush()
 
     restock_in_progress = True
@@ -149,7 +163,7 @@ async def monitor_restock_done():
 
                 for item in items:
                     sauce = item["itemType"]
-                    delivered = item["deliveredAmount"]
+                    delivered = item.get("deliveredAmount", 0)
 
                     if sauce in sauce_stock:
                         sauce_stock[sauce] += delivered
@@ -165,7 +179,7 @@ async def monitor_restock_done():
 
 async def wait_for_sauce(sauce_type):
     """Wait until sauce is available."""
-    while sauce_stock.get(sauce_type, 0) <= 0:
+    while sauce_stock.get(sauce_type, 0) <= 0 and running:
         print(f"Sauce '{sauce_type}' out of stock. Waiting...")
         await asyncio.sleep(1)
 
@@ -173,7 +187,7 @@ async def wait_for_sauce(sauce_type):
 async def process_pizza(pizza):
     global next_machine_busy, sauce_stock, restock_in_progress
 
-    pizza_id = pizza["pizzaId"]
+    pizza_id = pizza.get("pizzaId")
     sauce_type = pizza.get("sauce")
 
     if sauce_type not in sauce_stock:
@@ -200,27 +214,32 @@ async def process_pizza(pizza):
     # Update message
     pizza["msgDesc"] = (
         f"Sauce '{sauce_type}' added to pizza {pizza_id} "
-        f"in order {pizza['orderId']}"
+        f"in order {pizza.get('orderId')}"
     )
 
-    # Send done to previous machine
+    # Send done to previous machine (produce a DONE event with a key)
+    # Use composite pizza key so downstream ksqlDB partitioning/joins by pizza/order work
+    composite_key = f"{pizza_id}_{pizza.get('orderId')}"
+
     done_msg = {
-        "pizzaId": pizza["pizzaId"],
-        "orderId": pizza["orderId"],
-        "doneMsg": True
+        "pizzaId": pizza_id,
+        "orderId": pizza.get("orderId"),
+        "doneMsg": True,
+        "msgDesc": pizza["msgDesc"]
     }
 
-    producer.send(produce_topic_done, done_msg)
+    producer.send(produce_topic_done, key=composite_key, value=done_msg)
     producer.flush()
 
     print(f"📤 Done event sent -> {produce_topic_done} for pizza {pizza_id}")
 
     # Wait for next machine
-    while next_machine_busy:
-        print("⏳ Next machine busy, waiting...")
+    while next_machine_busy and running:
+        print("Next machine busy, waiting...")
         await asyncio.sleep(1)
 
-    producer.send(produce_topic_next, pizza)
+    # Send pizza to next machine with same composite key
+    producer.send(produce_topic_next, key=composite_key, value=pizza)
     producer.flush()
     next_machine_busy = True
 
@@ -242,6 +261,7 @@ async def monitor_machine_done():
         for _, messages in msg_pack.items():
             for message in messages:
                 data = message.value
+                # Note: message.key is available as message.key (bytes) if you need it
                 if data.get("doneMsg") == True:
                     next_machine_busy = False
                     print(f"Cheese machine free (pizzaId={data.get('pizzaId')})")
@@ -263,6 +283,8 @@ async def main_loop():
         for _, messages in msg_pack.items():
             for message in messages:
                 pizza = message.value
+                # You can inspect the Kafka record key via message.key if desired:
+                # print("Kafka key:", message.key)
                 print(f"Received pizza: {pizza}")
                 await process_pizza(pizza)
 
@@ -272,8 +294,20 @@ async def main_loop():
 try:
     asyncio.run(main_loop())
 finally:
-    consumer.close()
-    producer.close()
-    consumer_done.close()
-    consumer_restock_done.close()
+    try:
+        consumer.close()
+    except Exception:
+        pass
+    try:
+        producer.close()
+    except Exception:
+        pass
+    try:
+        consumer_done.close()
+    except Exception:
+        pass
+    try:
+        consumer_restock_done.close()
+    except Exception:
+        pass
     print("Clean shutdown complete.")
