@@ -64,17 +64,38 @@ def pizza_latency_csv():
 # -----------------------
 # Restock endpoints
 # -----------------------
-@app.get("/ksql/restock_latency")
-def restock_latency_csv():
-    sql = f"SELECT * FROM restock_latency;"
+
+@app.get("/ksql/dough_machine_restock_latency")
+def dough_machine_restock_csv():
+    sql = f"SELECT * FROM dough_machine_restock_latency;"
     return ksql_csv_response(sql)
 
-@app.get("/ksql/avg_restock_latency")
-def avg_restock_latency_csv():
-    sql = f"SELECT * FROM avg_restock_latency;"
+
+@app.get("/ksql/sauce_machine_restock_latency")
+def sauce_machine_restock_csv():
+    sql = f"SELECT * FROM sauce_machine_restock_latency;"
     return ksql_csv_response(sql)
 
-@app.get("/ksql/order_dispatch_latency")
-def order_dispatch_latency_csv():
-    sql = f"SELECT * FROM order_dispatch_latency;"
+
+@app.get("/ksql/cheese_machine_restock_latency")
+def cheese_machine_restock_csv():
+    sql = f"SELECT * FROM cheese_machine_restock_latency;"
+    return ksql_csv_response(sql)
+
+
+@app.get("/ksql/meat_machine_restock_latency")
+def meat_machine_restock_csv():
+    sql = f"SELECT * FROM meat_machine_restock_latency;"
+    return ksql_csv_response(sql)
+
+
+@app.get("/ksql/vegetables_machine_restock_latency")
+def vegetables_machine_restock_csv():
+    sql = f"SELECT * FROM vegetables_machine_restock_latency;"
+    return ksql_csv_response(sql)
+
+
+@app.get("/ksql/packaging_machine_restock_latency")
+def packaging_machine_restock_csv():
+    sql = f"SELECT * FROM packaging_machine_restock_latency;"
     return ksql_csv_response(sql)
