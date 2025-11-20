@@ -33,8 +33,45 @@ type DoneMessage struct {
 	DoneMsg bool `json:"doneMsg"`
 }
 
+// Restock request structures
+
+type RestockItem struct {
+	ItemType        string `json:"itemType"`
+	CurrentStock    int    `json:"currentStock"`
+	RequestedAmount int    `json:"requestedAmount"`
+}
+
+type RestockRequest struct {
+	MachineId        string        `json:"machineId"`
+	Items            []RestockItem `json:"items"`
+	RequestTimestamp int64         `json:"requestTimestamp"`
+}
+
+type RestockDoneItem struct {
+	ItemType        string `json:"itemType"`
+	DeliveredAmount int    `json:"deliveredAmount"`
+}
+
+type RestockDoneMessage struct {
+	Items []RestockDoneItem `json:"items"`
+}
+
 // track if the next machine is busy
 var nextMachineBusy = false
+
+const MAX_STOCK = 10
+
+// Meat stock levels
+var meatStock = map[string]int{
+	"pepperoni":       2,
+	"sausage":         2,
+	"ham":             2,
+	"grilled chicken": 2,
+	"bacon":           2,
+	"ground beef":     2,
+}
+
+var restockInProgress = false
 
 func main() {
 	consumeTopic := "meat-machine"
@@ -42,10 +79,15 @@ func main() {
 	produceTopicNext := "vegetables-machine"
 	produceTopicDone := "meat-machine-done"
 
+	// restock topics
+	restockRequestTopic := "meat-machine-restock"
+	restockDoneTopic := "meat-machine-restock-done"
+
 	kafkaAddr := "kafka-experiment:29092"
 
 	msgChan := make(chan Pizza)
 	doneChan := make(chan DoneMessage)
+	restockDoneChan := make(chan RestockDoneMessage)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -62,12 +104,15 @@ func main() {
 	// start consumers
 	go consumePizza(ctx, kafkaAddr, consumeTopic, msgChan)
 	go consumeDone(ctx, kafkaAddr, consumeTopicDone, doneChan)
+	go consumeRestockDone(ctx, kafkaAddr, restockDoneTopic, restockDoneChan)
 
-	// kafka producers
+	// producers
 	writerNext := newWriter(kafkaAddr, produceTopicNext)
 	writerDone := newWriter(kafkaAddr, produceTopicDone)
+	writerRestock := newWriter(kafkaAddr, restockRequestTopic)
 	defer writerNext.Close()
 	defer writerDone.Close()
+	defer writerRestock.Close()
 
 	fmt.Println("🎧 Meat machine ready")
 
@@ -76,8 +121,12 @@ func main() {
 		case <-ctx.Done():
 			fmt.Println("✔ Clean shutdown")
 			return
+
+		case doneRestock := <-restockDoneChan:
+			handleRestockDone(doneRestock)
+
 		case pizza := <-msgChan:
-			processPizza(ctx, pizza, writerNext, writerDone, doneChan)
+			processPizza(ctx, pizza, writerNext, writerDone, writerRestock, doneChan)
 		}
 	}
 }
@@ -89,6 +138,8 @@ func newWriter(addr, topic string) *kafka.Writer {
 		Balancer: &kafka.LeastBytes{},
 	}
 }
+
+// ------------------ Consumers --------------------
 
 func consumePizza(ctx context.Context, broker, topic string, out chan<- Pizza) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
@@ -132,20 +183,120 @@ func consumeDone(ctx context.Context, broker, topic string, out chan<- DoneMessa
 			log.Println("⚠️ Bad done JSON:", err)
 			continue
 		}
-		// mark next machine as free
 		nextMachineBusy = false
 		fmt.Printf("✅ Next machine free (pizzaId=%d)\n", done.PizzaId)
 		out <- done
 	}
 }
 
-func processPizza(ctx context.Context, pizza Pizza, writerNext, writerDone *kafka.Writer, doneChan <-chan DoneMessage) {
-	fmt.Printf("🍖 Start meat processing for pizza %d\n", pizza.PizzaId)
-	time.Sleep(1 * time.Second)
+func consumeRestockDone(ctx context.Context, broker, topic string, out chan<- RestockDoneMessage) {
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:     []string{broker},
+		Topic:       topic,
+		GroupID:     fmt.Sprintf("%s-group", topic),
+		StartOffset: kafka.LastOffset,
+	})
+	defer reader.Close()
 
+	for {
+		m, err := reader.ReadMessage(ctx)
+		if err != nil {
+			return
+		}
+		var msg RestockDoneMessage
+		if err := json.Unmarshal(m.Value, &msg); err != nil {
+			log.Println("⚠️ Bad restock done JSON:", err)
+			continue
+		}
+		out <- msg
+	}
+}
+
+// ------------------ Restocking Logic --------------------
+
+func handleRestockDone(msg RestockDoneMessage) {
+	for _, item := range msg.Items {
+		if _, ok := meatStock[item.ItemType]; ok {
+			meatStock[item.ItemType] += item.DeliveredAmount
+			if meatStock[item.ItemType] > MAX_STOCK {
+				meatStock[item.ItemType] = MAX_STOCK
+			}
+			fmt.Printf("Restock received for %s: +%d (now %d)\n",
+				item.ItemType, item.DeliveredAmount, meatStock[item.ItemType])
+		}
+	}
+	restockInProgress = false
+}
+
+func buildRestockRequest() RestockRequest {
+	items := []RestockItem{}
+
+	for meat, stock := range meatStock {
+		if stock <= 20 { // include all <=20%
+			items = append(items, RestockItem{
+				ItemType:        meat,
+				CurrentStock:    stock,
+				RequestedAmount: MAX_STOCK - stock,
+			})
+		}
+	}
+
+	return RestockRequest{
+		MachineId:        "meat-machine",
+		Items:            items,
+		RequestTimestamp: time.Now().UnixMilli(),
+	}
+}
+
+func checkRestockNeeded() bool {
+	for _, stock := range meatStock {
+		if stock <= 10 { // 10% threshold
+			return true
+		}
+	}
+	return false
+}
+
+// ------------------ Pizza Processing --------------------
+
+func processPizza(
+	ctx context.Context,
+	pizza Pizza,
+	writerNext, writerDone, writerRestock *kafka.Writer,
+	doneChan <-chan DoneMessage,
+) {
+	fmt.Printf("🍖 Start meat processing for pizza %d\n", pizza.PizzaId)
+
+	// Determine required meats
+	for _, meat := range pizza.Meat {
+		// Wait if a meat is unavailable
+		for meatStock[meat] <= 0 {
+			fmt.Printf("Meat '%s' out of stock, waiting...\n", meat)
+			time.Sleep(1 * time.Second)
+		}
+
+		// Use 1 unit per meat
+		meatStock[meat] -= 1
+		fmt.Printf("Used %s, remaining stock: %d\n", meat, meatStock[meat])
+	}
+
+	// Trigger restock if needed
+	if !restockInProgress && checkRestockNeeded() {
+		req := buildRestockRequest()
+		data, _ := json.Marshal(req)
+		writerRestock.WriteMessages(ctx, kafka.Message{Value: data})
+		restockInProgress = true
+		fmt.Println("Restock request sent")
+	}
+
+	numberMeat := len(pizza.Meat)
+	workTime := time.Duration(numberMeat*500) * time.Millisecond // 500ms per meat (0.5s)
+	time.Sleep(workTime)
+	fmt.Printf("🍖 Meat added to pizza %d\n", pizza.PizzaId)
+	// Update message
 	pizza.MsgDesc = fmt.Sprintf("Meat added to pizza %d", pizza.PizzaId)
 
-	// Send done event for this machine
+	// Notify previous machine
 	done := DoneMessage{
 		PizzaId: pizza.PizzaId,
 		OrderId: pizza.OrderId,
@@ -154,13 +305,12 @@ func processPizza(ctx context.Context, pizza Pizza, writerNext, writerDone *kafk
 	sendJSON(ctx, writerDone, pizza.PizzaId, done)
 	fmt.Println("📤 Sent done message")
 
-	// Wait for next machine only if busy
+	// Wait for next machine
 	if nextMachineBusy {
 		fmt.Println("⏳ Waiting for vegetables machine to be free...")
 		for nextMachineBusy {
 			select {
 			case <-doneChan:
-				// next machine is free now
 			case <-ctx.Done():
 				return
 			default:
@@ -176,9 +326,10 @@ func processPizza(ctx context.Context, pizza Pizza, writerNext, writerDone *kafk
 	sendJSON(ctx, writerNext, pizza.PizzaId, pizza)
 	fmt.Printf("➡️ Sent pizza %d to vegetables machine\n", pizza.PizzaId)
 
-	// Mark next machine as busy
 	nextMachineBusy = true
 }
+
+// ------------------ Utility --------------------
 
 func sendJSON(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
 	b, _ := json.Marshal(value)

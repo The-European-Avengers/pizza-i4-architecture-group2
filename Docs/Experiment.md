@@ -1,4 +1,3 @@
-
 ## Deliverable 1: Experiment Design Document (Async-Only Latency)
 
 ### 1\. Selected Quality Attributes
@@ -112,3 +111,73 @@ run_id,number_of_pizzas,production_time_ms,error_rate_percent
 29,100,90.5,0.1
 30,100,91.7,0.2
 ```
+
+
+### System Implementation Responsibilities
+- **Artem**
+  - Dough Machine, Dough Shaper & Cheese Grater, Logs
+  - Possible Programming Langues: C#, Scala, Java, Elasticsearch
+
+- **Miguel**
+  - Vegetables Slicer, Meat Slicer & Packaging -> Go
+  - Sauces Machine, Oven, Freezer -> Python / C++
+  - Retreive data -> FastAPI
+  - Real-time Kafka Monitoring -> ksqlDB
+
+- **Jonathan** 
+  - Warehousing -> Python
+  - Bus -> Kafka
+
+- **Jeremy**
+  - Frontend, API GATEWAY, Authentication MS, Ordering MS
+  - Possible Programming Languages: Next.js, Nest.js, Fastapi
+
+### Possible DB
+- Warehouse
+    - PostgreSQL
+    - MySQL
+    
+- Production Line
+    - MongoDB
+    - Exasol
+    - Search for Logs based DB
+- Web
+    - MongoDB
+    - Exasol
+    
+- Log
+    - Elasticsearch, 
+    - Splunk, 
+    - Graylog
+
+### Possible Programming Languages
+Programming Language
+- Warehouse
+    - Python
+    - JS / TS
+    - Java
+    - Go
+    - C++
+    - C#
+    - Scala
+    
+- Production Line
+    - Go
+    - Java
+    - Python
+    - C++
+    - Scala
+    - C#
+    - JS /TS
+
+- Web
+    - JS / TS
+    - ExpressJS + NodeJs
+    - FastAPI ( Python )
+    - React or NextJS
+
+
+### Possible Message Broker
+- Kafka
+- RabbitMQ
+- TBMQ

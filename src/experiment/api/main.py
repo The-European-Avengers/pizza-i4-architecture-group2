@@ -19,21 +19,14 @@ def query_ksql(sql: str):
     resp.raise_for_status()
     result = resp.json()
 
-    # Extract column names from metadata
     columns = []
     for item in result:
         if "header" in item and "schema" in item["header"]:
             schema = item["header"]["schema"]
-            # schema example: 'STRUCT<PIZZAID INTEGER, ORDERID INTEGER, STARTTIMESTAMP BIGINT>'
             schema = schema.strip("STRUCT<>")
-            
-            # --- MODIFIED LOGIC HERE ---
-            # Extract column names and strip any surrounding backticks (`)
             columns = [s.split()[0].strip('`') for s in schema.split(",")]
-            # ---------------------------
             break
 
-    # Extract rows
     rows = []
     for item in result:
         if "row" in item and "columns" in item["row"]:
@@ -41,23 +34,8 @@ def query_ksql(sql: str):
 
     return columns, rows
 
-# -----------------------
-# Dynamic JSON endpoint
-# -----------------------
-@app.get("/ksql/{table_name}/json")
-def table_json(table_name: str, limit: int = 100):
-    sql = f"SELECT * FROM {table_name} LIMIT {limit};"
+def ksql_csv_response(sql: str):
     columns, rows = query_ksql(sql)
-    return {"columns": columns, "rows": rows}
-
-# -----------------------
-# Dynamic CSV endpoint
-# -----------------------
-@app.get("/ksql/{table_name}/csv")
-def table_csv(table_name: str, limit: int = 100):
-    sql = f"SELECT * FROM {table_name} LIMIT {limit};"
-    columns, rows = query_ksql(sql)
-
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -67,3 +45,36 @@ def table_csv(table_name: str, limit: int = 100):
         writer.writerow(row)
 
     return Response(content=output.getvalue(), media_type="text/csv")
+
+
+# -----------------------
+# Pizza & Order endpoints
+# -----------------------
+@app.get("/ksql/order_latency")
+def order_latency_csv():
+    sql = f"SELECT * FROM order_latency;"
+    return ksql_csv_response(sql)
+
+@app.get("/ksql/pizza_latency")
+def pizza_latency_csv():
+    sql = f"SELECT * FROM pizza_latency;"
+    return ksql_csv_response(sql)
+
+
+# -----------------------
+# Restock endpoints
+# -----------------------
+@app.get("/ksql/restock_latency")
+def restock_latency_csv():
+    sql = f"SELECT * FROM restock_latency;"
+    return ksql_csv_response(sql)
+
+@app.get("/ksql/avg_restock_latency")
+def avg_restock_latency_csv():
+    sql = f"SELECT * FROM avg_restock_latency;"
+    return ksql_csv_response(sql)
+
+@app.get("/ksql/order_dispatch_latency")
+def order_dispatch_latency_csv():
+    sql = f"SELECT * FROM order_dispatch_latency;"
+    return ksql_csv_response(sql)
