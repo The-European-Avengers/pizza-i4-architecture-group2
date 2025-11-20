@@ -3,16 +3,18 @@ import { v4 as uuidv4 } from "uuid";
 const CLIENTGATEWAY_API_URL_ORDER =
   "http://localhost:3000/api/order-stack/order";
 
-interface Order {
+type Order = {
   OrderId: string;
-  items: {
-    pizzaName: string;
-    quantity: number;
-  }[];
+  pizzas:Record<string, number>;
+  // items: {
+  //   pizzaName: string;
+  //   quantity: number;
+  // }[];
+  isBaked?: boolean;
   createdAt: Date;
 }
 
-interface Pizza {
+type Pizza = {
   id: number;
   name: string;
   desc: string;
@@ -114,9 +116,17 @@ const createRandomOrder = (numberOfTypes: number): Order => {
   console.log(`Total Pizzas in Order: ${currentPizzaCount}`);
   console.log("-----------------");
 
+  const pizzasRecord: Record<string, number> = {};
+  orderItems.forEach(item => {
+    if (item) {
+      pizzasRecord[item.pizzaName] = item.quantity;
+    }
+  });
+
   return {
     OrderId: uuidv4(),
-    items: orderItems,
+    pizzas: pizzasRecord,
+    isBaked: true,
     //total: parseFloat(calculatedTotal.toFixed(2)),
     createdAt: new Date(),
   };
