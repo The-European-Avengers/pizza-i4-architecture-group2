@@ -15,42 +15,43 @@ class CallbackHandler:
     def on_dough_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)  # Simulate processing time
-        self.client.send('dough-machine-restock-done', self.create_restock_msg(message))
+        # Use machineId as message key so Redpanda shows a non-null key
+        self.client.send('dough-machine-restock-done', self.create_restock_msg(message), key=message.value.get('machineId'))
         self.client.producer.flush()
         logger.info('DOUGH RESTOCK COMPLETED')
 
     def on_sauce_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
-        self.client.send('sauce-machine-restock-done', self.create_restock_msg(message))
+        self.client.send('sauce-machine-restock-done', self.create_restock_msg(message), key=message.value.get('machineId'))
         self.client.producer.flush()  # ✅ FLUSH
         logger.info('SAUCE RESTOCK COMPLETED')
 
     def on_cheese_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
-        self.client.send('cheese-machine-restock-done', self.create_restock_msg(message))
+        self.client.send('cheese-machine-restock-done', self.create_restock_msg(message), key=message.value.get('machineId'))
         self.client.producer.flush()  # ✅ FLUSH
         logger.info('CHEESE RESTOCK COMPLETED')
 
     def on_meat_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
-        self.client.send('meat-machine-restock-done', self.create_restock_msg(message))
+        self.client.send('meat-machine-restock-done', self.create_restock_msg(message), key=message.value.get('machineId'))
         self.client.producer.flush()  # ✅ FLUSH
         logger.info('MEAT RESTOCK COMPLETED')
 
     def on_vegetables_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
-        self.client.send('vegetables-machine-restock-done', self.create_restock_msg(message))
+        self.client.send('vegetables-machine-restock-done', self.create_restock_msg(message), key=message.value.get('machineId'))
         self.client.producer.flush()  # ✅ FLUSH
         logger.info('VEGETABLES RESTOCK COMPLETED')
 
     def on_packaging_robot(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
         sleep(1)
-        self.client.send('packaging-machine-restock-done', self.create_restock_msg(message))
+        self.client.send('packaging-machine-restock-done', self.create_restock_msg(message), key=message.value.get('machineId'))
         self.client.producer.flush()  # ✅ FLUSH
         logger.info('PACKAGING RESTOCK COMPLETED')
 

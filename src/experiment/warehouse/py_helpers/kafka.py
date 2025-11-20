@@ -22,9 +22,11 @@ def get_consumer(topics: Union[list, str]) -> KafkaConsumer:
 
 def get_producer():
     """Helper function for getting Kafka Producer object"""
+    # Add key_serializer so that string keys are encoded as UTF-8 bytes
     return KafkaProducer(
         bootstrap_servers='kafka-experiment:29092',
-        value_serializer=lambda v: json.dumps(v).encode('utf-8')
+        value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+        key_serializer=lambda k: k.encode('utf-8') if isinstance(k, str) else k
     )
 
 
@@ -60,7 +62,7 @@ class KafkaClient:
         self._message_queue = queue.Queue()
         self._worker_thread = None
 
-    def send(self, topic: str, message: Dict[str, Any], wait: bool = False):
+    def send(self, topic: str, message: Dict[str, Any], key: str = None, wait: bool = False):
         """
         Send a message to a specific topic.
 
@@ -72,7 +74,8 @@ class KafkaClient:
         Returns:
             Future object representing the send operation
         """
-        future = self.producer.send(topic, message)
+        # Use explicit value= and key= so serialization is applied correctly
+        future = self.producer.send(topic, key=key, value=message)
         if wait:
             return future.get(timeout=10)
         return future
