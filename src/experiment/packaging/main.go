@@ -48,6 +48,11 @@ type PizzaDone struct {
 	OrderSize    int     `json:"orderSize"`
 	PizzaId      int     `json:"pizzaId"`
 	EndTimestamp float64 `json:"endTimestamp"`
+	Sauce        string   `json:"sauce"`
+	Cheese       []string `json:"cheese"`
+	Meat         []string `json:"meat"`
+	Veggies      []string `json:"veggies"`
+	Baked        bool     `json:"baked"`
 }
 
 // Restock messages
@@ -261,7 +266,13 @@ func processPizza(
 	pizzaDoneMsg := PizzaDone{
 		PizzaId:      pizza.PizzaId,
 		OrderId:      pizza.OrderId,
+		OrderSize:    pizza.OrderSize,
 		EndTimestamp: float64(end),
+		Sauce:       pizza.Sauce,
+		Cheese:      pizza.Cheese,
+		Meat:        pizza.Meat,
+		Veggies:     pizza.Veggies,
+		Baked:       pizza.Baked,
 	}
 	sendJSONPizza(ctx, writerPizzaDone, pizza.PizzaId, pizzaDoneMsg)
 

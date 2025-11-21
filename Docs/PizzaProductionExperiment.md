@@ -150,7 +150,7 @@ This message describes the **current state of a single pizza** and is the primar
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `pizzaId` | `int` | Unique ID for the pizza. |
-| `orderId` | `int` | ID of the order this pizza belongs to. |
+| `orderId` | `string` | ID of the order this pizza belongs to. |
 | `orderSize` | `int` | Total number of pizzas in the order. |
 | `startTimestamp` | `long` | When the overall order processing began. |
 | `endTimestamp` | `long` | When this specific pizza processing finished (nullable until complete). |
@@ -164,7 +164,7 @@ This message describes the **current state of a single pizza** and is the primar
 ```json
 {
   "pizzaId": 42,
-  "orderId": 123,
+  "orderId": "0d956eaa-5cc8-4320-b62c-3ca8249085af",
   "orderSize": 3,
   "startTimestamp": 1731571200000,
   "endTimestamp": null,
@@ -186,7 +186,7 @@ Sent by a machine to its dedicated `-done` topic after successfully processing a
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `pizzaId` | `int` | ID of the pizza just completed. |
-| `orderId` | `int` | ID of the order. |
+| `orderId` | `string` | ID of the order. |
 | `doneMsg` | `boolean` | Always `true`, signals completion. |
 
 **Example:**
@@ -194,7 +194,7 @@ Sent by a machine to its dedicated `-done` topic after successfully processing a
 ```json
 {
   "pizzaId": 42,
-  "orderId": 123,
+  "orderId": "0d956eaa-5cc8-4320-b62c-3ca8249085af",
   "doneMsg": true
 }
 ```
@@ -205,8 +205,8 @@ These simple messages mark the start and end of an entire order, used primarily 
 
 | Message Type | Topic | Example |
 | :--- | :--- | :--- |
-| **Order Processing (Start)** | `order-processing` | `{"orderId": 123, "orderSize": 3, "startTimestamp": 1731571200000}` |
-| **Order Done (End)** | `order-done` | `{"orderId": 123, "endTimestamp": 1731571380000}` |
+| **Order Processing (Start)** | `order-processing` | `{"orderId": "0d956eaa-5cc8-4320-b62c-3ca8249085af", "orderSize": 3, "startTimestamp": 1731571200000}` |
+| **Order Done (End)** | `order-done` | `{"orderId": "0d956eaa-5cc8-4320-b62c-3ca8249085af", "endTimestamp": 1731571380000}` |
 
 ### 4\. Pizza Done Message (Final Latency Record)
 
@@ -214,19 +214,27 @@ Sent to the dedicated `pizza-done` topic by the **Packaging-robot** to finalize 
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `orderId` | `int` | ID of the order. |
+| `orderId` | `string` | ID of the order. |
 | `orderSize` | `int` | Total number of pizzas in the order. |
 | `pizzaId` | `int` | Unique ID for the pizza. |
 | `endTimestamp` | `long` | The final completion timestamp for this pizza. |
+| `sauce` | `string` | Sauce type applied. |
+| `cheese`, `meat`, `veggies` | `array<string>` | Toppings applied. |
+| `baked` | `boolean` | Whether the pizza has been baked. |
 
 **Example:**
 
 ```json
 {
-  "orderId": 123,
+  "orderId": "0d956eaa-5cc8-4320-b62c-3ca8249085af",
   "orderSize": 3,
   "pizzaId": 1,
-  "endTimestamp": 1731571380000
+  "endTimestamp": 1731571380000,
+  "sauce": "tomato",
+  "cheese": ["mozzarella"],
+  "meat": ["pepperoni", "sausage"],
+  "veggies": ["mushroom", "onion"],
+  "baked": true
 }
 ```
 
@@ -349,8 +357,8 @@ SELECT * FROM order_latency EMIT CHANGES;
 +---------------+---------------+---------------+---------------+---------------+
 |ORDERID        |ORDERSIZE      |STARTTIMESTAMP |ENDTIMESTAMP   |LATENCYMS      |
 +---------------+---------------+---------------+---------------+---------------+
-|349            |2              |1763312501613  |null           |null           |
-|349            |2              |1763312501613  |1763312520802  |19189          |
+|0d956eaa-5cc8-4320-b62c-3ca8249085af            |2              |1763312501613  |null           |null           |
+|0d956eaa-5cc8-4320-b62c-3ca8249085af            |2              |1763312501613  |1763312520802  |19189          |
 ```
 
 **Example Output (Pizza Latency)**
@@ -359,15 +367,10 @@ SELECT * FROM pizza_latency;
 +---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+
 |S_PIZZA_ORDER_KEY          |S_PIZZA_ID                 |S_ORDER_ID                 |STARTTIMESTAMP             |ENDTIMESTAMP               |LATENCYMS                  |
 +---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+
-|1_181                      |1                          |181                        |1763367145274              |1763367162756              |17482                      |
-|1_440                      |1                          |440                        |1763367138905              |1763367154218              |15313                      |
-|2_181                      |2                          |181                        |1763367145274              |1763367166045              |20771                      |
-|2_440                      |2                          |440                        |1763367138905              |1763367156896              |17991                      |
-|3_181                      |3                          |181                        |1763367145274              |1763367169768              |24494                      |
-|3_440                      |3                          |440                        |1763367138905              |1763367159538              |20633                      |
-|4_181                      |4                          |181                        |1763367145274              |1763367172284              |27010                      |
-|5_181                      |5                          |181                        |1763367145274              |1763367175402              |30128                      |
-|6_181                      |6                          |181                        |1763367145274              |1763367178524              |33250                      |
+|1_363ef34f-4e0b-4058-95fe-52899ebaac7b                      |1                          |363ef34f-4e0b-4058-95fe-52899ebaac7b                        |1763367145274              |1763367162756              |17482                      |
+|1_363ef34f-4e0b-4058-95fe-52899ebaac7b                      |1                          |363ef34f-4e0b-4058-95fe-52899ebaac7b                        |1763367138905              |1763367154218              |15313                      |
+|2_363ef34f-4e0b-4058-95fe-52899ebaac7b                      |2                          |363ef34f-4e0b-4058-95fe-52899ebaac7b                        |1763367145274              |1763367166045              |20771                      |
+|2_363ef34f-4e0b-4058-95fe-52899ebaac7b                      |2                          |363ef34f-4e0b-4058-95fe-52899ebaac7b                        |1763367138905              |1763367156896              |17991                      |
 ```
 
 ### 4\. Restock Latency Calculation

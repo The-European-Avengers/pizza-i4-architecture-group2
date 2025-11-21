@@ -132,6 +132,12 @@ SELECT
     PIZZA_ORDER_KEY,
     LATEST_BY_OFFSET(pizzaId) AS PIZZA_ID,
     LATEST_BY_OFFSET(orderId) AS ORDER_ID,
+    LATEST_BY_OFFSET(orderSize) AS ORDER_SIZE,
+    LATEST_BY_OFFSET(sauce) AS SAUCE,
+    LATEST_BY_OFFSET(cheese) AS CHEESE,
+    LATEST_BY_OFFSET(meat) AS MEAT,
+    LATEST_BY_OFFSET(veggies) AS VEGGIES,
+    LATEST_BY_OFFSET(baked) AS BAKED,
     -- Using the calculated PIZZA_START_TIME (from ROWTIME)
     MIN(PIZZA_START_TIME) AS STARTTIMESTAMP 
 FROM dough_stream_rekeyed
@@ -144,6 +150,12 @@ SELECT
     CAST(pizzaId AS VARCHAR) + '_' + orderId AS PIZZA_ORDER_KEY,
     pizzaId,
     orderId,
+    orderSize,
+    sauce,
+    cheese,
+    meat,
+    veggies,
+    baked,
     endTimestamp
 FROM pizza_steps_raw
 PARTITION BY (CAST(pizzaId AS VARCHAR) + '_' + orderId);
@@ -154,6 +166,12 @@ SELECT
     PIZZA_ORDER_KEY,
     LATEST_BY_OFFSET(pizzaId) AS PIZZA_ID,
     LATEST_BY_OFFSET(orderId) AS ORDER_ID,
+    LATEST_BY_OFFSET(orderSize) AS ORDER_SIZE,
+    LATEST_BY_OFFSET(sauce) AS SAUCE,
+    LATEST_BY_OFFSET(cheese) AS CHEESE,
+    LATEST_BY_OFFSET(meat) AS MEAT,
+    LATEST_BY_OFFSET(veggies) AS VEGGIES,
+    LATEST_BY_OFFSET(baked) AS BAKED,
     MAX(endTimestamp) AS ENDTIMESTAMP
 FROM pizza_steps_raw_rekeyed
 GROUP BY PIZZA_ORDER_KEY
@@ -165,7 +183,13 @@ SELECT
     s.PIZZA_ORDER_KEY,
     s.PIZZA_ID,
     s.ORDER_ID,
-    s.STARTTIMESTAMP, -- Now the accurate pizza start time
+    s.ORDER_SIZE,
+    s.SAUCE,
+    s.CHEESE,
+    s.MEAT,
+    s.VEGGIES,
+    s.BAKED,
+    s.STARTTIMESTAMP,
     e.ENDTIMESTAMP,
     (e.ENDTIMESTAMP - s.STARTTIMESTAMP) AS LATENCYMS
 FROM pizza_start_table s
