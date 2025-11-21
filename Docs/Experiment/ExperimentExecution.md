@@ -65,37 +65,10 @@ Run the bash script to execute the test cell:
 
 ## 3\. Data Analysis and Extraction
 
-Latency data is captured and calculated by KSQLDB and exposed via the FastAPI service.
-
-### 3.1. Accessing Latency Data
-
-Use the following endpoints to access the required data after a test run is complete:
-
-| Data Type | JSON Endpoint | CSV Download Endpoint |
-| :--- | :--- | :--- |
-| **Order Latency** | `http://localhost:8000/ksql/order_latency/json` | `http://localhost:8000/ksql/order_latency/download` |
-| **Pizza Latency** | `http://localhost:8000/ksql/pizza_latency/json` | `http://localhost:8000/ksql/pizza_latency/download` |
 
 
-## 4\. Running a Clean Experiment Replication
 
-To ensure the integrity of the latency measurements for the 10 planned replications per load level, all persistent Kafka data must be cleared between runs.
-
-### 4.1. Stop and Clean Command
-
-1.  Stop the API Gateway service (Ctrl+C).
-
-2.  Stop the core Docker services and remove the persistent volume:
-
-    ```bash
-    docker-compose down -v
-    ```
-
-After this command finishes, return to **Step 1.1** to start a fresh run.
-
-## 2. Data Extraction
-
-The production data from KSQLDB is exposed via a FastAPI service, allowing you to easily query and extract the latency tables in real-time using standard HTTP requests.
+Latency data is captured and calculated by KSQLDB and exposed via the FastAPI service, allowing you to easily query and extract the latency tables in real-time using standard HTTP requests.
 
 ### Base URL
 
@@ -139,3 +112,20 @@ ORDERID,ORDERSIZE,STARTTIMESTAMP,ENDTIMESTAMP,LATENCYMS
 10,5,1763308900000,1763308950000,50000
 11,10,1763308910000,1763308975000,65000
 ```
+
+
+## 4\. Running a Clean Experiment Replication
+
+To ensure the integrity of the latency measurements for the 10 planned replications per load level, all persistent Kafka data must be cleared between runs.
+
+### 4.1. Stop and Clean Command
+
+1.  Stop the API Gateway service (Ctrl+C).
+
+2.  Stop the core Docker services and remove the persistent volume:
+
+    ```bash
+    docker-compose down -v
+    ```
+
+After this command finishes, return to **Step 1.1** to start a fresh run.
