@@ -10,10 +10,10 @@ The production line is intentionally implemented using multiple programming lang
 ### 1.1. C\# Services
 These services manage the initial order flow and dough preparation stages.
 
-| Service | Role | Team Responsibility |
-| :--- | :--- | :--- |
-| **KafkaInitializer** | Bootstraps the system by creating all required Kafka topics. | Jonathan (Bus) |
-| **OrderProcessing** | Manages incoming orders and dispatches pizzas to the first machine (`dough-machine`). | Jeremy (Ordering MS) |
+| Service | Role | 
+| :--- | :--- |
+| **KafkaInitializer** | Bootstraps the system by creating all required Kafka topics. | 
+| **OrderProcessing** | Manages incoming orders and dispatches pizzas to the first machine (`dough-machine`). | 
 | **DoughMachine** | Simulates the preparation of raw dough. | 
 | **DoughShaper** | Simulates shaping the dough into pizza bases. | 
 | **CheeseGrater** | Simulates grating and adding cheese to the pizza. | 
@@ -21,8 +21,8 @@ These services manage the initial order flow and dough preparation stages.
 ### 1.2. Python Services
 Python is used for key machines involved in topping and baking.
 
-| Service | Role | Team Responsibility |
-| :--- | :--- | :--- |
+| Service | Role | 
+| :--- | :--- |
 | **SauceMachine** | Chooses and applies the correct sauce to the pizza. | 
 | **Oven** | Handles the baking process. | 
 | **Freezer** | Handles the freezing step for pizzas that require freezing. | 
@@ -30,8 +30,8 @@ Python is used for key machines involved in topping and baking.
 ### 1.3. Go Services
 Go is utilized for high-throughput slicing and final packaging steps.
 
-| Service | Role | Team Responsibility |
-| :--- | :--- | :--- |
+| Service | Role | 
+| :--- | :--- |
 | **MeatSlicer** | Selects and applies meat toppings. | 
 | **VegetablesSlicer**| Selects and applies vegetable toppings. | 
 | **Packaging-robot** | Packages finished pizzas into boxes, signaling **`pizza-done`**. | 
