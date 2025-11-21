@@ -132,13 +132,7 @@ SELECT
     PIZZA_ORDER_KEY,
     LATEST_BY_OFFSET(pizzaId) AS PIZZA_ID,
     LATEST_BY_OFFSET(orderId) AS ORDER_ID,
-    LATEST_BY_OFFSET(orderSize) AS ORDER_SIZE,
-    LATEST_BY_OFFSET(sauce) AS SAUCE,
-    LATEST_BY_OFFSET(cheese) AS CHEESE,
-    LATEST_BY_OFFSET(meat) AS MEAT,
-    LATEST_BY_OFFSET(veggies) AS VEGGIES,
-    LATEST_BY_OFFSET(baked) AS BAKED,
-    -- Using the calculated PIZZA_START_TIME (from ROWTIME)
+    -- Remove orderSize and pizza details from here since dough_stream doesn't have them
     MIN(PIZZA_START_TIME) AS STARTTIMESTAMP 
 FROM dough_stream_rekeyed
 GROUP BY PIZZA_ORDER_KEY
@@ -178,17 +172,18 @@ GROUP BY PIZZA_ORDER_KEY
 EMIT CHANGES;
 
 -- Table: End-to-end latency for each individual pizza, joined by PIZZA_ORDER_KEY
+-- Get pizza details from pizza_end_table (which has them from pizza-done topic)
 CREATE TABLE pizza_latency AS
 SELECT
-    s.PIZZA_ORDER_KEY,
-    s.PIZZA_ID,
-    s.ORDER_ID,
-    s.ORDER_SIZE,
-    s.SAUCE,
-    s.CHEESE,
-    s.MEAT,
-    s.VEGGIES,
-    s.BAKED,
+    e.PIZZA_ORDER_KEY,
+    e.PIZZA_ID,
+    e.ORDER_ID,
+    e.ORDER_SIZE,
+    e.SAUCE,
+    e.CHEESE,
+    e.MEAT,
+    e.VEGGIES,
+    e.BAKED,
     s.STARTTIMESTAMP,
     e.ENDTIMESTAMP,
     (e.ENDTIMESTAMP - s.STARTTIMESTAMP) AS LATENCYMS
@@ -196,7 +191,6 @@ FROM pizza_start_table s
 LEFT JOIN pizza_end_table e
     ON s.PIZZA_ORDER_KEY = e.PIZZA_ORDER_KEY
 EMIT CHANGES;
-
 
 CREATE TABLE order_stack_table AS
 SELECT
