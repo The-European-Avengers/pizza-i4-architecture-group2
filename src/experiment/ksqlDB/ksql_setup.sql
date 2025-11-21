@@ -257,6 +257,7 @@ FROM dough_machine_restock r
 INNER JOIN dough_machine_restock_done d
 WITHIN 1 HOURS
 ON r.machineId = d.machineId
+WHERE d.completedTimestamp > r.requestTimestamp
 EMIT CHANGES;
 
 CREATE TABLE dough_machine_restock_latency AS
@@ -300,6 +301,7 @@ FROM sauce_machine_restock r
 INNER JOIN sauce_machine_restock_done d
 WITHIN 1 HOURS
 ON r.machineId = d.machineId
+WHERE d.completedTimestamp > r.requestTimestamp
 EMIT CHANGES;
 
 CREATE TABLE sauce_machine_restock_latency AS
@@ -343,6 +345,7 @@ FROM cheese_machine_restock r
 INNER JOIN cheese_machine_restock_done d
 WITHIN 1 HOURS
 ON r.machineId = d.machineId
+WHERE d.completedTimestamp > r.requestTimestamp
 EMIT CHANGES;
 
 CREATE TABLE cheese_machine_restock_latency AS
@@ -386,6 +389,7 @@ FROM meat_machine_restock r
 INNER JOIN meat_machine_restock_done d
 WITHIN 1 HOURS
 ON r.machineId = d.machineId
+WHERE d.completedTimestamp > r.requestTimestamp
 EMIT CHANGES;
 
 CREATE TABLE meat_machine_restock_latency AS
@@ -429,6 +433,7 @@ FROM vegetables_machine_restock r
 INNER JOIN vegetables_machine_restock_done d
 WITHIN 1 HOURS
 ON r.machineId = d.machineId
+WHERE d.completedTimestamp > r.requestTimestamp
 EMIT CHANGES;
 
 CREATE TABLE vegetables_machine_restock_latency AS
@@ -472,6 +477,7 @@ FROM packaging_machine_restock r
 INNER JOIN packaging_machine_restock_done d
 WITHIN 1 HOURS
 ON r.machine = d.machine
+WHERE d.completedTimestamp > r.requestTimestamp
 EMIT CHANGES;
 
 CREATE TABLE packaging_machine_restock_latency AS
