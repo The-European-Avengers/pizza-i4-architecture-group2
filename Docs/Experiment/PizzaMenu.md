@@ -1,4 +1,4 @@
-## 🍕 Pizza Menu Definition
+## Pizza Menu Definition
 
 This file defines the standardized data structure used for all pizza recipes processed by the automated I4 factory system.
     

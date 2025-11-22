@@ -126,7 +126,7 @@ def check_restock_needed():
     return any(stock <= 10 for stock in sauce_stock.values())
 
 
-def trigger_restock_request():
+def trigger_restock_request(orderId):
     global restock_in_progress
 
     request = build_restock_request()
@@ -137,7 +137,7 @@ def trigger_restock_request():
     print("Restock request sent:", request)
 
     # IMPORTANT: set the Kafka record key to the machineId so ksqlDB tables that GROUP BY machineId will match
-    producer.send(restock_request_topic, key=request["machineId"], value=request)
+    producer.send(restock_request_topic, key=orderId, value=request)
     producer.flush()
 
     restock_in_progress = True
@@ -209,7 +209,7 @@ async def process_pizza(pizza):
 
     # Restock logic
     if not restock_in_progress and check_restock_needed():
-        trigger_restock_request()
+        trigger_restock_request(pizza.get("orderId"))
 
     # Update message
     pizza["msgDesc"] = (

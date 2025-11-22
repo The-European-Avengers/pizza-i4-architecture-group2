@@ -289,7 +289,7 @@ func processPizza(
 	if !restockInProgress && checkRestockNeeded(pizza.Veggies) {
 		req := buildRestockRequest(pizza.Veggies)
 		data, _ := json.Marshal(req)
-		writerRestock.WriteMessages(ctx, kafka.Message{Value: data, Key: []byte("vegetables-machine")})
+		writerRestock.WriteMessages(ctx, kafka.Message{Value: data, Key: []byte(pizza.OrderId)})
 		restockInProgress = true
 		fmt.Println("Restock request sent")
 	}

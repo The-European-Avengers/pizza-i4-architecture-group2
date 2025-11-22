@@ -18,7 +18,7 @@ import (
 
 type Pizza struct {
 	PizzaId        int      `json:"pizzaId"`
-	OrderId        string      `json:"orderId"`
+	OrderId        string   `json:"orderId"`
 	OrderSize      int      `json:"orderSize"`
 	StartTimestamp float64  `json:"startTimestamp"`
 	EndTimestamp   *float64 `json:"endTimestamp"`
@@ -32,22 +32,28 @@ type Pizza struct {
 
 // Packaging machine per-pizza done event
 type PackagingDone struct {
-	PizzaId int  `json:"pizzaId"`
-	OrderId string  `json:"orderId"`
-	DoneMsg bool `json:"doneMsg"`
+	PizzaId int    `json:"pizzaId"`
+	OrderId string `json:"orderId"`
+	DoneMsg bool   `json:"doneMsg"`
 }
 
 // Final order done message → MUST include endTimestamp
 type OrderDone struct {
-	OrderId      string     `json:"orderId"`
+	OrderId      string  `json:"orderId"`
 	EndTimestamp float64 `json:"endTimestamp"`
+	OrderSize    int     `json:"orderSize`
 }
 
 type PizzaDone struct {
-	OrderId      string     `json:"orderId"`
-	OrderSize    int     `json:"orderSize"`
-	PizzaId      int     `json:"pizzaId"`
-	EndTimestamp float64 `json:"endTimestamp"`
+	OrderId      string   `json:"orderId"`
+	OrderSize    int      `json:"orderSize"`
+	PizzaId      int      `json:"pizzaId"`
+	EndTimestamp float64  `json:"endTimestamp"`
+	Sauce        string   `json:"sauce"`
+	Cheese       []string `json:"cheese"`
+	Meat         []string `json:"meat"`
+	Veggies      []string `json:"veggies"`
+	Baked        bool     `json:"baked"`
 }
 
 // Restock messages
@@ -233,7 +239,7 @@ func processPizza(
 	boxType := "box" // Example: choose box type dynamically if needed
 
 	// Check stock & request restock if low
-	checkBoxStock(ctx, boxType, writerRestock)
+	checkBoxStock(ctx, boxType, writerRestock, pizza.OrderId)
 
 	// Wait if no boxes
 	waitForBoxes(ctx, boxType)
@@ -261,7 +267,13 @@ func processPizza(
 	pizzaDoneMsg := PizzaDone{
 		PizzaId:      pizza.PizzaId,
 		OrderId:      pizza.OrderId,
+		OrderSize:    pizza.OrderSize,
 		EndTimestamp: float64(end),
+		Sauce:        pizza.Sauce,
+		Cheese:       pizza.Cheese,
+		Meat:         pizza.Meat,
+		Veggies:      pizza.Veggies,
+		Baked:        pizza.Baked,
 	}
 	sendJSONPizza(ctx, writerPizzaDone, pizza.PizzaId, pizzaDoneMsg)
 
@@ -276,6 +288,7 @@ func processPizza(
 		orderDone := OrderDone{
 			OrderId:      pizza.OrderId,
 			EndTimestamp: float64(end),
+			OrderSize:    pizza.OrderSize,
 		}
 		sendJSONOrder(ctx, writerOrderDone, pizza.OrderId, orderDone)
 		fmt.Printf("🎉 Order %d completed → sent order-done\n", pizza.OrderId)
@@ -286,7 +299,7 @@ func processPizza(
 	}
 }
 
-func checkBoxStock(ctx context.Context, boxType string, writer *kafka.Writer) {
+func checkBoxStock(ctx context.Context, boxType string, writer *kafka.Writer, orderId string) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -308,7 +321,7 @@ func checkBoxStock(ctx context.Context, boxType string, writer *kafka.Writer) {
 		}
 		b, _ := json.Marshal(req)
 		writer.WriteMessages(ctx, kafka.Message{
-			Key:   []byte("packaging-machine"),
+			Key:   []byte(orderId),
 			Value: b,
 		})
 		restockInProgress = true
@@ -340,7 +353,7 @@ func sendJSONOrder(ctx context.Context, writer *kafka.Writer, key string, value 
 	})
 }
 func sendJSONPizza(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
-		b, err := json.Marshal(value)
+	b, err := json.Marshal(value)
 	if err != nil {
 		log.Println("❌ Failed to marshal JSON:", err)
 		return
