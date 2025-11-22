@@ -41,6 +41,7 @@ type PackagingDone struct {
 type OrderDone struct {
 	OrderId      string  `json:"orderId"`
 	EndTimestamp float64 `json:"endTimestamp"`
+	OrderSize    int     `json:"orderSize`
 }
 
 type PizzaDone struct {
@@ -287,6 +288,7 @@ func processPizza(
 		orderDone := OrderDone{
 			OrderId:      pizza.OrderId,
 			EndTimestamp: float64(end),
+			OrderSize:    pizza.OrderSize,
 		}
 		sendJSONOrder(ctx, writerOrderDone, pizza.OrderId, orderDone)
 		fmt.Printf("🎉 Order %d completed → sent order-done\n", pizza.OrderId)

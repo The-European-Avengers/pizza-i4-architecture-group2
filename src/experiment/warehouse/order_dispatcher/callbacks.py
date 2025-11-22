@@ -14,11 +14,13 @@ class CallbackHandler:
 
     def on_order_done(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
+        print(f"Message: {message.value}")
         sleep(5)  # Simulate dispatch processing time
         dispatch_message = {
             'orderId': message.value['orderId'],
             'msgDesc': 'Order dispatched successfully',
-            'dispatchedTimestamp': int(datetime.now().timestamp() * 1000)  # Milliseconds
+            'dispatchedTimestamp': int(datetime.now().timestamp() * 1000),  # Milliseconds
+            'orderSize': message.value['OrderSize']
         }
         # Use orderId as the Kafka message key so consumers and Redpanda show a non-null key
         self.client.send('order-dispatched', dispatch_message, key=message.value.get('orderId'))

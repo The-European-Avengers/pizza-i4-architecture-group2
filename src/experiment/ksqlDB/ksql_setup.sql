@@ -43,7 +43,6 @@ CREATE STREAM order_done_stream (
 -- Order processing start stream
 CREATE STREAM order_stack_stream (
     orderId VARCHAR,
-    orderSize INT,
     startTimestamp BIGINT
 ) WITH (
     KAFKA_TOPIC='order-stack',
@@ -53,7 +52,8 @@ CREATE STREAM order_stack_stream (
 -- Order completion stream
 CREATE STREAM order_dispatched_stream (
     orderId VARCHAR,
-    endTimestamp BIGINT
+    dispatchedTimestamp BIGINT,
+    orderSize INT
 ) WITH (
     KAFKA_TOPIC='order-dispatched',
     VALUE_FORMAT='JSON'
@@ -195,7 +195,6 @@ EMIT CHANGES;
 CREATE TABLE order_stack_table AS
 SELECT
     orderId,
-    LATEST_BY_OFFSET(orderSize) AS orderSize,
     MIN(startTimestamp) AS start_ts
 FROM order_stack_stream
 GROUP BY orderId
@@ -205,7 +204,8 @@ EMIT CHANGES;
 CREATE TABLE order_dispatched_table AS
 SELECT
     orderId,
-    MAX(endTimestamp) AS end_ts
+    MAX(dispatchedTimestamp) AS end_ts,
+    LATEST_BY_OFFSET(orderSize) AS orderSize
 FROM order_dispatched_stream
 GROUP BY orderId
 EMIT CHANGES;
@@ -214,10 +214,10 @@ EMIT CHANGES;
 CREATE TABLE order_dispatch_latency AS
 SELECT
     s.orderId AS orderId,
-    s.orderSize AS orderSize,
     s.start_ts AS startTimestamp,
-    d.end_ts AS endTimestamp,
-    (d.end_ts - s.start_ts) AS latencyMs
+    d.end_ts AS dispatchedTimestamp,
+    (d.end_ts - s.start_ts) AS latencyMs,
+    d.orderSize as orderSize
 FROM order_stack_table s
 LEFT JOIN order_dispatched_table d
     ON s.orderId = d.orderId
