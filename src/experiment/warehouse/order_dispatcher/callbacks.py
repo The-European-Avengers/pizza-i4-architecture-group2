@@ -14,7 +14,6 @@ class CallbackHandler:
 
     def on_order_done(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
-        print(f"Message: {message.value}")
         sleep(5)  # Simulate dispatch processing time
         dispatch_message = {
             'orderId': message.value['orderId'],
