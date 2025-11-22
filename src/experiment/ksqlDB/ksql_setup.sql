@@ -224,7 +224,7 @@ LEFT JOIN order_dispatched_table d
 EMIT CHANGES;
 
 -- ----------------------------------------------------
--- RESTOCK LATENCY 
+-- RESTOCK LATENCY (Using orderId as primary key)
 -- ----------------------------------------------------
 
 --------------------------------------------------------------------------------
@@ -232,6 +232,7 @@ EMIT CHANGES;
 --------------------------------------------------------------------------------
 
 CREATE STREAM dough_machine_restock (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     requestTimestamp BIGINT
 ) WITH (
@@ -240,6 +241,7 @@ CREATE STREAM dough_machine_restock (
 );
 
 CREATE STREAM dough_machine_restock_done (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     completedTimestamp BIGINT
 ) WITH (
@@ -249,6 +251,7 @@ CREATE STREAM dough_machine_restock_done (
 
 CREATE STREAM dough_machine_restock_latency_stream AS
 SELECT
+    r.orderId AS orderId,
     r.machineId AS machineId,
     r.requestTimestamp AS requestTimestamp,
     d.completedTimestamp AS completedTimestamp,
@@ -256,19 +259,18 @@ SELECT
 FROM dough_machine_restock r
 INNER JOIN dough_machine_restock_done d
 WITHIN 1 HOURS
-ON r.machineId = d.machineId
-WHERE d.completedTimestamp > r.requestTimestamp
+ON r.orderId = d.orderId
 EMIT CHANGES;
 
 CREATE TABLE dough_machine_restock_latency AS
 SELECT
-    machineId + '_' + CAST(requestTimestamp AS VARCHAR) AS restockKey,
+    orderId,
     LATEST_BY_OFFSET(machineId) AS machineId,
     LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp,
     LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp,
     LATEST_BY_OFFSET(restockLatencyMs) AS restockLatencyMs
 FROM dough_machine_restock_latency_stream
-GROUP BY machineId + '_' + CAST(requestTimestamp AS VARCHAR)
+GROUP BY orderId
 EMIT CHANGES;
 
 --------------------------------------------------------------------------------
@@ -276,6 +278,7 @@ EMIT CHANGES;
 --------------------------------------------------------------------------------
 
 CREATE STREAM sauce_machine_restock (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     requestTimestamp BIGINT
 ) WITH (
@@ -284,6 +287,7 @@ CREATE STREAM sauce_machine_restock (
 );
 
 CREATE STREAM sauce_machine_restock_done (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     completedTimestamp BIGINT
 ) WITH (
@@ -293,6 +297,7 @@ CREATE STREAM sauce_machine_restock_done (
 
 CREATE STREAM sauce_machine_restock_latency_stream AS
 SELECT
+    r.orderId AS orderId,
     r.machineId AS machineId,
     r.requestTimestamp AS requestTimestamp,
     d.completedTimestamp AS completedTimestamp,
@@ -300,19 +305,18 @@ SELECT
 FROM sauce_machine_restock r
 INNER JOIN sauce_machine_restock_done d
 WITHIN 1 HOURS
-ON r.machineId = d.machineId
-WHERE d.completedTimestamp > r.requestTimestamp
+ON r.orderId = d.orderId
 EMIT CHANGES;
 
 CREATE TABLE sauce_machine_restock_latency AS
 SELECT
-    machineId + '_' + CAST(requestTimestamp AS VARCHAR) AS restockKey,
+    orderId,
     LATEST_BY_OFFSET(machineId) AS machineId,
     LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp,
     LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp,
     LATEST_BY_OFFSET(restockLatencyMs) AS restockLatencyMs
 FROM sauce_machine_restock_latency_stream
-GROUP BY machineId + '_' + CAST(requestTimestamp AS VARCHAR)
+GROUP BY orderId
 EMIT CHANGES;
 
 --------------------------------------------------------------------------------
@@ -320,6 +324,7 @@ EMIT CHANGES;
 --------------------------------------------------------------------------------
 
 CREATE STREAM cheese_machine_restock (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     requestTimestamp BIGINT
 ) WITH (
@@ -328,6 +333,7 @@ CREATE STREAM cheese_machine_restock (
 );
 
 CREATE STREAM cheese_machine_restock_done (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     completedTimestamp BIGINT
 ) WITH (
@@ -337,6 +343,7 @@ CREATE STREAM cheese_machine_restock_done (
 
 CREATE STREAM cheese_machine_restock_latency_stream AS
 SELECT
+    r.orderId AS orderId,
     r.machineId AS machineId,
     r.requestTimestamp AS requestTimestamp,
     d.completedTimestamp AS completedTimestamp,
@@ -344,19 +351,18 @@ SELECT
 FROM cheese_machine_restock r
 INNER JOIN cheese_machine_restock_done d
 WITHIN 1 HOURS
-ON r.machineId = d.machineId
-WHERE d.completedTimestamp > r.requestTimestamp
+ON r.orderId = d.orderId
 EMIT CHANGES;
 
 CREATE TABLE cheese_machine_restock_latency AS
 SELECT
-    machineId + '_' + CAST(requestTimestamp AS VARCHAR) AS restockKey,
+    orderId,
     LATEST_BY_OFFSET(machineId) AS machineId,
     LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp,
     LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp,
     LATEST_BY_OFFSET(restockLatencyMs) AS restockLatencyMs
 FROM cheese_machine_restock_latency_stream
-GROUP BY machineId + '_' + CAST(requestTimestamp AS VARCHAR)
+GROUP BY orderId
 EMIT CHANGES;
 
 --------------------------------------------------------------------------------
@@ -364,6 +370,7 @@ EMIT CHANGES;
 --------------------------------------------------------------------------------
 
 CREATE STREAM meat_machine_restock (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     requestTimestamp BIGINT
 ) WITH (
@@ -372,6 +379,7 @@ CREATE STREAM meat_machine_restock (
 );
 
 CREATE STREAM meat_machine_restock_done (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     completedTimestamp BIGINT
 ) WITH (
@@ -381,6 +389,7 @@ CREATE STREAM meat_machine_restock_done (
 
 CREATE STREAM meat_machine_restock_latency_stream AS
 SELECT
+    r.orderId AS orderId,
     r.machineId AS machineId,
     r.requestTimestamp AS requestTimestamp,
     d.completedTimestamp AS completedTimestamp,
@@ -388,19 +397,18 @@ SELECT
 FROM meat_machine_restock r
 INNER JOIN meat_machine_restock_done d
 WITHIN 1 HOURS
-ON r.machineId = d.machineId
-WHERE d.completedTimestamp > r.requestTimestamp
+ON r.orderId = d.orderId
 EMIT CHANGES;
 
 CREATE TABLE meat_machine_restock_latency AS
 SELECT
-    machineId + '_' + CAST(requestTimestamp AS VARCHAR) AS restockKey,
+    orderId,
     LATEST_BY_OFFSET(machineId) AS machineId,
     LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp,
     LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp,
     LATEST_BY_OFFSET(restockLatencyMs) AS restockLatencyMs
 FROM meat_machine_restock_latency_stream
-GROUP BY machineId + '_' + CAST(requestTimestamp AS VARCHAR)
+GROUP BY orderId
 EMIT CHANGES;
 
 --------------------------------------------------------------------------------
@@ -408,6 +416,7 @@ EMIT CHANGES;
 --------------------------------------------------------------------------------
 
 CREATE STREAM vegetables_machine_restock (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     requestTimestamp BIGINT
 ) WITH (
@@ -416,6 +425,7 @@ CREATE STREAM vegetables_machine_restock (
 );
 
 CREATE STREAM vegetables_machine_restock_done (
+    orderId VARCHAR KEY,
     machineId VARCHAR,
     completedTimestamp BIGINT
 ) WITH (
@@ -425,6 +435,7 @@ CREATE STREAM vegetables_machine_restock_done (
 
 CREATE STREAM vegetables_machine_restock_latency_stream AS
 SELECT
+    r.orderId AS orderId,
     r.machineId AS machineId,
     r.requestTimestamp AS requestTimestamp,
     d.completedTimestamp AS completedTimestamp,
@@ -432,19 +443,18 @@ SELECT
 FROM vegetables_machine_restock r
 INNER JOIN vegetables_machine_restock_done d
 WITHIN 1 HOURS
-ON r.machineId = d.machineId
-WHERE d.completedTimestamp > r.requestTimestamp
+ON r.orderId = d.orderId
 EMIT CHANGES;
 
 CREATE TABLE vegetables_machine_restock_latency AS
 SELECT
-    machineId + '_' + CAST(requestTimestamp AS VARCHAR) AS restockKey,
+    orderId,
     LATEST_BY_OFFSET(machineId) AS machineId,
     LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp,
     LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp,
     LATEST_BY_OFFSET(restockLatencyMs) AS restockLatencyMs
 FROM vegetables_machine_restock_latency_stream
-GROUP BY machineId + '_' + CAST(requestTimestamp AS VARCHAR)
+GROUP BY orderId
 EMIT CHANGES;
 
 --------------------------------------------------------------------------------
@@ -452,6 +462,7 @@ EMIT CHANGES;
 --------------------------------------------------------------------------------
 
 CREATE STREAM packaging_machine_restock (
+    orderId VARCHAR KEY,
     machine VARCHAR,
     requestTimestamp BIGINT
 ) WITH (
@@ -460,6 +471,7 @@ CREATE STREAM packaging_machine_restock (
 );
 
 CREATE STREAM packaging_machine_restock_done (
+    orderId VARCHAR KEY,
     machine VARCHAR,
     completedTimestamp BIGINT
 ) WITH (
@@ -469,6 +481,7 @@ CREATE STREAM packaging_machine_restock_done (
 
 CREATE STREAM packaging_machine_restock_latency_stream AS
 SELECT
+    r.orderId AS orderId,
     r.machine AS machine,
     r.requestTimestamp AS requestTimestamp,
     d.completedTimestamp AS completedTimestamp,
@@ -476,17 +489,16 @@ SELECT
 FROM packaging_machine_restock r
 INNER JOIN packaging_machine_restock_done d
 WITHIN 1 HOURS
-ON r.machine = d.machine
-WHERE d.completedTimestamp > r.requestTimestamp
+ON r.orderId = d.orderId
 EMIT CHANGES;
 
 CREATE TABLE packaging_machine_restock_latency AS
 SELECT
-    machine + '_' + CAST(requestTimestamp AS VARCHAR) AS restockKey,
+    orderId,
     LATEST_BY_OFFSET(machine) AS machine,
     LATEST_BY_OFFSET(requestTimestamp) AS requestTimestamp,
     LATEST_BY_OFFSET(completedTimestamp) AS completedTimestamp,
     LATEST_BY_OFFSET(restockLatencyMs) AS restockLatencyMs
 FROM packaging_machine_restock_latency_stream
-GROUP BY machine + '_' + CAST(requestTimestamp AS VARCHAR)
+GROUP BY orderId
 EMIT CHANGES;

@@ -102,6 +102,12 @@ This section describes the four main message types exchanged between services.
 
 This message describes the **current state of a single pizza** and is the primary payload that travels sequentially through all machines.
 
+#### Message Key
+The message key is the `orderId` (string) to ensure all pizzas from the same order are grouped together.
+
+#### Message Value
+
+
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `pizzaId` | `int` | Unique ID for the pizza. |
@@ -136,6 +142,11 @@ This message describes the **current state of a single pizza** and is the primar
 
 Sent by a machine to its dedicated `-done` topic after successfully processing a `Pizza Order Message`. This signals to the overall flow controller (OrderProcessing logic) that the machine is ready for the next job.
 
+#### Message Key
+The message key is the `orderId` (string) to ensure all pizzas from the same order are grouped together.
+
+#### Message Value 
+
 **Topic:** `*-done` (e.g., `dough-machine-done`)
 
 | Field | Type | Description |
@@ -158,6 +169,11 @@ Sent by a machine to its dedicated `-done` topic after successfully processing a
 
 These simple messages mark the start and end of an entire order, used primarily for end-to-end latency measurement.
 
+#### Message Key
+The message key is the `orderId` (string) to ensure all pizzas from the same order are grouped together.
+
+#### Message Value
+
 | Message Type | Topic | Example |
 | :--- | :--- | :--- |
 | **Order Processing (Start)** | `order-processing` | `{"orderId": "0d956eaa-5cc8-4320-b62c-3ca8249085af", "orderSize": 3, "startTimestamp": 1731571200000}` |
@@ -166,6 +182,11 @@ These simple messages mark the start and end of an entire order, used primarily 
 ### 4\. Pizza Done Message (Final Latency Record)
 
 Sent to the dedicated `pizza-done` topic by the **Packaging-robot** to finalize the record for an individual pizza's total time.
+
+#### Message Key
+The message key is the `orderId` (string) to ensure all pizzas from the same order are grouped together.
+
+#### Message Value
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
@@ -196,6 +217,11 @@ Sent to the dedicated `pizza-done` topic by the **Packaging-robot** to finalize 
 ### 5\. Restock Request Message
 
 This message is sent by a production machine when its internal stock of one or more ingredients is running low. It is intended for a simulated **Internal Goods Provider** to track restocking needs and latency.
+
+#### Message Key
+The message key is the `orderId` (string) to ensure all pizzas from the same order are grouped together.
+
+#### Message Value
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
@@ -231,7 +257,14 @@ This message is sent by a production machine when its internal stock of one or m
 
 This message is sent by the **Internal Goods Provider** (simulated) upon the completion of a restock delivery to the requesting machine. It is used to measure the **Restock Latency** (from `requestTimestamp` to `completedTimestamp`).
 
-**Topic:** `restock-done`
+#### Topic:
+`restock-done`
+
+#### Message Key
+The message key is the `orderId` (string) to ensure all pizzas from the same order are grouped together.
+
+#### Message Value
+
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
@@ -264,7 +297,13 @@ This message is sent by the **Internal Goods Provider** (simulated) upon the com
 
 Sent by the **OrderProcessing** service when an order has been produced and dispatched to the warehouse to be stored. This message is useful for measuring the latency between order start and dispatch.
 
-**Topic:** `order-dispatched`
+#### Topic:
+`order-dispatched`
+
+#### Message Key
+The message key is the `orderId` (string) to ensure all pizzas from the same order are grouped together.
+
+#### Message Value
 
 | Field | Type | Description |
 | :--- | :--- | :--- |

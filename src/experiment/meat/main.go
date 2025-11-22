@@ -15,7 +15,7 @@ import (
 
 type Pizza struct {
 	PizzaId        int      `json:"pizzaId"`
-	OrderId        string      `json:"orderId"`
+	OrderId        string   `json:"orderId"`
 	OrderSize      int      `json:"orderSize"`
 	StartTimestamp float64  `json:"startTimestamp"`
 	EndTimestamp   *float64 `json:"endTimestamp"`
@@ -28,9 +28,9 @@ type Pizza struct {
 }
 
 type DoneMessage struct {
-	PizzaId int  `json:"pizzaId"`
-	OrderId string  `json:"orderId"`
-	DoneMsg bool `json:"doneMsg"`
+	PizzaId int    `json:"pizzaId"`
+	OrderId string `json:"orderId"`
+	DoneMsg bool   `json:"doneMsg"`
 }
 
 // Restock request structures
@@ -284,7 +284,7 @@ func processPizza(
 	if !restockInProgress && checkRestockNeeded() {
 		req := buildRestockRequest()
 		data, _ := json.Marshal(req)
-		writerRestock.WriteMessages(ctx, kafka.Message{Value: data, Key: []byte("meat-machine")})
+		writerRestock.WriteMessages(ctx, kafka.Message{Value: data, Key: []byte(pizza.OrderId)})
 		restockInProgress = true
 		fmt.Println("Restock request sent")
 	}
@@ -343,7 +343,7 @@ func sendJSONOrder(ctx context.Context, writer *kafka.Writer, key string, value 
 	})
 }
 func sendJSONPizza(ctx context.Context, writer *kafka.Writer, key int, value interface{}) {
-		b, err := json.Marshal(value)
+	b, err := json.Marshal(value)
 	if err != nil {
 		log.Println("❌ Failed to marshal JSON:", err)
 		return

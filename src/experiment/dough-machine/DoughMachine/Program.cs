@@ -311,7 +311,7 @@ public class ProcessingService : BackgroundService
 
                     var restockMessage = new Message<string, string>
                     {
-                        Key = "dough-machine",
+                        Key = pizza.OrderId,
                         Value = JsonSerializer.Serialize(restockRequest)
                     };
                     await producer.ProduceAsync(RESTOCK_TOPIC, restockMessage, stoppingToken);
