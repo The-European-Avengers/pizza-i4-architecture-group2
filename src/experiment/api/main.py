@@ -59,6 +59,11 @@ def order_latency_csv():
 def pizza_latency_csv():
     sql = f"SELECT * FROM pizza_latency;"
     return ksql_csv_response(sql)
+@app.get("/ksql/order_dispatch_latency")
+def order_dispatched_latency_csv():
+    sql = f"SELECT * FROM order_dispatch_latency;"
+    return ksql_csv_response(sql)
+
 
 
 # -----------------------
