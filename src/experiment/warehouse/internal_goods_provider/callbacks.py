@@ -14,7 +14,7 @@ class CallbackHandler:
 
     def on_dough_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
-        sleep(1)  # Simulate processing time
+        sleep(75)  # Simulate processing time
         # preserve the original message key if present; fall back to machineId from value
         key = message.key
         if isinstance(key, (bytes, bytearray)):
@@ -31,7 +31,7 @@ class CallbackHandler:
 
     def on_sauce_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
-        sleep(1)
+        sleep(75)
         # preserve the original message key if present; fall back to machineId from value
         key = message.key
         if isinstance(key, (bytes, bytearray)):
@@ -49,7 +49,7 @@ class CallbackHandler:
 
     def on_cheese_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
-        sleep(1)
+        sleep(75)
         # preserve the original message key if present; fall back to machineId from value
         key = message.key
         if isinstance(key, (bytes, bytearray)):
@@ -66,7 +66,7 @@ class CallbackHandler:
 
     def on_meat_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
-        sleep(1)
+        sleep(75)
         # preserve the original message key if present; fall back to machineId from value
         key = message.key
         if isinstance(key, (bytes, bytearray)):
@@ -83,7 +83,7 @@ class CallbackHandler:
 
     def on_vegetables_machine(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
-        sleep(1)
+        sleep(75)
         # preserve the original message key if present; fall back to machineId from value
         key = message.key
         if isinstance(key, (bytes, bytearray)):
@@ -100,7 +100,7 @@ class CallbackHandler:
 
     def on_packaging_robot(self, message):
         logger.info(f'Topic: {message.topic} Message: {message.value}')
-        sleep(1)
+        sleep(75)
         # preserve the original message key if present; fall back to machineId from value
         key = message.key
         if isinstance(key, (bytes, bytearray)):
