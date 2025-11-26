@@ -424,7 +424,7 @@ public class ProcessingService : BackgroundService
                     {
                         _logger.LogInformation("   • Applying {CheeseType}... (Stock remaining: {Stock})", 
                             cheeseType, _state.GetCheeseStock(cheeseType));
-                        await Task.Delay(100, stoppingToken); // 100ms per cheese type
+                        await Task.Delay(250, stoppingToken); // 250ms per cheese type
                     }
                     else
                     {
