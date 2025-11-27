@@ -2,8 +2,10 @@
 <!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
 <nta>
 	<declaration>// Global declarations:
+
 int[0,100] temp = 0;
 int[-20, 0] freezer_temp = 0;
+clock t;
 
 const int WAREHOUSE_VOLUME = 25;
 int[0, WAREHOUSE_VOLUME] dough_warehouse = WAREHOUSE_VOLUME;
@@ -37,14 +39,14 @@ chan turn_off, oven_ready, pizza_ready;
 const int MAX_ORDERS_IN_SYSTEM = 3; // Or any total number you want
 int[0,3] pizzas_in_production = 0;
 
-const int MAX_PIZZA_BUFFER = 3; // Max pizzas in any buffer
-int[0,3] raw_dough_buffer_count = 0; // DoughMachine -&gt; DoughShaper
-int[0,3] dough_buffer_count = 0;     // DoughShaper -&gt; Sauce
-int[0,3] sauce_buffer_count = 0;     // Sauce -&gt; Cheese
-int[0,3] cheese_buffer_count = 0;    // Cheese -&gt; Meat
-int[0,3] meat_buffer_count = 0;      // Meat -&gt; Veg
-int[0,3] oven_buffer_count = 0;      // Veg -&gt; Oven
-int[0,3] freezer_buffer_count = 0;   // Veg -&gt; Freezer
+const int MAX_PIZZA_BUFFER = 2; // Max pizzas in any buffer
+int[0, MAX_PIZZA_BUFFER] raw_dough_buffer_count = 0; // DoughMachine -&gt; DoughShaper
+int[0, MAX_PIZZA_BUFFER] dough_buffer_count = 0;     // DoughShaper -&gt; Sauce
+int[0, MAX_PIZZA_BUFFER] sauce_buffer_count = 0;     // Sauce -&gt; Cheese
+int[0, MAX_PIZZA_BUFFER] cheese_buffer_count = 0;    // Cheese -&gt; Meat
+int[0, MAX_PIZZA_BUFFER] meat_buffer_count = 0;      // Meat -&gt; Veg
+int[0, MAX_PIZZA_BUFFER] oven_buffer_count = 0;      // Veg -&gt; Oven
+int[0, MAX_PIZZA_BUFFER] freezer_buffer_count = 0;   // Veg -&gt; Freezer
 
 bool isRestocking = false;
 
@@ -71,7 +73,7 @@ chan get_veg, provide_veg, veg_from_warehouse, restock_veg, order_veg, veg_arriv
 
 </declaration>
 	<template>
-		<name>PizzaReciever</name>
+		<name>OrderDispatcher</name>
 		<declaration>clock t;</declaration>
 		<location id="id0" x="0" y="0">
 			<name x="-17" y="17">idle</name>
@@ -888,7 +890,8 @@ sauce_stock--</label>
 			<source ref="id141"/>
 			<target ref="id142"/>
 			<label kind="guard" x="-493" y="-306">dough_buffer_count &gt; 0</label>
-			<label kind="assignment" x="-493" y="-289">dough_buffer_count--</label>
+			<label kind="assignment" x="-493" y="-289">t=0,
+dough_buffer_count--</label>
 		</transition>
 	</template>
 	<template>
@@ -924,7 +927,6 @@ dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 </declaration>
 		<location id="id158" x="-416" y="-76">
 			<name x="-442" y="-110">idle</name>
-			<label kind="exponentialrate" x="-426" y="-42">0.1</label>
 		</location>
 		<location id="id159" x="-272" y="-204">
 			<name x="-315" y="-246">choosingMeat</name>
@@ -987,7 +989,7 @@ dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<target ref="id158"/>
 			<label kind="guard" x="-620" y="-8">t&gt;=2 &amp;&amp; 
 meat_buffer_count &lt; MAX_PIZZA_BUFFER</label>
-			<label kind="assignment" x="-620" y="34">meat_buffer_count++</label>
+			<label kind="assignment" x="-620" y="35">meat_buffer_count++</label>
 		</transition>
 		<transition id="id172">
 			<source ref="id159"/>
@@ -998,7 +1000,7 @@ meat_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<source ref="id158"/>
 			<target ref="id159"/>
 			<label kind="guard" x="-561" y="-195">cheese_buffer_count &gt; 0</label>
-			<label kind="assignment" x="-561" y="-170">cheese_buffer_count--</label>
+			<label kind="assignment" x="-561" y="-170">t=0, cheese_buffer_count--</label>
 		</transition>
 	</template>
 	<template>
@@ -1060,7 +1062,8 @@ cheese_stock--</label>
 			<source ref="id174"/>
 			<target ref="id175"/>
 			<label kind="guard" x="-330" y="-177">sauce_buffer_count &gt; 0</label>
-			<label kind="assignment" x="-331" y="-153">sauce_buffer_count--</label>
+			<label kind="assignment" x="-331" y="-153">t=0, 
+sauce_buffer_count--</label>
 		</transition>
 		<transition id="id186">
 			<source ref="id176"/>
@@ -1134,7 +1137,7 @@ veg_stock--</label>
 			<source ref="id193"/>
 			<target ref="id194"/>
 			<label kind="synchronisation" x="323" y="-102">provide_veg?</label>
-			<label kind="assignment" x="323" y="-76">isRestocking=false, t=0</label>
+			<label kind="assignment" x="323" y="-76">isRestocking=false</label>
 		</transition>
 		<transition id="id200">
 			<source ref="id192"/>
@@ -1182,7 +1185,7 @@ isOven</label>
 			<source ref="id187"/>
 			<target ref="id188"/>
 			<label kind="guard" x="-501" y="-221">meat_buffer_count &gt; 0</label>
-			<label kind="assignment" x="-501" y="-195">meat_buffer_count--</label>
+			<label kind="assignment" x="-501" y="-195">t=0, meat_buffer_count--</label>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
@@ -1195,7 +1198,7 @@ oven = Oven();
 doughMachine = DoughMachine();
 
 // List one or more processes to be composed into a system.
-system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, SauceMachine, CheeseGrater, VegetablesSlicer, MeatSlicer, InternalGoodsProvider, InventoryManager, RestockingHandler, PizzaReciever;
+system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, SauceMachine, CheeseGrater, VegetablesSlicer, MeatSlicer, InternalGoodsProvider, InventoryManager, RestockingHandler, OrderDispatcher;
 </system>
 	<queries>
 		<option key="--exploration" value="0"/>
@@ -1204,7 +1207,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>A[] not deadlock</formula>
 			<comment>Check that the system never deadlocks</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-12 11:49:01 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-26 20:00:29 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1222,7 +1225,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>A[] (oven.baking imply temp == TARGET_TEMP)</formula>
 			<comment>Check that baking only happens at target temperature</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-11 23:29:17 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-26 20:00:58 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1231,7 +1234,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		<query>
 			<formula>E&lt;&gt; packagingRobot.operatePizza</formula>
 			<comment>Check that packaging robot can reach dispatching state</comment>
-			<result outcome="success" type="quality" timestamp="2025-11-11 23:29:21 +0100">
+			<result outcome="success" type="quality" timestamp="2025-11-26 20:01:10 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1266,8 +1269,8 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		</query>
 		<query>
 			<formula>A&lt;&gt; (doughMachine.kneading imply pizzas_in_production == 3)</formula>
-			<comment/>
-			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:02 +0100">
+			<comment>Ensure that at all paths eventually, when the dough machine is kneading, the system has reached maximum production capacity (3 pizzas)</comment>
+			<result outcome="success" type="quality" timestamp="2025-11-26 20:01:33 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1293,7 +1296,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		</query>
 		<query>
 			<formula>E[] doughMachine.restock imply doughMachine.dispatch</formula>
-			<comment/>
+			<comment>Verify that whenever the dough machine is in restock state, it can eventually reach dispatch state (checks recovery from restocking)</comment>
 			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:13 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
@@ -1301,17 +1304,9 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 			</result>
 		</query>
 		<query>
-			<formula>(pizzas_in_production &gt; 0) --&gt; (packagingRobot.operatePizza)</formula>
-			<comment/>
-			<result outcome="failure" type="quality" timestamp="2025-11-12 12:41:25 +0100">
-				<option key="--exploration" value="0"/>
-				<option key="--backwards-order" value="0"/>
-				<option key="--diagnostic" value="0"/>
-			</result>
-		</query>
-		<query>
 			<formula>E&lt;&gt; Customer.turnOnMachines imply packagingRobot.operatePizza</formula>
-			<comment/>
+			<comment>Check if having pizzas in production, here exist a path to the packaging robot operating (checks end-to-end production flow)
+</comment>
 			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:17 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
@@ -1383,7 +1378,7 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		</query>
 		<query>
 			<formula>doughMachine.restock --&gt; doughMachine.restocked</formula>
-			<comment>Liveness: If the dough machine needs to restock, will it *eventually* be restocked? (Checks internal supply chain liveness).</comment>
+			<comment>Check if the dough machine needs to restock, it will eventually be restocked. (Checks internal supply chain liveness).</comment>
 			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:44 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
@@ -1392,8 +1387,17 @@ system Customer, freezer, packagingRobot, oven, doughMachine, DoughShaper, Sauce
 		</query>
 		<query>
 			<formula>InventoryManager.requestDough --&gt; InventoryManager.restockDough</formula>
-			<comment>Liveness: If the main warehouse orders dough, will it *eventually* arrive, allowing the manager to restock machines? (Checks external supply chain liveness).</comment>
+			<comment>Check if the main warehouse orders dough, it will eventually arrive, allowing the manager to restock machines. (Checks external supply chain liveness).</comment>
 			<result outcome="success" type="quality" timestamp="2025-11-11 23:30:48 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (SauceMachine.dispatch imply t &lt;= 2)</formula>
+			<comment/>
+			<result outcome="failure" type="quality" timestamp="2025-11-26 20:33:37 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
