@@ -2,7 +2,7 @@
 
 ## Abstract (to be written last)
 - Brief summary of the report's content, objectives, and key findings.
-## 1 Introduction & Motivation
+## 1 Introduction & Motivation (Jeremy)
 ## 2 Problem & Approach
 - Problem description
 - Research questions (2)
