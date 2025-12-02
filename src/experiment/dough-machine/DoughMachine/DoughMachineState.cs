@@ -13,7 +13,7 @@ public class DoughMachineState
     public AutoResetEvent IsShaperReady { get; } = new AutoResetEvent(true);
 
     // Stock management
-    public int DoughStock { get; set; } = 11; // Start with 11 units
+    public int DoughStock { get; set; } = 100; 
     public bool IsRestockInProgress { get; set; } = false;
     private readonly object _stockLock = new object();
 

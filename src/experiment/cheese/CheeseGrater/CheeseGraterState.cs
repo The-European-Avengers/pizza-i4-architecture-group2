@@ -12,14 +12,14 @@ public class CheeseGraterState
     // Cheese stock - each type starts with 11 units
     private readonly Dictionary<string, int> _cheeseStock = new Dictionary<string, int>
     {
-        { "mozzarella", 11 },
-        { "cheddar", 11 },
-        { "smoked provolone", 11 },
-        { "feta", 11 },
-        { "provolone", 11 },
-        { "parmesan", 11 },
-        { "gorgonzola", 11 },
-        { "jalapeño jack", 11 }
+        { "mozzarella", 100 },
+        { "cheddar", 100 },
+        { "smoked provolone", 100 },
+        { "feta", 100 },
+        { "provolone", 100 },
+        { "parmesan", 100 },
+        { "gorgonzola", 100 },
+        { "jalapeño jack", 100 }
     };
 
     public bool IsRestockInProgress { get; set; } = false;

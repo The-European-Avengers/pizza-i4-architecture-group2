@@ -85,7 +85,7 @@ const MAX_STOCK = 100 // Define max stock for safety
 var (
 	pizzasCompleted = make(map[string]int)
 	boxStock        = map[string]int{
-		"box": 10,
+		"box": 100,
 	}
 	mu                sync.Mutex
 	restockInProgress = false

@@ -11,13 +11,13 @@ MAX_STOCK = 100
 
 # Sauce stock levels
 sauce_stock = {
-    "tomato": 11,
-    "BBQ Sauce": 11,
-    "Pesto": 11,
-    "Olive Oil": 11,
-    "Sriracha-Tomato Blend": 11,
-    "White Garlic Cream": 11,
-    "Hollandaise Sauce": 11
+    "tomato": 100,
+    "BBQ Sauce": 100,
+    "Pesto": 100,
+    "Olive Oil": 100,
+    "Sriracha-Tomato Blend": 100,
+    "White Garlic Cream": 100,
+    "Hollandaise Sauce": 100
 }
 
 def shutdown_handler(sig, frame):
