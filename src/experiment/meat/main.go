@@ -126,7 +126,7 @@ func main() {
 			handleRestockDone(doneRestock)
 
 		case pizza := <-msgChan:
-			processPizza(ctx, pizza, writerNext, writerDone, writerRestock, doneChan)
+			processPizza(ctx, pizza, writerNext, writerDone, writerRestock, doneChan, restockDoneChan)
 		}
 	}
 }
@@ -264,21 +264,9 @@ func processPizza(
 	pizza Pizza,
 	writerNext, writerDone, writerRestock *kafka.Writer,
 	doneChan <-chan DoneMessage,
+	restockDoneChan <-chan RestockDoneMessage,
 ) {
 	fmt.Printf("🍖 Start meat processing for pizza %d\n", pizza.PizzaId)
-
-	// Determine required meats
-	for _, meat := range pizza.Meat {
-		// Wait if a meat is unavailable
-		for meatStock[meat] <= 0 {
-			fmt.Printf("Meat '%s' out of stock, waiting...\n", meat)
-			time.Sleep(1 * time.Second)
-		}
-
-		// Use 1 unit per meat
-		meatStock[meat] -= 1
-		fmt.Printf("Used %s, remaining stock: %d\n", meat, meatStock[meat])
-	}
 
 	// Trigger restock if needed
 	if !restockInProgress && checkRestockNeeded() {
@@ -287,6 +275,37 @@ func processPizza(
 		writerRestock.WriteMessages(ctx, kafka.Message{Value: data, Key: []byte(pizza.OrderId)})
 		restockInProgress = true
 		fmt.Println("Restock request sent")
+	}
+
+	// Determine required meats
+	for _, meat := range pizza.Meat {
+		// Wait if a meat is unavailable
+		for meatStock[meat] <= 0 {
+			if !restockInProgress {
+				// Trigger restock if not already in progress
+				req := buildRestockRequest()
+				data, _ := json.Marshal(req)
+				writerRestock.WriteMessages(ctx, kafka.Message{Value: data, Key: []byte(pizza.OrderId)})
+				restockInProgress = true
+				fmt.Printf("Meat '%s' out of stock & restock requested, waiting...\n", meat)
+			} else {
+				fmt.Printf("Meat '%s' out of stock, waiting for restock... The request was made before\n", meat)
+			}
+
+			// Wait with select to allow processing restock messages
+			select {
+			case doneRestock := <-restockDoneChan:
+				handleRestockDone(doneRestock)
+			case <-time.After(1 * time.Second):
+				// Continue checking
+			case <-ctx.Done():
+				return
+			}
+		}
+
+		// Use 1 unit per meat
+		meatStock[meat] -= 1
+		fmt.Printf("Used %s, remaining stock: %d\n", meat, meatStock[meat])
 	}
 
 	numberMeat := len(pizza.Meat)
