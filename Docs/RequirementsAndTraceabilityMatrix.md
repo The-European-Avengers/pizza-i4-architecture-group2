@@ -92,7 +92,7 @@
 | **NFR8** | Reliability (<0.1% fail) | Quality control loops, Monitoring | Error handling, Circuit breakers | Fault detection, Recovery |
 | **NFR9** | Maintainability (MTTR <30min) | Clear subsystem boundaries | Event logging, Dashboard monitoring | Observability, Modularity |
 | **NFR10** | Interoperability (REST) | API Gateway pattern | REST controllers, OpenAPI spec | Standard protocols |
-
+| **NFR11** | Integrability | Well-defined interfaces, Modular design | Service contracts, API documentation | Encapsulation, Standardization, Event-driven integration |
 
 ### System Constraints
 We have identified the following system constraints that may impact the design and implementation of the pizza production system:

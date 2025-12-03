@@ -118,7 +118,7 @@ Each machine checks buffer availability (`buffer_count < MAX_PIZZA_BUFFER`) befo
 - Broadcast channels: `turn_on`, `pizza_request`
 - Binary channels: ingredient requests, restocking operations
 
-**Committed States:**
+**Committed Locations:**
 - Used in stock checking and restocking decision points
 - Ensures atomic transitions for resource allocation
 
