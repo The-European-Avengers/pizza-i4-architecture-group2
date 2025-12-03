@@ -12,14 +12,14 @@ public class CheeseGraterState
     // Cheese stock - each type starts with 11 units
     private readonly Dictionary<string, int> _cheeseStock = new Dictionary<string, int>
     {
-        { "mozzarella", 100 },
-        { "cheddar", 100 },
-        { "smoked provolone", 100 },
-        { "feta", 100 },
-        { "provolone", 100 },
-        { "parmesan", 100 },
-        { "gorgonzola", 100 },
-        { "jalapeño jack", 100 }
+        { "mozzarella", 32 },
+        { "cheddar", 32 },
+        { "smoked provolone", 32 },
+        { "feta", 32 },
+        { "provolone", 32 },
+        { "parmesan", 32 },
+        { "gorgonzola", 32 },
+        { "jalapeño jack", 32 }
     };
 
     public bool IsRestockInProgress { get; set; } = false;
@@ -72,7 +72,7 @@ public class CheeseGraterState
                     {
                         ItemType = kvp.Key,
                         CurrentStock = kvp.Value,
-                        RequestedAmount = 100 - kvp.Value
+                        RequestedAmount = 50 - kvp.Value
                     });
                 }
                 // Opportunistic restock if <= 20 (only if we're already restocking)
@@ -82,7 +82,7 @@ public class CheeseGraterState
                     {
                         ItemType = kvp.Key,
                         CurrentStock = kvp.Value,
-                        RequestedAmount = 100 - kvp.Value
+                        RequestedAmount = 50 - kvp.Value
                     });
                 }
             }

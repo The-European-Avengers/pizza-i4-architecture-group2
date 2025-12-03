@@ -56,7 +56,7 @@ type RestockDoneMessage struct {
 	Items []RestockDoneItem `json:"items"`
 }
 
-const MAX_STOCK = 100
+const MAX_STOCK = 50
 
 // -------------------- GLOBAL STATE --------------------
 
@@ -66,21 +66,21 @@ var (
 
 	// Stock of all veggies
 	veggieStock = map[string]int{
-		"basil":            100,
-		"mushroom":         100,
-		"onion":            100,
-		"green pepper":     100,
-		"black olive":      100,
-		"red onion":        100,
-		"spinach":          100,
-		"truffle":          100,
-		"sun-dried tomato": 100,
-		"artichoke heart":  100,
-		"pineapple":        100,
-		"jalapeño":         100,
-		"red bell pepper":  100,
-		"scrambled egg":    100,
-		"chives":           100,
+		"basil":            20,
+		"mushroom":         20,
+		"onion":            20,
+		"green pepper":     20,
+		"black olive":      20,
+		"red onion":        20,
+		"spinach":          20,
+		"truffle":          20,
+		"sun-dried tomato": 20,
+		"artichoke heart":  20,
+		"pineapple":        20,
+		"jalapeño":         20,
+		"red bell pepper":  20,
+		"scrambled egg":    20,
+		"chives":           20,
 	}
 
 	restockInProgress = false

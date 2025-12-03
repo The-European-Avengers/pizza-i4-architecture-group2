@@ -7,17 +7,17 @@ from kafka import KafkaConsumer, KafkaProducer
 running = True
 next_machine_busy = False
 
-MAX_STOCK = 100
+MAX_STOCK = 50
 
 # Sauce stock levels
 sauce_stock = {
-    "tomato": 100,
-    "BBQ Sauce": 100,
-    "Pesto": 100,
-    "Olive Oil": 100,
-    "Sriracha-Tomato Blend": 100,
-    "White Garlic Cream": 100,
-    "Hollandaise Sauce": 100
+    "tomato": 45,
+    "BBQ Sauce": 45,
+    "Pesto": 45,
+    "Olive Oil": 45,
+    "Sriracha-Tomato Blend": 45,
+    "White Garlic Cream": 45,
+    "Hollandaise Sauce": 45
 }
 
 def shutdown_handler(sig, frame):
