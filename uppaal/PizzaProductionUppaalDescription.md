@@ -15,7 +15,7 @@ This UPPAAL model formally specifies and verifies a real-time pizza production s
 - `MeatSlicer` - Adds meat toppings
 - `VegetablesSlicer` - Adds vegetable toppings (routes to oven or freezer)
 - `Oven` - Bakes pizzas at target temperature (100°C)
-- `Freezer` - Freezes pizzas
+- `Freezer` - Freezes pizzas at -18°C
 - `PackagingRobot` - Packages finished pizzas
 
 **Supply Chain Components:**
@@ -26,6 +26,36 @@ This UPPAAL model formally specifies and verifies a real-time pizza production s
 **Control Components:**
 - `Customer` - Generates pizza orders
 - `OrderDispatcher` - Manages order pickup and completion
+
+## Modeling Approach: Buffer-Based Decoupling
+
+### Design Rationale
+Rather than using direct channel synchronization between consecutive production stages, we implemented a **buffer-based architecture** with global counters for each production stage. This design decision was driven by several critical factors:
+
+**Problem with Direct Synchronization:**
+- Direct channel-to-channel communication between timed automata creates tight coupling
+- Time-constrained transitions (e.g., `t<=10` invariants) combined with synchronous handshakes lead to frequent deadlocks
+- When one machine finishes processing but the next machine isn't ready to receive, the system can block indefinitely
+- Concurrent production of multiple pizzas exacerbates synchronization conflicts
+
+**Buffer-Based Solution:**
+We introduced 7 intermediate buffers as global integer counters:
+- `raw_dough_buffer_count` (between DoughMachine and DoughShaper)
+- `dough_buffer_count` (between DoughShaper and SauceMachine)
+- `sauce_buffer_count` (between SauceMachine and CheeseGrater)
+- `cheese_buffer_count` (between CheeseGrater and MeatSlicer)
+- `meat_buffer_count` (between MeatSlicer and VegetablesSlicer)
+- `oven_buffer_count` (between VegetablesSlicer and Oven)
+- `freezer_buffer_count` (between VegetablesSlicer and Freezer)
+
+**Benefits:**
+- **Temporal decoupling**: Machines can finish processing and dispatch to buffers without waiting for downstream machines
+- **Deadlock prevention**: Buffers absorb timing mismatches between production stages
+- **Concurrent operation**: Multiple pizzas can be at different stages simultaneously without blocking
+- **Capacity management**: Buffer limits (MAX_PIZZA_BUFFER = 2) prevent unbounded queuing and enable bottleneck detection
+
+**Implementation:**
+Each machine checks buffer availability (`buffer_count < MAX_PIZZA_BUFFER`) before dispatching and increments the counter. The next stage decrements the counter when pulling from the buffer. This asynchronous handoff eliminates the timing conflicts inherent in synchronous channel communication.
 
 ## Key Features
 
@@ -90,12 +120,12 @@ This UPPAAL model formally specifies and verifies a real-time pizza production s
 
 **Committed States:**
 - Used in stock checking and restocking decision points
+- Ensures atomic transitions for resource allocation
 
 ## Quality Attributes Verified
 
-1. **Performance**: Certain processing stages meet timing constraints
+1. **Performance**: Processing stages meet timing constraints
 2. **Availability**: System handles restocking without disruption
 3. **Correctness**: Temperature requirements enforced, no resource violations
 4. **Throughput**: System supports concurrent production (3 pizzas)
 5. **Safety**: No deadlocks, no negative inventory
-

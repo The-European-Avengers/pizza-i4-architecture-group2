@@ -37,71 +37,35 @@ public class ProcessingService : BackgroundService
                 _logger.LogInformation("Main Processor (4/4) waiting for a pizza from SauceMachine...");
                 var pizza = await Task.Run(() => _state.PizzaQueue.Take(stoppingToken), stoppingToken);
                 
-                // Step 2: Check if restock is needed before processing
-                if (_state.ShouldRequestRestock())
+                // Step 2: ✅ CHECK AND REQUEST RESTOCK BEFORE WAITING
+                if (_state.ShouldRequestRestock(pizza.Cheese))
                 {
-                    var restockNeeds = _state.GetRestockNeeds();
-                    _logger.LogWarning("⚠️ Cheese stock low. Requesting restock for {Count} types:", restockNeeds.Count);
+                    _logger.LogWarning("⚠️ Cheese stock low. Requesting restock...");
                     
-                    foreach (var need in restockNeeds)
-                    {
-                        _logger.LogWarning("   • {CheeseType}: {Current} units (requesting {Requested})", 
-                            need.ItemType, need.CurrentStock, need.RequestedAmount);
-                    }
-
-                    _state.IsRestockInProgress = true;
-
-                    var restockRequest = new RestockRequestMessage
-                    {
-                        MachineId = "cheese-machine",
-                        Items = restockNeeds,
-                        RequestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                    };
-
+                    var restockRequest = BuildRestockRequest(pizza.Cheese);
                     var restockMessage = new Message<string, string>
                     {
                         Key = pizza.OrderId,
                         Value = JsonSerializer.Serialize(restockRequest)
                     };
+                    
                     await producer.ProduceAsync(RESTOCK_TOPIC, restockMessage, stoppingToken);
                     producer.Flush(stoppingToken);
+                    
+                    _state.IsRestockInProgress = true;
                     _logger.LogInformation("📦 Restock request sent.");
                 }
 
-                // Step 3: Check if we have all required cheese types for this pizza
-                bool canProcessPizza = true;
-                var missingCheeses = new List<string>();
-                
-                foreach (var cheeseType in pizza.Cheese)
+                // Step 3: ✅ NOW WAIT FOR STOCK (non-blocking because RestockDoneConsumerService handles updates)
+                while (!_state.HasRequiredCheese(pizza.Cheese))
                 {
-                    if (_state.GetCheeseStock(cheeseType) <= 0)
-                    {
-                        canProcessPizza = false;
-                        missingCheeses.Add(cheeseType);
-                    }
-                }
-
-                // Step 4: Wait for stock if needed
-                while (!canProcessPizza)
-                {
-                    _logger.LogWarning("⏳ Missing cheese for Pizza {PizzaId}: {MissingTypes}. Waiting for restock...", 
-                        pizza.PizzaId, string.Join(", ", missingCheeses));
+                    var missingCheese = string.Join(", ", pizza.Cheese.Where(c => _state.GetCheeseStock(c) <= 0));
+                    _logger.LogWarning("⏳ Missing cheese for Pizza {PizzaId}: {Cheese}. Waiting for restock...", 
+                        pizza.PizzaId, missingCheese);
                     await Task.Delay(1000, stoppingToken);
-
-                    // Re-check stock
-                    canProcessPizza = true;
-                    missingCheeses.Clear();
-                    foreach (var cheeseType in pizza.Cheese)
-                    {
-                        if (_state.GetCheeseStock(cheeseType) <= 0)
-                        {
-                            canProcessPizza = false;
-                            missingCheeses.Add(cheeseType);
-                        }
-                    }
                 }
 
-                // Step 5: Wait for Meat Machine signal 
+                // Step 4: Wait for Meat Machine signal 
                 _logger.LogInformation("Main Processor (4/4) waiting for Meat Machine to be ready (Pizza {PizzaId})...", pizza.PizzaId);
                 await Task.Run(() => _state.IsMeatMachineReady.WaitOne(), stoppingToken);
 
@@ -110,7 +74,7 @@ public class ProcessingService : BackgroundService
                     _logger.LogInformation("First pizza in order - consumed initial 'ready' signal.");
                 }
 
-                // Step 6: Process the pizza - apply each cheese type (100ms per cheese)
+                // Step 5: Process the pizza - apply each cheese type (250ms per cheese)
                 _logger.LogInformation("Grating cheese for Pizza {PizzaId} (Order: {OrderId}). Cheese types: {CheeseTypes}", 
                     pizza.PizzaId, pizza.OrderId, string.Join(", ", pizza.Cheese));
 
@@ -132,7 +96,7 @@ public class ProcessingService : BackgroundService
                 pizza.MsgDesc = "Cheese grated";
                 _logger.LogInformation("...Finished Pizza {PizzaId}. Sending to {Topic}", pizza.PizzaId, NEXT_TOPIC);
 
-                // Step 7: Send pizza to Meat Machine
+                // Step 6: Send pizza to Meat Machine
                 var nextMessage = new Message<string, string>
                 {
                     Key = pizza.OrderId,
@@ -140,7 +104,7 @@ public class ProcessingService : BackgroundService
                 };
                 await producer.ProduceAsync(NEXT_TOPIC, nextMessage, stoppingToken);
 
-                // Step 8: Send "done" signal back to SauceMachine
+                // Step 7: Send "done" signal back to SauceMachine
                 var doneMessage = new Message<string, string>
                 {
                     Key = pizza.OrderId,
@@ -163,5 +127,31 @@ public class ProcessingService : BackgroundService
         {
             _logger.LogError(ex, "Main Processor (4/4) critical error.");
         }
+    }
+
+    private RestockRequestMessage BuildRestockRequest(List<string> requiredCheeses)
+    {
+        var items = new List<RestockItem>();
+        
+        foreach (var cheese in _state.GetAllCheeses())
+        {
+            var stock = _state.GetCheeseStock(cheese);
+            if (stock <= 10 || (requiredCheeses.Contains(cheese) && stock <= 20))
+            {
+                items.Add(new RestockItem
+                {
+                    ItemType = cheese,
+                    CurrentStock = stock,
+                    RequestedAmount = 100 - stock
+                });
+            }
+        }
+
+        return new RestockRequestMessage
+        {
+            MachineId = "cheese-machine",
+            Items = items,
+            RequestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
     }
 }

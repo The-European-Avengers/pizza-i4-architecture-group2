@@ -107,4 +107,44 @@ public class CheeseGraterState
             return new Dictionary<string, int>(_cheeseStock);
         }
     }
+
+    public bool ShouldRequestRestock(List<string> requiredCheeses)
+    {
+        if (IsRestockInProgress) return false;
+    
+        // Check if any required cheese is critically low (≤10)
+        foreach (var cheese in requiredCheeses)
+        {
+            if (GetCheeseStock(cheese) <= 10)
+                return true;
+        }
+    
+        // Or if any cheese at all is at or below 20%
+        foreach (var cheese in _cheeseStock.Keys)
+        {
+            if (_cheeseStock[cheese] <= 20)
+                return true;
+        }
+    
+        return false;
+    }
+
+    public bool HasRequiredCheese(List<string> requiredCheeses)
+    {
+        foreach (var cheese in requiredCheeses)
+        {
+            if (GetCheeseStock(cheese) <= 0)
+                return false;
+        }
+        return true;
+    }
+
+    public List<string> GetAllCheeses()
+    {
+        lock (_stockLock)
+        {
+            return new List<string>(_cheeseStock.Keys);
+        }
+    }
+    
 }
