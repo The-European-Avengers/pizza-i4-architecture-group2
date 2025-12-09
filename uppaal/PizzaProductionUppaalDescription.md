@@ -76,7 +76,7 @@ Each machine checks buffer availability (`buffer_count < MAX_PIZZA_BUFFER`) befo
 
 ## Verification Results
 
-### Properties Verified (30 queries)
+### Properties Verified (26 queries)
 
 **Safety (7 queries):**
 - Deadlock freedom
@@ -100,7 +100,7 @@ Each machine checks buffer availability (`buffer_count < MAX_PIZZA_BUFFER`) befo
 - Warehouse orders eventually arrive
 - Restocking state leads to dispatch
 
-**Performance (9 queries):**
+**Performance (5 queries):**
 - Time bounds enforced (kneading ≤ 10, shaping ≤ 10, sauce/meat/vegetables/cheese application ≤ 10)
 - Bottleneck detection at dough shaper, cheese grater, and vegetable slicer
 - Resource utilization validated (oven can be busy while pizzas wait)
