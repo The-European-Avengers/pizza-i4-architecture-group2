@@ -5,7 +5,6 @@
 
 int[0,100] temp = 0;
 int[-20, 0] freezer_temp = 0;
-clock t;
 
 const int WAREHOUSE_VOLUME = 25;
 int[0, WAREHOUSE_VOLUME] dough_warehouse = WAREHOUSE_VOLUME;
@@ -1231,7 +1230,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] not deadlock</formula>
 			<comment>Safety: System never reaches deadlock state</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:48:48 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:11:59 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1240,7 +1239,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] ((oven.baking imply temp == TARGET_TEMP) and (freezer.freeze imply freezer_temp == FREEZE_TEMP))</formula>
 			<comment>Safety: Baking and freezing only occur at target temperatures</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 14:04:29 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:02 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1249,7 +1248,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] (stock_level &lt; 0 imply false)</formula>
 			<comment>Safety: Stock level never negative</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:48:53 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:04 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1258,7 +1257,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] (pizzas_in_production &lt;= MAX_ORDERS_IN_SYSTEM)</formula>
 			<comment>Safety: Pizza production never exceeds maximum capacity</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:48:55 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:07 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1267,7 +1266,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] (dough_stock &gt;= 0 and sauce_stock &gt;= 0 and cheese_stock &gt;= 0 and meat_stock &gt;= 0 and veg_stock &gt;= 0)</formula>
 			<comment>Safety: Machine stock levels never become negative</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:48:57 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:09 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1276,7 +1275,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] (dough_warehouse &gt;= 0 and sauce_warehouse &gt;= 0 and cheese_warehouse &gt;= 0 and meat_warehouse &gt;= 0 and veg_warehouse &gt;= 0)</formula>
 			<comment>Safety: Warehouse stock levels never become negative</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:48:59 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:11 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1285,7 +1284,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; oven.baking</formula>
 			<comment>Reachability: Oven can reach baking state</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:04 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:13 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1294,7 +1293,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; packagingRobot.operatePizza</formula>
 			<comment>Reachability: Packaging robot can reach operating state</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:07 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:16 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1303,7 +1302,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; freezer.freeze</formula>
 			<comment>Reachability: Freezer can reach freezing state</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:09 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:19 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1312,7 +1311,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; internalGoodsProvider.provideDough</formula>
 			<comment>Reachability: Goods provider can supply ingredients</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:12 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:22 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1321,7 +1320,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; doughMachine.restock</formula>
 			<comment>Reachability: Dough machine can trigger restocking</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:15 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:25 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1330,7 +1329,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; inventoryManager.requestDough</formula>
 			<comment>Reachability: Warehouse can request external supplies</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:18 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:28 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1339,7 +1338,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; (pizzas_in_production == MAX_ORDERS_IN_SYSTEM)</formula>
 			<comment>Reachability: System can reach maximum production capacity</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:21 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:30 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1348,7 +1347,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; (oven.baking and freezer.freeze)</formula>
 			<comment>Reachability: Oven and freezer can operate simultaneously</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:23 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:33 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1357,7 +1356,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; (dough_buffer_count == MAX_PIZZA_BUFFER)</formula>
 			<comment>Reachability: Buffers can become full (bottleneck detection)</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:26 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:35 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1366,7 +1365,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A&lt;&gt; (doughMachine.kneading imply pizzas_in_production == 3)</formula>
 			<comment>Capacity: System reaches full production capacity during operation</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:28 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:38 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1375,7 +1374,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E[] doughMachine.restock imply doughMachine.dispatch</formula>
 			<comment>Liveness: Restocking state eventually leads to dispatch</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:32 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:42 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1384,7 +1383,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>E&lt;&gt; customer.turnOnMachines imply packagingRobot.operatePizza</formula>
 			<comment>Liveness: Orders eventually reach packaging (end-to-end flow)</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:35 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:45 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1393,7 +1392,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>doughMachine.restock --&gt; doughMachine.restocked</formula>
 			<comment>Liveness: Dough machine restocking eventually completes</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:42 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:49 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1402,7 +1401,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>inventoryManager.requestDough --&gt; inventoryManager.restockDough</formula>
 			<comment>Liveness: Warehouse orders eventually arrive</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:49:47 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:56 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1419,7 +1418,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 			<comment>Perfomance: All ingredient processing steps must strictly adhere to their maximum time constraints (in time units), 
 across all possible execution paths of the system. This verifies the simultaneous compliance of all critical 
 topping and dough preparation stages (Dough Shaping ≤2, Kneading ≤5, and all topping additions ≤5) with the specified timing requirements.</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:57:34 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:12:58 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1428,7 +1427,7 @@ topping and dough preparation stages (Dough Shaping ≤2, Kneading ≤5, and all
 		<query>
 			<formula>E&lt;&gt; (oven.baking and oven_buffer_count &gt; 0)</formula>
 			<comment>Performance: Oven can be busy while pizzas wait (utilization check)</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 13:50:06 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:13:05 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1437,7 +1436,7 @@ topping and dough preparation stages (Dough Shaping ≤2, Kneading ≤5, and all
 		<query>
 			<formula>E&lt;&gt; (raw_dough_buffer_count == MAX_PIZZA_BUFFER and dough_buffer_count == 0)</formula>
 			<comment>Performance: Detects bottleneck at dough shaper</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-09 14:16:22 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:13:08 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1446,7 +1445,7 @@ topping and dough preparation stages (Dough Shaping ≤2, Kneading ≤5, and all
 		<query>
 			<formula>E&lt;&gt; (meat_buffer_count == MAX_PIZZA_BUFFER and oven_buffer_count == 0)</formula>
 			<comment>Performance: Detects bottleneck at vegetable slicer</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-01 23:51:28 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:13:11 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1455,7 +1454,7 @@ topping and dough preparation stages (Dough Shaping ≤2, Kneading ≤5, and all
 		<query>
 			<formula>E&lt;&gt; (sauce_buffer_count == MAX_PIZZA_BUFFER and cheese_buffer_count == 0)</formula>
 			<comment>Performance: Detects bottleneck at cheese grater</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-01 23:51:34 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-09 19:13:15 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
