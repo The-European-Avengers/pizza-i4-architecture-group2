@@ -781,18 +781,21 @@ clock t;</declaration>
 			<name x="544" y="51">restocked</name>
 		</location>
 		<location id="id133" x="374" y="34">
-			<name x="357" y="51">kneading</name>
+			<name x="340" y="51">kneading</name>
+			<label kind="invariant" x="340" y="68">t&lt;=5</label>
 		</location>
 		<init ref="id128"/>
 		<transition id="id134">
 			<source ref="id132"/>
 			<target ref="id133"/>
 			<label kind="synchronisation" x="408" y="8">provide_dough?</label>
-			<label kind="assignment" x="391" y="76">isRestocking=false</label>
+			<label kind="assignment" x="391" y="76">isRestocking=false,
+t=0</label>
 		</transition>
 		<transition id="id135">
 			<source ref="id133"/>
 			<target ref="id129"/>
+			<label kind="guard" x="238" y="42">t&gt;=5</label>
 			<label kind="assignment" x="212" y="-8">t=0, 
 dough_stock--</label>
 		</transition>
@@ -800,6 +803,7 @@ dough_stock--</label>
 			<source ref="id130"/>
 			<target ref="id133"/>
 			<label kind="guard" x="289" y="-68">dough_stock&gt;0</label>
+			<label kind="assignment" x="306" y="-51">t=0</label>
 		</transition>
 		<transition id="id137">
 			<source ref="id131"/>
@@ -849,16 +853,19 @@ raw_dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 		</location>
 		<location id="id146" x="-25" y="-59">
 			<name x="-51" y="-42">addToPizza</name>
+			<label kind="invariant" x="-59" y="-25">t&lt;=5</label>
 		</location>
 		<init ref="id141"/>
 		<transition id="id147">
 			<source ref="id142"/>
 			<target ref="id146"/>
 			<label kind="guard" x="-110" y="-195">sauce_stock &gt; 0</label>
+			<label kind="assignment" x="-85" y="-178">t=0</label>
 		</transition>
 		<transition id="id148">
 			<source ref="id146"/>
 			<target ref="id143"/>
+			<label kind="guard" x="-144" y="-51">t&gt;=5</label>
 			<label kind="assignment" x="-170" y="-102">t=0, 
 sauce_stock--</label>
 		</transition>
@@ -866,7 +873,8 @@ sauce_stock--</label>
 			<source ref="id145"/>
 			<target ref="id146"/>
 			<label kind="synchronisation" x="-8" y="-25">provide_sauce?</label>
-			<label kind="assignment" x="-8" y="-8">isRestocking=false</label>
+			<label kind="assignment" x="-8" y="-8">isRestocking=false,
+t=0</label>
 		</transition>
 		<transition id="id150">
 			<source ref="id144"/>
@@ -948,24 +956,28 @@ dough_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 			<name x="144" y="76">restocked</name>
 		</location>
 		<location id="id164" x="-51" y="59">
-			<name x="-77" y="76">addToPizza</name>
+			<name x="-85" y="76">addToPizza</name>
+			<label kind="invariant" x="-68" y="93">t&lt;=5</label>
 		</location>
 		<init ref="id158"/>
 		<transition id="id165">
 			<source ref="id164"/>
 			<target ref="id161"/>
+			<label kind="guard" x="-178" y="68">t&gt;=5</label>
 			<label kind="assignment" x="-229" y="34">t=0, meat_stock--</label>
 		</transition>
 		<transition id="id166">
 			<source ref="id160"/>
 			<target ref="id164"/>
 			<label kind="guard" x="-42" y="-93">meat_stock &gt; 0</label>
+			<label kind="assignment" x="-42" y="-76">t=0</label>
 		</transition>
 		<transition id="id167">
 			<source ref="id163"/>
 			<target ref="id164"/>
-			<label kind="synchronisation" x="8" y="34">provide_meat?</label>
-			<label kind="assignment" x="-17" y="59">isRestocking=false</label>
+			<label kind="synchronisation" x="-17" y="0">provide_meat?</label>
+			<label kind="assignment" x="-17" y="17">isRestocking=false,
+t=0</label>
 		</transition>
 		<transition id="id168">
 			<source ref="id162"/>
@@ -1028,24 +1040,28 @@ meat_buffer_count &lt; MAX_PIZZA_BUFFER</label>
 		</location>
 		<location id="id179" x="255" y="34">
 			<name x="229" y="51">addToPizza</name>
+			<label kind="invariant" x="246" y="68">t&lt;=5</label>
 		</location>
 		<init ref="id174"/>
 		<transition id="id180">
 			<source ref="id175"/>
 			<target ref="id179"/>
 			<label kind="guard" x="119" y="-93">cheese_stock &gt; 0</label>
+			<label kind="assignment" x="153" y="-68">t=0</label>
 		</transition>
 		<transition id="id181">
 			<source ref="id179"/>
 			<target ref="id176"/>
+			<label kind="guard" x="102" y="42">t&gt;=5</label>
 			<label kind="assignment" x="59" y="-8">t=0, 
 cheese_stock--</label>
 		</transition>
 		<transition id="id182">
 			<source ref="id178"/>
 			<target ref="id179"/>
-			<label kind="synchronisation" x="297" y="8">provide_cheese?</label>
-			<label kind="assignment" x="273" y="34">isRestocking=false</label>
+			<label kind="synchronisation" x="271" y="-34">provide_cheese?</label>
+			<label kind="assignment" x="272" y="-17">isRestocking=false,
+t=0</label>
 		</transition>
 		<transition id="id183">
 			<source ref="id177"/>
@@ -1215,7 +1231,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] not deadlock</formula>
 			<comment>Safety: System never reaches deadlock state</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-01 23:50:14 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-08 23:36:25 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1224,7 +1240,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] (oven.baking imply temp == TARGET_TEMP)</formula>
 			<comment>Safety: Baking only occurs at target temperature</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-01 23:50:17 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-08 23:24:04 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1233,7 +1249,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] (stock_level &lt; 0 imply false)</formula>
 			<comment>Safety: Stock level never negative</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-01 23:50:20 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-08 23:24:07 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1242,7 +1258,7 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 		<query>
 			<formula>A[] (pizzas_in_production &lt;= MAX_ORDERS_IN_SYSTEM)</formula>
 			<comment>Safety: Pizza production never exceeds maximum capacity</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-01 23:50:22 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-08 23:24:09 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
@@ -1402,9 +1418,45 @@ system customer, freezer, packagingRobot, oven, doughMachine, doughShaper, sauce
 			</result>
 		</query>
 		<query>
-			<formula>A[] (doughShaper.shapingDough imply doughShaper.t &lt;= 10)</formula>
+			<formula>A[] (doughShaper.shapingDough imply doughShaper.t &lt;= 2)</formula>
 			<comment>Performance: Dough shaping completes within time bound</comment>
-			<result outcome="success" type="quality" timestamp="2025-12-01 23:51:21 +0100">
+			<result outcome="success" type="quality" timestamp="2025-12-08 23:31:19 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (doughMachine.kneading imply doughMachine.t &lt;= 5)</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2025-12-08 23:30:39 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (sauceMachine.addToPizza imply sauceMachine.t &lt;= 5)</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2025-12-08 23:31:23 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (meatSlicer.addToPizza imply meatSlicer.t &lt;= 5)</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2025-12-08 23:32:57 +0100">
+				<option key="--exploration" value="0"/>
+				<option key="--backwards-order" value="0"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>A[] (cheeseGrater.addToPizza imply cheeseGrater.t &lt;= 5)</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2025-12-08 23:36:18 +0100">
 				<option key="--exploration" value="0"/>
 				<option key="--backwards-order" value="0"/>
 				<option key="--diagnostic" value="0"/>
