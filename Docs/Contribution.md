@@ -22,13 +22,16 @@ In this page how each member has contributed to the project is described. (you c
 ## Contributions Table
 
 | Task | Jonathan | Jeremy | Artem | Miguel | Sagor |
-|---|:---:|:---:|:---:|:---:|:---:|
+|---|---|---|---|---|---|
+| Requirements & Use Cases |  |  | ✓ |  |  |
 | Feature Tree |  |  | ✓ |  |  |
 | Architecture Model |  |  | ✓ |  |  |
 | Design Model |  |  | ✓ |  |  |
 | State Machines |  |  | ✓ |  |  |
+| First Pitch| ✓ | ✓ |  |  |  |
 | Traceability Matrix |  |  | ✓ |  |  |
-| UPPAAL models |  |  | ✓ |  |  |
-| Experiment |  |  | ✓ |  |  |
+| UPPAAL |  |  | ✓ |  |  |
+| Experiment |  |  | Kafka Initializer, Order Processing, Dough Machine, Dough Shaper, Cheese Grater |  |  |
+| Second Pitch|  |  | ✓ | ✓ |  |
 | Report |  |  | ✓ |  |  |
 
