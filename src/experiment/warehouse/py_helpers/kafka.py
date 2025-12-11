@@ -147,7 +147,7 @@ class KafkaClient:
         self.consumer.close()
         self.producer.flush()
         self.producer.close()
-        print("✅ Kafka client stopped")
+        print("Kafka client stopped")
 
     def __enter__(self):
         """Context manager support."""

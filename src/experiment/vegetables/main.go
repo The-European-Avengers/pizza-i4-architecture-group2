@@ -105,12 +105,11 @@ func main() {
 	msgChan := make(chan Pizza)
 	ovenDoneChan := make(chan DoneMessage, 1)
 	freezerDoneChan := make(chan DoneMessage, 1)
-	restockDoneChan := make(chan RestockDoneMessage) // Added RestockDoneMessage channel
+	restockDoneChan := make(chan RestockDoneMessage) 
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// graceful shutdown
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -150,7 +149,6 @@ func main() {
 			handleRestockDone(doneRestock)
 
 		case pizza := <-msgChan:
-			// Removed 'go' keyword for sequential processing
 			processPizza(ctx, pizza, writerDone, writerOven, writerFreezer, writerRestock, ovenDoneChan, freezerDoneChan)
 		}
 	}

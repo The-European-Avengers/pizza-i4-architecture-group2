@@ -33,7 +33,6 @@ type DoneMessage struct {
 	DoneMsg bool   `json:"doneMsg"`
 }
 
-// Restock request structures
 
 type RestockItem struct {
 	ItemType        string `json:"itemType"`

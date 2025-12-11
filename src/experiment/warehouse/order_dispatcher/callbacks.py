@@ -23,6 +23,5 @@ class CallbackHandler:
         }
         # Use orderId as the Kafka message key so consumers and Redpanda show a non-null key
         self.client.send('order-dispatched', dispatch_message, key=message.value.get('orderId'))
-        # ✅ CRITICAL FIX: Flush the producer to ensure message is sent immediately
         self.client.producer.flush()
         logger.info('ORDER DISPATCHED SUCCESSFULLY')

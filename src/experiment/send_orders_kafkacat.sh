@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Pizza Order Test Script using kafkacat/kcat
-# Install: brew install kcat (macOS) or apt-get install kafkacat (Linux)
 
 KAFKA_BROKER="localhost:9092"
 TOPIC="order-stack"

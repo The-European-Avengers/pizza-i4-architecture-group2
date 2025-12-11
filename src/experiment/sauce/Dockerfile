@@ -4,9 +4,6 @@ FROM python:3.11-slim AS base
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies (optional, only if you need them)
-# RUN apt-get update && apt-get install -y gcc && rm -rf /var/lib/apt/lists/*
-
 # Copy dependency file first for caching
 COPY requirements.txt .
 
