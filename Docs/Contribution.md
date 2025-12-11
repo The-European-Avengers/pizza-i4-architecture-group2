@@ -3,6 +3,7 @@ In this page how each member has contributed to the project is described. (you c
 
 ## Jonathan
 
+
 ## Jeremy
 
 ## Artem
@@ -34,16 +35,17 @@ In this page how each member has contributed to the project is described. (you c
 
 | Task | Jonathan | Jeremy | Artem | Miguel | Sagor |
 |---|---|---|---|---|---|
-| Requirements & Use Cases |||✓|✓||
-| Feature Tree |||✓|||
-| Architecture Model |||✓|✓||
-| Design Model |||✓|✓||
-| Analysis Model ||||✓||
-| State Machines |||✓|✓||
-| First Pitch|✓|✓|✓|✓||
-| Traceability Matrix |||✓|✓||
-| UPPAAL |||✓|✓-||
-| Experiment ||| Kafka Initializer, Order Processing, Dough Machine, Dough Shaper, Cheese Grater | Meat machine, Sauce machine, Vegetable machine, Oven, Freezer, Packaging Robot, KsqlDB & API to retrieve data ||
-| Second Pitch|✓|✓|✓|✓||
+| Requirements & Use Cases |✓|✓|✓|✓||
+| Feature Tree |✓|✓|✓|✓||
+| Design Model |✓|✓|✓|✓||
+| Analysis Model |✓|✓|✓|✓||
+| State Machines |✓|✓|✓|✓||
+| First Pitch|Contributor & Presenter|Contributor & Presenter|Contributor|Contributor||
+| Traceability Matrix |✓|✓|✓|✓||
+| Exercise 8 |✓|✓||||
+| UPPAAL |||Main Developer|Helper||
+| Experiment |Kafka deployment, Order Dispatcher & Internal Goods Provider|API Gateway, Customer microservice & design DB| Kafka Initializer, Order Processing, Dough Machine, Dough Shaper, Cheese Grater | Meat Machine, Sauce Machine, Vegetable Slicer, Oven, Freezer, Packaging Robot, KsqlDB, API to retrieve data & Data Analysis ||
+| Second Pitch|Contributor|Contributor|Contributor & Presenter|Contributor & Presenter|Contributor|
 | Report |✓|✓|✓|✓|✓|
 
+Sagor join the project late and thus has not contributed to as many sections as the others. And at this point all remaining work was already assigned.
