@@ -43,10 +43,13 @@ Each machine consumes from input topic, processes pizza, and publishes to next s
 Each machine consumes from input topic, processes pizza, and publishes to next stage's topic.
 
 ### Backpressure Mechanism
-Machines signal completion via `*-done` topics. Order Processing waits for signals before dispatching, preventing buffer overflow (performance tactic #3: Bound Queue Sizes).
+Machines signal completion via `*-done` topics. Order Processing waits for signals before dispatching, preventing buffer overflow (Bound Queue Sizes).
 
 ### Restocking Communication
 When stock ≤ 10 units: machine publishes restock request → Internal Goods Provider responds via `*-restock-done` → machine resumes production.
+
+### Fault Tolerance & Durability
+Kafka replication factor ensures message durability. Pizza state is embedded in messages (no shared state), enabling stateless computation across replicas (Maintain Multiple Copies of Computations).
 
 ## Technology Stack
 - **Message Broker**: Kafka (Redpanda)
@@ -59,4 +62,4 @@ Latency measurements from Kafka message timestamps:
 - **Pizza Latency**: `startTimestamp` → `pizza-done`
 - **Restock Latency**: `*-restock` → `*-restock-done`
 
-This event-driven architecture implements performance tactics #2 (stateless computation), #3 (bounded queues), and #4 (resource scheduling).
+This event-driven architecture implements performance tactics: Maintain Multiple Copies of Computations, Stateless Computation, Bounded Queue Sizes, and Resource Scheduling.
