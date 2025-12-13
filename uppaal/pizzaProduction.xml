@@ -35,7 +35,7 @@ broadcast chan turn_on;
 broadcast chan ovenMachine, freezerMachine;
 chan turn_off, oven_ready, pizza_ready;
 
-const int MAX_ORDERS_IN_SYSTEM = 3; // Or any total number you want
+const int MAX_ORDERS_IN_SYSTEM = 3; // Max amount of pizzas allowed to be in production line
 int[0,3] pizzas_in_production = 0;
 
 const int MAX_PIZZA_BUFFER = 2; // Max pizzas in any buffer
