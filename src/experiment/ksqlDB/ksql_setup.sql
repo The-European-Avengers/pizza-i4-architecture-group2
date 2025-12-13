@@ -70,23 +70,16 @@ CREATE STREAM dough_stream (
     VALUE_FORMAT='JSON'
 );
 
--- Stream rekeyed for pizza start events using the COMPOSITE KEY: (pizzaId, orderId)
--- Kafka's ROWTIME is used as the actual pizza start time for accurate latency calculation.
+
 CREATE STREAM dough_stream_rekeyed AS
 SELECT
-    -- Create the composite key by combining the IDs
     CAST(pizzaId AS VARCHAR) + '_' + orderId AS PIZZA_ORDER_KEY,
     pizzaId,
     orderId,
-    -- Renaming the field that holds the Order's start time
     startTimestamp AS ORDER_START_TIME,
-    -- ROWTIME (the event's timestamp) is the accurate Pizza Start Time
     ROWTIME AS PIZZA_START_TIME
 FROM dough_stream
 PARTITION BY (CAST(pizzaId AS VARCHAR) + '_' + orderId);
-
--- NOTE: Order streams and tables (order_processing_stream, order_done_stream, etc.) are omitted here
--- but rely on being correctly grouped by orderId only.
 
 -- -----------------------------
 -- TABLES
@@ -126,13 +119,11 @@ EMIT CHANGES;
 
 
 -- Table: Pizza start time, grouped by PIZZA_ORDER_KEY
--- Uses PIZZA_START_TIME (ROWTIME) for the individual pizza's start time.
 CREATE TABLE pizza_start_table AS
 SELECT
     PIZZA_ORDER_KEY,
     LATEST_BY_OFFSET(pizzaId) AS PIZZA_ID,
     LATEST_BY_OFFSET(orderId) AS ORDER_ID,
-    -- Remove orderSize and pizza details from here since dough_stream doesn't have them
     MIN(PIZZA_START_TIME) AS STARTTIMESTAMP 
 FROM dough_stream_rekeyed
 GROUP BY PIZZA_ORDER_KEY
@@ -172,7 +163,6 @@ GROUP BY PIZZA_ORDER_KEY
 EMIT CHANGES;
 
 -- Table: End-to-end latency for each individual pizza, joined by PIZZA_ORDER_KEY
--- Get pizza details from pizza_end_table (which has them from pizza-done topic)
 CREATE TABLE pizza_latency AS
 SELECT
     e.PIZZA_ORDER_KEY,

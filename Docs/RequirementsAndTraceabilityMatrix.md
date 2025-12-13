@@ -51,6 +51,8 @@
 | **NFR8** | Reliability | <0.1% production failures | Error logs analysis | High |
 | **NFR9** | Maintainability | MTTR (Mean Time To Repair) <30 minutes | Incident reports | Medium |
 | **NFR10** | Interoperability | Support REST API integration | API testing | Medium |
+| **NFR11** | Integrability | Simple integration of new machines in <3 person-days | Measure development time | High |
+
 
 ## 3. Traceability Matrix
 

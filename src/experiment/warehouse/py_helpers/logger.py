@@ -29,7 +29,6 @@ def get_logger(
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    # Remove any existing handlers
     if logger.hasHandlers():
         logger.handlers.clear()
 
@@ -52,7 +51,6 @@ def get_logger(
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    # Optional: Prevent log messages from propagating to the root logger twice
     logger.propagate = False
 
     return logger

@@ -136,7 +136,6 @@ def trigger_restock_request(orderId):
 
     print("Restock request sent:", request)
 
-    # IMPORTANT: set the Kafka record key to the machineId so ksqlDB tables that GROUP BY machineId will match
     producer.send(restock_request_topic, key=orderId, value=request)
     producer.flush()
 
@@ -217,8 +216,6 @@ async def process_pizza(pizza):
         f"in order {pizza.get('orderId')}"
     )
 
-    # Send done to previous machine (produce a DONE event with a key)
-    # Use composite pizza key so downstream ksqlDB partitioning/joins by pizza/order work
     composite_key = f"{pizza_id}_{pizza.get('orderId')}"
 
     done_msg = {
@@ -283,8 +280,6 @@ async def main_loop():
         for _, messages in msg_pack.items():
             for message in messages:
                 pizza = message.value
-                # You can inspect the Kafka record key via message.key if desired:
-                # print("Kafka key:", message.key)
                 print(f"Received pizza: {pizza}")
                 await process_pizza(pizza)
 

@@ -61,7 +61,7 @@ class CallbackHandler:
         if key is None:
             key = message.value.get('machineId')
         self.client.send('cheese-machine-restock-done', self.create_restock_msg(message), key=key)
-        self.client.producer.flush()  # ✅ FLUSH
+        self.client.producer.flush()  # FLUSH
         logger.info('CHEESE RESTOCK COMPLETED')
 
     def on_meat_machine(self, message):
@@ -78,7 +78,7 @@ class CallbackHandler:
         if key is None:
             key = message.value.get('machineId')
         self.client.send('meat-machine-restock-done', self.create_restock_msg(message), key=key)
-        self.client.producer.flush()  # ✅ FLUSH
+        self.client.producer.flush()  # FLUSH
         logger.info('MEAT RESTOCK COMPLETED')
 
     def on_vegetables_machine(self, message):
@@ -95,7 +95,7 @@ class CallbackHandler:
         if key is None:
             key = message.value.get('machineId')
         self.client.send('vegetables-machine-restock-done', self.create_restock_msg(message), key=key)
-        self.client.producer.flush()  # ✅ FLUSH
+        self.client.producer.flush()  # FLUSH
         logger.info('VEGETABLES RESTOCK COMPLETED')
 
     def on_packaging_robot(self, message):
@@ -112,7 +112,7 @@ class CallbackHandler:
         if key is None:
             key = message.value.get('machineId')
         self.client.send('packaging-machine-restock-done', self.create_restock_msg(message), key=key)
-        self.client.producer.flush()  # ✅ FLUSH
+        self.client.producer.flush()  # FLUSH
         logger.info('PACKAGING RESTOCK COMPLETED')
 
     @staticmethod

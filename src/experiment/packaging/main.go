@@ -72,14 +72,14 @@ type RestockRequest struct {
 // ADDED: Type for restock response, using delivered amount
 type RestockDoneItem struct {
 	ItemType        string `json:"itemType"`
-	DeliveredAmount int    `json:"deliveredAmount"` // Should use delivered, not requested
+	DeliveredAmount int    `json:"deliveredAmount"` 
 }
 
 type RestockDoneMessage struct {
 	Items []RestockDoneItem `json:"items"`
 }
 
-const MAX_STOCK = 100 // Define max stock for safety
+const MAX_STOCK = 100 
 
 // Track pizzas per order safely
 var (
@@ -182,7 +182,6 @@ func consumePizza(ctx context.Context, broker, topic string, out chan<- Pizza) {
 	}
 }
 
-// CHANGED: Function signature to use RestockDoneMessage channel
 func consumeRestockDone(ctx context.Context, broker, topic string, out chan<- RestockDoneMessage) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     []string{broker},
@@ -197,7 +196,6 @@ func consumeRestockDone(ctx context.Context, broker, topic string, out chan<- Re
 		if err != nil {
 			return
 		}
-		// CHANGED: Use the defined RestockDoneMessage structure
 		var msg RestockDoneMessage
 		if err := json.Unmarshal(m.Value, &msg); err != nil {
 			log.Println("⚠️ Bad restock-done JSON:", err)
@@ -208,14 +206,12 @@ func consumeRestockDone(ctx context.Context, broker, topic string, out chan<- Re
 	}
 }
 
-// ADDED: Thread-safe handler for updating stock
 func handleRestockDone(msg RestockDoneMessage) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	for _, item := range msg.Items {
 		if _, ok := boxStock[item.ItemType]; ok {
-			// FIXED: Use DeliveredAmount instead of RequestedAmount
 			boxStock[item.ItemType] += item.DeliveredAmount
 			if boxStock[item.ItemType] > MAX_STOCK {
 				boxStock[item.ItemType] = MAX_STOCK
@@ -236,7 +232,7 @@ func processPizza(
 	writerPizzaDone *kafka.Writer,
 	writerRestock *kafka.Writer,
 ) {
-	boxType := "box" // Example: choose box type dynamically if needed
+	boxType := "box" 
 
 	// Check stock & request restock if low
 	checkBoxStock(ctx, boxType, writerRestock, pizza.OrderId)
