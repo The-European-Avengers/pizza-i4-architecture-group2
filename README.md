@@ -31,8 +31,6 @@ All project documentation is located in the **`Docs/`** directory:
 
 ### Architecture Documentation
 
-TODO: add link to files so are clickable in github
-
 - **[FeatureModel.md](./Docs/FeatureModel.md)** - Feature model and variability analysis
 - **[RequirementsAndTraceabilityMatrix.md](./Docs/RequirementsAndTraceabilityMatrix.md)** - System requirements and traceability
 - **[StateMachines.md](./Docs/StateMachines.md)** - State machine specifications for system components
