@@ -1,132 +1,286 @@
-# Advanced Software Architecture and Analysis Portfolio Template
+# Advanced Software Architecture and Analysis Techniques
 
-- [Introduction](#introduction)
-  - [.github](#github)
-    - [CI/CD Workflow](#cicd-workflow)
-    - [Hand in Workflow](#hand-in-workflow)
-  - [.vscode](#vscode)
-  - [Report](#report)
-  - [Src](#src)
-- [Compiling Latex](#compiling-latex)
-  - [Option 1: LaTeX Workshop + TeX Live](#option-1-latex-workshop--tex-live)
-    - [Extension](#extension)
-    - [Link to download TeX Live](#link-to-download-tex-live)
-  - [Option 2: Trigger Task on Save + Docker](#option-2-trigger-task-on-save--docker)
-    - [Compilation of latex on save](#compilation-of-latex-on-save)
-  - [Option 3: Overleaf](#option-3-overleaf)
-- [Recommended VSCode Extension](#recommended-vscode-extension)
+This repository contains the course materials, implementation, and documentation for the Advanced Software Architecture and Analysis Techniques master's course. The project demonstrates a complete software system for pizza production with event-driven architecture, formal verification, and comprehensive analysis.
 
-## Introduction
-This repository serves as a template for students of Advanced Software Engineering to structure their portfolio project.
+## Table of Contents
 
-Below is the detailed overview of the repository structure:
+- [Repository Structure](#repository-structure)
+- [Documentation](#documentation)
+- [Implementation](#implementation)
+- [Getting Started](#getting-started)
+- [Technologies Used](#technologies-used)
+- [Contribution](#contribution)
 
-<pre>
-.
-├── .github/
-│   └── workflows/
-│       ├── ci-cd.yml
-│       └── handin.yml
-├── .vscode/
-│   ├── settings.json
-│   └── tasks.json
-├── Report/
-│   ├── GroupTemplate/
-│   └── ReflectionsTemplate/
-├── Src/
-└── .gitignore
-</pre>
+## Repository Structure
 
-## .github
-This folder contains template workflows designed for CI/CD processes and for generating the final submission artifacts.
+```
+├── Docs/                    # Complete project documentation
+├── src/                     # Source code implementation
+│   ├── experiment/          # Pizza production experiment
+│   ├── data-analysis/       # Data analysis and visualization
+│   ├── kafka/               # Kafka configuration and setup
+│   └── web/                 # Web applications
+├── report/                  # LaTeX report templates
+├── uppaal/                  # Formal verification models
+└── images/                  # Project diagrams and assets
+```
 
-### CI/CD Workflow
-The CI/CD workflow is split into several jobs:
+## Documentation
 
-![cicdworkflow](images/cicdworkflow.png)
+All project documentation is located in the **`Docs/`** directory:
 
-- **Clone repository**: Clones the repository, creates an artifact from it, and then uploads this artifact, ensuring consistency across all jobs.
-- **Code analysis**: Utilize this job for linting or any other static code analysis tools you'd like to incorporate.
-- **Build application**: Compile the source code. After compiling, the artifact is uploaded for easy accessibility, aiding in debugging and local testing.
-- **Test application**: Run tests that require the code to be compiled. This step downloads the compiled artifact created in the previous step.
-- **Build and push image**: Builds an image using a specified `DockerFile` and pushes the image to the GitHub container registry specific to the repository owner.
-- **Deploy application**: Can be used to deploy the image(s) generated during the workflow onto your virtual machines.
+### Architecture Documentation
 
-### Hand in Workflow
-The hand-in workflow includes some of the jobs from the CI/CD workflow and some additional ones:
+- **`FeatureModel.md`** - Feature model and variability analysis
+- **`RequirementsAndTraceabilityMatrix.md`** - System requirements and traceability
+- **`StateMachines.md`** - State machine specifications for system components
+- **`ExperimentCommunicationArchitecture.md`** - Communication architecture design
+- **`UppaalDescription.md`** - Formal verification specifications
+- **`verification_validation.md`** - V&V strategy and results
 
-![Alt text](images/handinworkflow.png)
+### Experiment Documentation
 
-- **Compile latex groupReport**: This job compiles the latex source files for the group report and upload the output as an artifact.
-- **Compile latex groupReport**: This job compiles the latex source files for the reflections document and upload the output as an artifact.
-- **Upload hand-in artifacts**: This job creates a zip file containing the Group Report, the Reflections Document, the source code, and any build artifacts. The zip can be downloaded by navigating to Repository > Actions > The completed hand-in workflow as shown in the image below.
+Located in **`Docs/Experiment/`**:
 
-![Workflow Artifacts](images/artifacts.png)
+- **`PizzaProductionExperiment.md`** - Overview of the experiment
+- **`ExperimentScope.md`** - Scope and objectives
+- **`ExperimentImplementation.md`** - Implementation details
+- **`ExperimentExecution.md`** - Execution procedures
+- **`PizzaMenu.md`** - Pizza recipes and configurations
 
-### Report
-This directory contains the latex source files essential for the group report and the reflections document.
+### Diagrams
 
-The directory latexUtils contains scripts for compiling LaTeX locally using docker, you do not need to change anything in these files, but you are welcome to do so if you want to.
+All architectural diagrams are available in:
 
-### Src
-This folder is intended for organizing and storing all your source code. You decide on the structure but please keep everything source code related inside `./src`.
-You are allowed to have your DockerFiles at root level for build context reasons, as the example DockerFile provided.
+- **`Docs/diagram-images/`** - PNG exports of diagrams
+  - Analysis-level architecture
+  - Design-level architecture
+  - Feature model
+  - State machines for all components
+  - Subsystems tree
+  - Experiment communication flow
 
-## Compiling Latex
-You can compile latex source files to PDF locally. Multiple options are available; choose the one you prefer.
+- **`Docs/diagram-scripts/`** - Source files for diagrams
+  - `.excalidraw` files for editing
+  - `.dot` files for Graphviz diagrams
 
-### Option 1: LaTeX Workshop Extension + TeX Live
-For this option, you'll need the VSCode extension called LaTeX Workshop and the LaTeX Distribution named TeX Live.
+### Additional Documentation
 
-While TeX Live does require 6GB! of space, it is a comprehensive collection of nearly all LaTeX packages, it is very user-friendly when paired with LaTeX Workshop.
+- **`Contribution.md`** - Contribution guidelines
+- **`ReportStructure.md`** - Report organization guide
+- **`Peer_doc_group_2.md`** - Peer review documentation made for group 2
 
-#### Extension
+## Implementation
 
-![LaTeX Workshop Extension](images/workshop.png)
+### Pizza Production Experiment (`src/experiment/`)
 
-#### Link to download TeX Live
-[TeX Live Official Download](https://www.tug.org/texlive/)
+A complete event-driven pizza production system built with microservices:
 
-### Option 2: Trigger Task on Save Extension + Docker
-This option requires Docker to be installed and running.
+#### Core Components
 
-Here's how it works:
+- **Order Processing** (`order-processing/`) - C# service for order management
+- **Warehouse** (`warehouse/`) - Python services for inventory and order dispatching
+  - `internal_goods_provider/` - Inventory management
+  - `order_dispatcher/` - Order routing
+  
+#### Production Machines
 
-Inside the `report` directory, there's a docker-compose-latex.yml file.
+Each machine is implemented as an independent service:
 
-- This docker-compose file will create bind volumes for the `GroupTemplate` and `ReflectionsTemplate` folders.
-- A docker container will start, compile the latex source files, and then exit. The initial process might be a little time-consuming as it needs to create the image. However, afterwards compilations are faster.
+- **Dough Processing**
+  - `dough-machine/` - C# service for dough preparation
+  - `dough-shaper/` - C# service for shaping
+  
+- **Topping Processing**
+  - `Sauce/` - Python sauce application service
+  - `Meat/` - Go meat slicing service
+  - `cheese/` (CheeseGrater) - C# cheese preparation service
+  - `Vegetables/` - Go vegetable slicing service
+  
+- **Cooking & Packaging**
+  - `Oven/` - Python baking service
+  - `Freezer/` - Python freezing service
+  - `Packaging/` - Go packaging robot service
 
-To manually run the docker-compose-latex.yml and compile both latex documents, use the command:
+#### Infrastructure
 
-- ```docker compose -f report/docker-compose-latex.yml up```
+- **Kafka** - Event streaming backbone
+- **KsqlDB** (`KsqlDB/`) - Stream processing and analytics
+- **Kafka Initializer** (`kafka-initializer/`) - C# service for topic setup
+- **API Gateway** (`Api/`) - Python REST API interface
 
-To only compile a specific latex document i.e `GroupReport` or `Reflections` use these commands:
+#### Docker Support
 
-- ```docker compose -f report/docker-compose-latex.yml run latex reflection```
-- ```docker compose -f report/docker-compose-latex.yml run latex groupreport```
+- **`docker-compose.yml`** - Complete system orchestration
+- Individual Dockerfiles for each service
 
-#### Trigger Task on Save Extension
-If you're using VSCode, you can set up your latex files to compile upon saving.
-For this, download the `Trigger Task on Save` extension.
+### Web Applications (`src/web/`)
 
-![Trigger Task on Save Extension](images/triggerTaskOnSave.png)
+Two interconnected web applications:
 
-This extension will trigger tasks defined in `.vscode/tasks.json` every time you save a `.tex` file.
-The task will execute the `docker compose -f report/docker-compose-latex.yml run latex` command with a parameter, depending on the .tex file you are working on.
+#### Client Gateway (`client-gateway/`)
+- **Technology**: NestJS (TypeScript)
+- **Purpose**: API gateway and request routing
+- **Modules**:
+  - Authentication integration
+  - Order management
+  - Order stack management
+  - User management
+- **Pattern**: Microservices communication via RPC
 
-### Option 3: Overleaf
-You are free to import the latex source files into Overleaf.
-- If you use this method, you could export the source files from overleaf when done with the report and reflections document.
-- By placing the source files into their respective folders `repot/GroupTemplate` and `report/ReflectionsTemplate` you can still take advantage of the handin workflow when creating your final hand in artifact.
+#### Ordering Microservice (`ordering-ms/`)
+- **Technology**: NestJS (TypeScript)
+- **Purpose**: Order processing and lifecycle management
+- **Modules**:
+  - Order creation and tracking
+  - Menu management
+  - Integration with Client Gateway
 
-## Recommended VSCode Extension
 
-### GitHub Actions
+### Data Analysis (`src/data-analysis/`)
 
-- GitHub workflow documentation
-- Auto completion
-- Overview of workflow runs directly from VSCode
+Comprehensive analysis of experiment results:
 
-![Alt text](images/githubactions.png)
+- **Jupyter Notebook**:
+  - `analysis.ipynb` - Data analysis and visualization
+
+- **Experiment Data** (`experiment-data/`):
+  - Order latency measurements
+  - Pizza production time tracking
+  - Machine restock latency for all components
+  - Order dispatch metrics
+
+- **Generated Reports**:
+  - Statistical analysis CSVs
+  - Visualization charts (PNG)
+  - Efficiency metrics
+
+### Kafka Setup (`src/kafka/`)
+
+Basic Kafka infrastructure:
+- Producer and consumer examples
+- Docker Compose configuration
+- Python virtual environment setup
+
+### Scripts (`src/web/scripts/`)
+
+Utility scripts for testing:
+- **`newOrders.ts`** - Order generation script
+- **`script.sh`** - Automation helper
+
+## Getting Started
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Node.js (v18+) and npm
+- .NET 8.0 SDK
+- Python 3.13+
+- Go 1.21+
+
+### Running the Pizza Production System
+
+1. **Navigate to the experiment directory**:
+   ```bash
+   cd src/experiment
+   ```
+
+2. **Start all services**:
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Initialize Kafka topics**:
+   ```bash
+   # Wait for Kafka to be ready, then run initializer
+   docker-compose logs -f kafka-initializer
+   ```
+
+### Running the Web Applications
+
+
+1. **Start client gateway**:
+   ```bash
+   cd src/web/client-gateway
+   npm install
+   npm run start:dev
+   ```
+2. **Running an Order (Load Generation)**
+
+  The load generation scripts (`script.sh` and `newOrder.ts`) are located in the `src/web/scripts` folder. Navigate to the directory containing the load script:
+  ```bash
+  cd src/web/scripts
+  ```
+  The `script.sh` is configured to execute `newOrder.ts` multiple times, simulating the **10 replications** required for the experiment. The script must be edited to target the correct load level (10, 50, or 100 pizzas). Then run the bash script to execute the test cell:
+  ```bash
+  ./script.sh
+  ```
+
+### Running Data Analysis
+
+1. **Install dependencies**:
+   ```bash
+   cd src/data-analysis
+   pip install jupyter pandas matplotlib numpy
+   ```
+
+2. **Launch Jupyter**:
+   ```bash
+   jupyter notebook
+   ```
+
+3. **Open any analysis notebook** to view results
+
+## Technologies Used
+
+### Languages
+- **C#** - .NET 8.0 microservices
+- **Python** - Machine services and data analysis
+- **Go** - High-performance machine services
+- **TypeScript** - Web applications and gateway
+
+### Frameworks & Libraries
+- **NestJS** - Backend microservices framework
+- **Pandas/NumPy** - Data analysis
+
+### Infrastructure
+- **Apache Kafka** - Event streaming platform
+- **KsqlDB** - Stream processing
+- **Docker** - Containerization
+- **PostgreSQL** - Relational database
+
+### Formal Methods
+- **UPPAAL** - Timed automata verification
+
+
+## Formal Verification
+
+UPPAAL models are located in **`uppaal/`**:
+
+- **`pizzaProduction.xml`** - Complete system model
+  - Timed automata for all components
+  - Properties verification
+  - Deadlock analysis
+  - Timing constraint validation
+
+Refer to [[Docs/UppaalDescription.md]] for model details and verification results.
+
+## Contribution
+
+Below is a summary of each member's contributions to the project:
+
+| Task | Jonathan | Jeremy | Artem | Miguel | Sagor |
+|---|---|---|---|---|---|
+| Requirements & Use Cases |✓|✓|✓|✓||
+| Feature Tree |✓|✓|✓|✓||
+| Design Model |✓|✓|✓|✓||
+| Analysis Model |✓|✓|✓|✓||
+| State Machines |✓|✓|✓|✓||
+| First Pitch|Contributor & Presenter|Contributor & Presenter|Contributor|Contributor||
+| Traceability Matrix |✓|✓|✓|✓||
+| Exercise 8 |✓|✓||||
+| UPPAAL |||Main Developer|Helper||
+| Experiment |Kafka deployment, Order Dispatcher & Internal Goods Provider|API Gateway, Customer microservice & design DB| Kafka Initializer, Order Processing, Dough Machine, Dough Shaper, Cheese Grater | Meat Machine, Sauce Machine, Vegetable Slicer, Oven, Freezer, Packaging Robot, KsqlDB, API to retrieve data & Data Analysis ||
+| Second Pitch|Contributor|Contributor|Contributor & Presenter|Contributor & Presenter|Contributor|
+| Report |✓|✓|✓|✓|✓|
 
