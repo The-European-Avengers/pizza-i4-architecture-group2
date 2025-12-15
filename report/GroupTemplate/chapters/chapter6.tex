@@ -1,0 +1,79 @@
+\section{Behavioral Modeling \& Verification}
+
+To formally specify and verify the dynamic, event-based behavior of our architecture, we employed State Machine Diagrams (based on UML/SysML principles) to define component behavior and the UPPAAL Timed Automata formalism to verify its real-time correctness. This approach follows established practices in the verification of real-time systems \cite{larsen1996} and ensures rigorous validation of timing and resource constraints. Furthermore, our evaluation leverages insights from recent UPPAAL research summarised in \cite{uppaalreview2025}, which highlights the tool’s applicability and limitations for complex cyber-physical systems.
+
+\subsection{State Machines}
+
+We used State Machine Diagrams to graphically specify the behavior of the production line and supporting components. A state machine defines the sequence of states a component moves through in response to events (or triggers). This visual modeling step ensured a shared understanding of component logic before formal verification.
+
+\subsubsection{Production Line State Machines}
+
+State machines were developed for all production line systems, including the Dough Machine, Dough Shaper, Oven, Freezer, and the topping components: Cheese Grater, Meat Slicer, Vegetables Slicer, and Sauce Machine. Detailed diagrams and descriptions for all state machines are available in Appendix~\ref{git:links}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\columnwidth]{assets/cheese-grater-sm.png}
+\caption{Cheese Grater State Machine}
+\label{fig:cheese-grater}
+\end{figure}
+
+\subsubsection{Key Process States and Transitions}
+
+The component state machines follow a common pattern, reacting to order flow and managing local resources:
+
+\textbf{States:} Components typically include an initial \texttt{IDLE} state, a \texttt{WAITING\_FOR\_PIZZA} state (often the initial state after a \texttt{turn\_on} event), a \texttt{CHECK\_STOCK} state, an active \texttt{PROCESSING} state (e.g., \texttt{GRATE\_CHEESE}, \texttt{BAKING}), and an \texttt{ADD\_TO\_PIZZA} or \texttt{DISPATCH} state.
+
+\textbf{Transitions:} The transitions define the flow logic:
+\begin{itemize}
+    \item \textit{Triggers:} Events are modeled as signals (e.g., \texttt{vegetable-machine-restock-done}, \texttt{sauce-machine-done}) or the completion of a preceding process that signals a pizza is ready to be pulled from a buffer.
+    \item \textit{Guards:} Conditions determine the transition path. For example, the Cheese Grater uses \texttt{[Stock $\leq$ 10]} to transition to restocking and \texttt{[Stock $>$ 10]} to proceed with topping application.
+    \item \textit{Final States:} Machines transition to a final state upon completing their process for a specific pizza.
+\end{itemize}
+
+\subsection{UPPAAL Timed Automata}
+
+We used UPPAAL, a tool for formal verification of real-time systems \cite{uppaal}, to analyze our architecture. This was critical for verifying safety and liveness properties—ensuring no deadlocks occur, restocking processes complete, and pizzas are produced under correct timing conditions. UPPAAL confirmed that concurrent operations, timing constraints, and resource management logic work as intended.
+
+\subsubsection{Model Structure and Templates}
+
+The UPPAAL model consists of 14 concurrently running templates representing the state machines developed in Section~6.1. These templates fall into three categories: Production Components (e.g., Oven, CheeseGrater), Supply Chain Components (e.g., InventoryManager), and Control Components (e.g., Customer). They interact through synchronization channels and shared global variables.
+
+\subsubsection{Timing Constraints Specification}
+
+Timing constraints are modeled using local clocks \texttt{t} and invariants/guards. For instance, \texttt{t $\geq$ 2} enforces minimum processing time before dispatch. Key timing constraints include a 2-unit Oven preheating phase and a 10-unit Baking phase.
+
+A crucial design decision was the adoption of a \textbf{buffer-based decoupling approach} using seven global integer counters (e.g., \texttt{dough\_buffer\_count}). This avoids the tight coupling and deadlocks caused by purely synchronous channels – an issue well-recognised in real-time model checking literature \cite{larsen1996}. The bounded buffers enable asynchronous operation and prevent system blocks, thereby increasing concurrency.
+
+\subsection{Formal Verification Results}
+
+The formal verification process involved evaluating 26 properties using UPPAAL’s model-checking engine.
+
+\subsubsection{Safety Properties (Deadlock Freedom)}
+
+Deadlock freedom (\texttt{A[] not deadlock}) was verified successfully. Other validated safety properties include:
+\begin{itemize}
+    \item Non-negative stock levels.
+    \item Correct temperature enforcement.
+    \item Compliance with the maximum of 3 concurrent orders.
+\end{itemize}
+
+\subsubsection{Liveness Properties (Verifying that processes eventually complete)}
+
+Liveness properties confirmed continuous system progress:
+\begin{itemize}
+    \item Orders reach packaging.
+    \item Restocking requests eventually complete.
+    \item Timing bounds (e.g., dough shaping $\leq 10$ time units) always hold.
+\end{itemize}
+
+\subsubsection{Quality Attribute Validation}
+
+\textbf{Availability (NFR1):} Verified via liveness of restocking processes.  
+\textbf{Performance (NFR2):} Verified via bottleneck detection and timing constraints.  
+\textbf{Throughput (NFR3):} Verified via reachability of maximum system capacity.
+
+\subsubsection{Model Scope and Limitations}
+
+UPPAAL allowed us to verify key non-functional requirements within a reduced but realistic scope. However, verifying the entire production architecture at scale proved infeasible due to state-space explosion – a challenge widely discussed in real-time verification research \cite{larsen1996, uppaalreview2025}. As model complexity increased, the verifier exceeded memory and time limits.
+
+To improve scalability, future work could add multiple \texttt{InternalGoodsProvider} and \texttt{InventoryManager} instances, parallel production lines, and load balancers. Such extensions would require abstraction techniques or stochastic/statistical model checking to manage state-space explosion, approaches also highlighted in \cite{uppaalreview2025}.

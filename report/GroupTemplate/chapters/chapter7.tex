@@ -1,0 +1,146 @@
+\section{Experiment}
+
+This section describes the experimental validation of the pizza production system's performance requirement (NFR2). We present the experiment design, including objectives, variables, and validity assessment, followed by implementation details and results analysis. The experiment measures system latency under varying load conditions to empirically validate whether the architecture meets its 30-time-units pizza production requirement.
+
+\subsection{Experiment Design}
+
+The experiment validates the performance requirement (NFR2: \( < 30 \) time units pizza production latency) by measuring system throughput under controlled load conditions. In the experiment each time unit is equal to one second.
+
+\subsubsection{Objective and Hypothesis}
+
+\textbf{Objective:} Empirically validate whether the system meets NFR2 across different load scenarios and identify performance bottlenecks.
+
+\textbf{Null Hypothesis (H\textsubscript{0}):} Mean pizza latency remains below 30s across all order sizes with no significant difference between treatments.
+
+\textbf{Alternative Hypothesis (H\textsubscript{1}):} Mean pizza latency increases with order size and may exceed 30s under high load.
+
+\subsubsection{Variables and Treatments}
+
+\textbf{Independent Variable:} Order size (number of pizzas per batch), representing system load intensity.
+
+\textbf{Treatments:}
+\begin{itemize}
+    \item T1 (Baseline): 1 pizza per order
+    \item T2 (Low Load): 10 pizzas per order
+    \item T3 (Medium Load): 50 pizzas per order
+    \item T4 (High Load): 100 pizzas per order
+\end{itemize}
+
+\textbf{Dependent Variables (Response Measures):}
+\begin{itemize}
+    \item \textit{Order Latency:} Time from order submission to \texttt{order-done} event (milliseconds, ratio scale).
+    \item \textit{Pizza Latency:} End-to-end processing time from \texttt{startTimestamp} to \texttt{pizza-done} event (milliseconds, ratio scale).
+    \item \textit{Restock Latency:} Duration of restocking operations per machine (milliseconds, ratio scale).
+\end{itemize}
+
+All measurements were extracted from ksqlDB materialised views by joining timestamped Kafka events, ensuring objective and direct measurement through a dedicated FastAPI service that exposed computed latency values via CSV export endpoints.
+
+\subsubsection{Design Type and Execution}
+
+A \textbf{one-factor, four-treatment sequential design} was employed. Treatments were executed in ascending order (1→10→50→100 pizzas) within a single experimental run using a shell script. Each treatment completed fully before proceeding to the next, ensuring consistent system state while observing behavior under progressively increasing load.
+
+\subsubsection{Validity Evaluation}
+
+The validity threats and mitigation strategies are summarized in Table~\ref{tab:validity-threats}.
+
+\subsection{Experiment Implementation}
+
+Following the design specification, the experiment was implemented using a containerized microservices architecture. This section details the technology stack, deployment configuration, and challenges encountered during implementation.
+
+The experiment deployed only components involved in the performance evaluation workflow, ensuring a controlled and reproducible environment.
+
+\subsubsection{Technology Stack}
+
+The production line follows a polyglot microservices architecture with services interoperating through Kafka:
+
+\begin{itemize}
+    \item \textit{C\# Services}: KafkaInitializer, OrderProcessing, DoughMachine, DoughShaper, CheeseGrater.
+    \item \textit{Python Services}: SauceMachine, Oven, Freezer, Order Dispatcher, Internal Goods Provider.
+    \item \textit{Go Services}: MeatSlicer, VegetablesSlicer, Packaging-robot.
+    \item \textit{Nest.js (TypeScript)}: API Gateway and Ordering microservice.
+\end{itemize}
+
+\subsubsection{Deployment and Workflow}
+
+All components were containerised using Docker Compose for modularity and isolation. The system was initialized by creating required Kafka topics and ksqlDB tables. The production workflow operated as a Consumer--Processor--Producer pipeline: each machine consumed messages from its input topic, processed them, and published to the next stage, with the Packaging-robot producing the final \texttt{pizza-done} event. The complete communication diagram showing all component interactions via the Kafka message bus is available in Appendix~\ref{git:links}.
+
+\subsubsection{Implementation Challenges}
+
+Several challenges required resolution:
+
+\begin{itemize}
+    \item \textit{Undefined Message Structure}: Resolved by formalizing Kafka message schema across all services.
+    \item \textit{Incomplete Timestamping}: Fixed by introducing timestamps into all relevant messages.
+    \item \textit{ksqlDB Learning Curve}: Team familiarization with streaming model required additional time.
+    \item \textit{Simulation Time Definition}: Adopted internal time units instead of real-time; required multiple iterations for consistent usage.
+\end{itemize}
+
+\subsubsection{Performance Tactics Employed}
+
+To achieve NFR2 compliance, the system implements four key performance tactics~\cite{bass2021software}.
+
+\textbf{1. Bound Execution Times:} Each production machine enforces fixed maximum processing times through time-bounded operations. For example, the Oven limits baking to 10 time units and the DoughShaper to 2 time units, ensuring predictable latency contributions that sum to meet the 30-time-unit requirement.
+
+\textbf{2. Maintain Multiple Copies of Computations:} Kafka's replication factor ensures message durability, while pizza state is embedded directly in messages rather than shared databases. This stateless design eliminates database access latency and enables concurrent pizza processing without contention, directly supporting the throughput needed for large orders.
+
+\textbf{3. Bound Queue Sizes:} Machines use \texttt{*-done} topics to signal completion before accepting new work, implementing backpressure that prevents buffer overflow. The OrderProcessing service waits for \texttt{dough-machine-done} signals before dispatching subsequent pizzas, maintaining system stability under high load and preventing unbounded queuing that would violate NFR2.
+
+\textbf{4. Schedule Resources:} Sequential pizza scheduling by OrderProcessing coordinates production flow, while proactive restocking triggers at inventory threshold (≤10 units) prevent production stalls. This resource scheduling minimizes idle time and ensures continuous operation.
+
+These tactics were designed to ensure NFR2 compliance; the following section presents experimental validation of their effectiveness.
+
+\subsection{Results \& Analysis}
+
+This section presents the experimental results obtained from executing the four treatments. We analyze order latency, pizza latency, and processing time distribution to validate NFR2 and identify system bottlenecks.
+
+\subsubsection{Order Latency}
+
+Figure~\ref{fig:order-latency} shows order latency (time from the order request to the \texttt{order-done} event, which describes the finishing of the order.) across load scenarios. The system remained within NFR2 bounds, though latency increased from low-load (10 pizzas) to high-load (100 pizzas) due to sequential workflow and additional restocking operations.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/mean_order_latency_by_size.png}
+    \caption{Order latency under different load scenarios.}
+    \label{fig:order-latency}
+\end{figure}
+
+\subsubsection{Pizza Latency}
+
+Figure~\ref{fig:pizza-latency} shows end-to-end pizza processing time. Results reveal correlation between load intensity and duration, with bottlenecks in computationally intensive stages. Pizza latency exhibits greater variance than order latency due to cumulative delays, but remains within acceptable bounds. Overall, the graph confirms compliance with the NFR 2 (\( < 30 \) time units pizza)
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{assets/mean_pizza_production_time_by_size.png}
+    \caption{Pizza latency for different load scenarios.}
+    \label{fig:pizza-latency}
+\end{figure}
+
+\subsubsection{Processing Time Distribution}
+
+Figure~\ref{fig:latency-distribution} shows that production activities dominate processing time, with restocking operations contributing approximately 17\%. Restocking durations are relatively consistent across machines.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.75\linewidth]{assets/restock_vs_production_time.png}
+    \caption{Relative contribution of production and restocking to total processing time.}
+    \label{fig:latency-distribution}
+\end{figure}
+
+\subsubsection{Performance Validation and Bottlenecks}
+\label{subsec:pvb}
+
+The system meets NFR2, but two bottlenecks were identified:
+
+\begin{itemize}
+    \item Single restocking service creates waiting queues when multiple machines request simultaneously (FIFO, no prioritization).
+    \item Concurrent user requests create delays; B2C requests prioritized over B2B, with FIFO within categories.
+\end{itemize}
+
+\textbf{Possible optimizations:}
+
+\begin{itemize}
+    \item \textit{Horizontal scaling}: Replicate resource-intensive services (oven, slicers) and internal goods providers; implement load balancer for task distribution.
+    \item \textit{Vertical scaling}: Enhance individual machine performance to reduce processing times (not the best approach for scaling entire production, disscused in \ref{sec:rsi}).
+\end{itemize}
+
+Both approaches integrate with the current containerised architecture with minimal structural modifications.

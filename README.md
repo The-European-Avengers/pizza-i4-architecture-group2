@@ -31,28 +31,30 @@ All project documentation is located in the **`Docs/`** directory:
 
 ### Architecture Documentation
 
-- **`FeatureModel.md`** - Feature model and variability analysis
-- **`RequirementsAndTraceabilityMatrix.md`** - System requirements and traceability
-- **`StateMachines.md`** - State machine specifications for system components
-- **`ExperimentCommunicationArchitecture.md`** - Communication architecture design
-- **`UppaalDescription.md`** - Formal verification specifications
-- **`verification_validation.md`** - V&V strategy and results
+TODO: add link to files so are clickable in github
+
+- **[FeatureModel.md](./Docs/FeatureModel.md)** - Feature model and variability analysis
+- **[RequirementsAndTraceabilityMatrix.md](./Docs/RequirementsAndTraceabilityMatrix.md)** - System requirements and traceability
+- **[StateMachines.md](./Docs/StateMachines.md)** - State machine specifications for system components
+- **[ExperimentCommunicationArchitecture.md](./Docs/ExperimentCommunicationArchitecture.md)** - Communication architecture design
+- **[UppaalDescription.md](./Docs/UppaalDescription.md)** - Formal verification specifications
+- **[verification_validation.md](./Docs/verification_validation.md)** - V&V strategy and results
 
 ### Experiment Documentation
 
 Located in **`Docs/Experiment/`**:
 
-- **`PizzaProductionExperiment.md`** - Overview of the experiment
-- **`ExperimentScope.md`** - Scope and objectives
-- **`ExperimentImplementation.md`** - Implementation details
-- **`ExperimentExecution.md`** - Execution procedures
-- **`PizzaMenu.md`** - Pizza recipes and configurations
-
+- **[PizzaProductionExperiment.md](./Docs/Experiment/PizzaProductionExperiment.md)** - Overview of the experiment
+- **[ExperimentScope.md](./Docs/Experiment/ExperimentScope.md)** - Scope and objectives
+- **[ExperimentImplementation.md](./Docs/Experiment/ExperimentImplementation.md)** - Implementation details
+- **[ExperimentExecution.md](./Docs/Experiment/ExperimentExecution.md)** - Execution procedures
+- **[PizzaMenu.md](./Docs/Experiment/PizzaMenu.md)** - Pizza recipes and configurations
 ### Diagrams
 
 All architectural diagrams are available in:
 
 - **`Docs/diagram-images/`** - PNG exports of diagrams
+
   - Analysis-level architecture
   - Design-level architecture
   - Feature model
@@ -66,9 +68,9 @@ All architectural diagrams are available in:
 
 ### Additional Documentation
 
-- **`Contribution.md`** - Contribution guidelines
-- **`ReportStructure.md`** - Report organization guide
-- **`Peer_doc_group_2.md`** - Peer review documentation made for group 2
+- **[Contribution.md](./Docs/Contribution.md)** - Contribution guidelines
+- **[ReportStructure.md](./Docs/ReportStructure.md)** - Report organization guide
+- **[Peer_doc_group_2.md](./Docs/Peer_doc_group_2.md)** - Peer review documentation made for group 2
 
 ## Implementation
 
@@ -82,7 +84,7 @@ A complete event-driven pizza production system built with microservices:
 - **Warehouse** (`warehouse/`) - Python services for inventory and order dispatching
   - `internal_goods_provider/` - Inventory management
   - `order_dispatcher/` - Order routing
-  
+
 #### Production Machines
 
 Each machine is implemented as an independent service:
@@ -90,13 +92,11 @@ Each machine is implemented as an independent service:
 - **Dough Processing**
   - `dough-machine/` - C# service for dough preparation
   - `dough-shaper/` - C# service for shaping
-  
 - **Topping Processing**
   - `Sauce/` - Python sauce application service
   - `Meat/` - Go meat slicing service
   - `cheese/` (CheeseGrater) - C# cheese preparation service
   - `Vegetables/` - Go vegetable slicing service
-  
 - **Cooking & Packaging**
   - `Oven/` - Python baking service
   - `Freezer/` - Python freezing service
@@ -111,7 +111,7 @@ Each machine is implemented as an independent service:
 
 #### Docker Support
 
-- **`docker-compose.yml`** - Complete system orchestration
+- **[docker-compose.yml](./src/experiment/docker-compose.yml)** - Complete system orchestration
 - Individual Dockerfiles for each service
 
 ### Web Applications (`src/web/`)
@@ -119,6 +119,7 @@ Each machine is implemented as an independent service:
 Two interconnected web applications:
 
 #### Client Gateway (`client-gateway/`)
+
 - **Technology**: NestJS (TypeScript)
 - **Purpose**: API gateway and request routing
 - **Modules**:
@@ -129,6 +130,7 @@ Two interconnected web applications:
 - **Pattern**: Microservices communication via RPC
 
 #### Ordering Microservice (`ordering-ms/`)
+
 - **Technology**: NestJS (TypeScript)
 - **Purpose**: Order processing and lifecycle management
 - **Modules**:
@@ -136,15 +138,16 @@ Two interconnected web applications:
   - Menu management
   - Integration with Client Gateway
 
-
 ### Data Analysis (`src/data-analysis/`)
 
 Comprehensive analysis of experiment results:
 
 - **Jupyter Notebook**:
-  - `analysis.ipynb` - Data analysis and visualization
+
+  - [analysis.ipynb](./src/data-analysis/analysis.ipynb) - Data analysis and visualization
 
 - **Experiment Data** (`experiment-data/`):
+
   - Order latency measurements
   - Pizza production time tracking
   - Machine restock latency for all components
@@ -158,6 +161,7 @@ Comprehensive analysis of experiment results:
 ### Kafka Setup (`src/kafka/`)
 
 Basic Kafka infrastructure:
+
 - Producer and consumer examples
 - Docker Compose configuration
 - Python virtual environment setup
@@ -165,27 +169,28 @@ Basic Kafka infrastructure:
 ### Scripts (`src/web/scripts/`)
 
 Utility scripts for testing:
-- **`newOrders.ts`** - Order generation script
-- **`script.sh`** - Automation helper
 
-## Getting Started
+- **[newOrders.ts](./src/web/scripts/newOrders.ts)** - Order generation script
+- **[script.sh](./src/web/scripts/script.sh)** - Automation helper
+
+## Experiment Replication Guide
 
 ### Prerequisites
 
 - Docker and Docker Compose
 - Node.js (v18+) and npm
-- .NET 8.0 SDK
-- Python 3.13+
-- Go 1.21+
+- Python (v3.8+) with Jupyter Notebook
 
 ### Running the Pizza Production System
 
 1. **Navigate to the experiment directory**:
+
    ```bash
    cd src/experiment
    ```
 
 2. **Start all services**:
+
    ```bash
    docker-compose up -d
    ```
@@ -198,7 +203,6 @@ Utility scripts for testing:
 
 ### Running the Web Applications
 
-
 1. **Start client gateway**:
    ```bash
    cd src/web/client-gateway
@@ -207,51 +211,53 @@ Utility scripts for testing:
    ```
 2. **Running an Order (Load Generation)**
 
-  The load generation scripts (`script.sh` and `newOrder.ts`) are located in the `src/web/scripts` folder. Navigate to the directory containing the load script:
-  ```bash
-  cd src/web/scripts
-  ```
-  The `script.sh` is configured to execute `newOrder.ts` multiple times, simulating the **10 replications** required for the experiment. The script must be edited to target the correct load level (10, 50, or 100 pizzas). Then run the bash script to execute the test cell:
-  ```bash
-  ./script.sh
-  ```
+The load generation scripts (`script.sh` and `newOrder.ts`) are located in the `src/web/scripts` folder. Navigate to the directory containing the load script:
+
+```bash
+cd src/web/scripts
+```
+
+The `script.sh` is configured to execute `newOrder.ts` multiple times, simulating the **10 replications** required for the experiment. The script must be edited to target the correct load level (10, 50, or 100 pizzas). Then run the bash script to execute the test cell:
+
+```bash
+./script.sh
+```
 
 ### Running Data Analysis
 
-1. **Install dependencies**:
-   ```bash
-   cd src/data-analysis
-   pip install jupyter pandas matplotlib numpy
-   ```
+Open the data analysis notebook with a Jupyter environment:
 
-2. **Launch Jupyter**:
-   ```bash
-   jupyter notebook
-   ```
+```bash
+cd src/data-analysis
+jupyter notebook analysis.ipynb
+```
 
-3. **Open any analysis notebook** to view results
+### View Kafka Topics and Messages
 
-## Technologies Used
+To inspect Kafka topics and messages, we have used Redpanda Console, which can be accessed at `http://localhost:8090` after starting the Docker Compose setup. Be sure to check Redpanda container is running. This tool provides a user-friendly interface to monitor and manage Kafka topics, producers, and consumers. So, during the experiment execution, you can observe the message flow and topic statistics in real-time.
 
 ### Languages
+
 - **C#** - .NET 8.0 microservices
 - **Python** - Machine services and data analysis
 - **Go** - High-performance machine services
 - **TypeScript** - Web applications and gateway
 
 ### Frameworks & Libraries
+
 - **NestJS** - Backend microservices framework
 - **Pandas/NumPy** - Data analysis
 
 ### Infrastructure
+
 - **Apache Kafka** - Event streaming platform
 - **KsqlDB** - Stream processing
 - **Docker** - Containerization
 - **PostgreSQL** - Relational database
 
 ### Formal Methods
-- **UPPAAL** - Timed automata verification
 
+- **UPPAAL** - Timed automata verification
 
 ## Formal Verification
 
@@ -269,18 +275,17 @@ Refer to [[Docs/UppaalDescription.md]] for model details and verification result
 
 Below is a summary of each member's contributions to the project:
 
-| Task | Jonathan | Jeremy | Artem | Miguel | Sagor |
-|---|---|---|---|---|---|
-| Requirements & Use Cases |✓|✓|✓|✓||
-| Feature Tree |✓|✓|✓|✓||
-| Design Model |✓|✓|✓|✓||
-| Analysis Model |✓|✓|✓|✓||
-| State Machines |✓|✓|✓|✓||
-| First Pitch|Contributor & Presenter|Contributor & Presenter|Contributor|Contributor||
-| Traceability Matrix |✓|✓|✓|✓||
-| Exercise 8 |✓|✓||||
-| UPPAAL |||Main Developer|Helper||
-| Experiment |Kafka deployment, Order Dispatcher & Internal Goods Provider|API Gateway, Customer microservice & design DB| Kafka Initializer, Order Processing, Dough Machine, Dough Shaper, Cheese Grater | Meat Machine, Sauce Machine, Vegetable Slicer, Oven, Freezer, Packaging Robot, KsqlDB, API to retrieve data & Data Analysis ||
-| Second Pitch|Contributor|Contributor|Contributor & Presenter|Contributor & Presenter|Contributor|
-| Report |✓|✓|✓|✓|✓|
-
+| Task                     | Jonathan                                                     | Jeremy                                         | Artem                                                                           | Miguel                                                                                                                      | Sagor       |
+| ------------------------ | ------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Requirements & Use Cases | ✓                                                            | ✓                                              | ✓                                                                               | ✓                                                                                                                           |             |
+| Feature Model            | ✓                                                            | ✓                                              | ✓                                                                               | ✓                                                                                                                           |             |
+| Design Model             | ✓                                                            | ✓                                              | ✓                                                                               | ✓                                                                                                                           |             |
+| Analysis Model           | ✓                                                            | ✓                                              | ✓                                                                               | ✓                                                                                                                           |             |
+| State Machines           | ✓                                                            | ✓                                              | ✓                                                                               | ✓                                                                                                                           |             |
+| First Pitch              | Contributor & Presenter                                      | Contributor & Presenter                        | Contributor                                                                     | Contributor                                                                                                                 |             |
+| Traceability Matrix      | ✓                                                            | ✓                                              | ✓                                                                               | ✓                                                                                                                           |             |
+| Exercise 8               | ✓                                                            | ✓                                              |                                                                                 |                                                                                                                             |             |
+| UPPAAL                   |                                                              |                                                | Main Developer                                                                  | Helper                                                                                                                      |             |
+| Experiment               | Kafka deployment, Order Dispatcher & Internal Goods Provider | API Gateway, Customer microservice & design DB | Kafka Initializer, Order Processing, Dough Machine, Dough Shaper, Cheese Grater | Meat Machine, Sauce Machine, Vegetable Slicer, Oven, Freezer, Packaging Robot, KsqlDB, API to retrieve data & Data Analysis |             |
+| Second Pitch             | Contributor                                                  | Contributor                                    | Contributor & Presenter                                                         | Contributor & Presenter                                                                                                     | Contributor |
+| Report                   | ✓                                                            | ✓                                              | ✓                                                                               | ✓                                                                                                                           | ✓           |

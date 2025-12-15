@@ -1,0 +1,52 @@
+\section{Evaluation \& Discussion}
+
+This section evaluates the proposed architecture against the Quality Attribute Scenarios defined in Section IV and discusses the implications of the results procured from Formal Verification and Experiment.
+
+\subsection{Evaluation of Quality Attributes}
+
+\begin{itemize} 
+    \item \textit{Availability (NFR1)}: The formal verification using UPPAAL shows that the system is free of deadlocks under concurrent loads (e.g., multiple machines requesting restocking simultaneously). Additionally, the implementation using Docker enables automatic container restarts.
+    
+    \item \textit{Performance (NFR2)}: The experimental results demonstrate that the selected architecture supports pizza order loads ranging from 1 to 100 pizzas while maintaining latency within predefined operational bounds. As shown in Figure~\ref{fig:order-latency}, order latency increases approximately linearly with the applied load, indicating predictable scaling behavior. Figure~\ref{fig:pizza-latency} further confirms that the average pizza production time remains stable and within planned execution limits.
+    
+    \item \textit{Integrability (NFR11)}: The architecture achieves integrability through two key tactics: \textit{Use an Intermediary} (Kafka message bus) and \textit{Encapsulate} (independent microservices). Adding a new machine requires defining a JSON message schema, creating corresponding Kafka topics, implementing the Consumer-Processor-Producer pattern, and deploying as a Docker container. This decoupled approach bridges syntactic and behavioral semantic distances, enabling integration without modifying existing components. The response measure of $\leq$ 3 person-days integration time (Table~\ref{tab:inte}) was validated through the addition of multiple production machines during development.
+\end{itemize}
+
+To further validate code quality, the system was analyzed using Sigrid, a software analysis platform that evaluates maintainability, architecture quality, security, and reliability. The results (Appendix~\ref{app:sigrid}) show strong performance across quality dimensions: Maintainability (4.3 stars), Architecture (5.4 stars), Open Source Health (4.1 stars), and Green Code (4.4 stars). The Security rating (2.3 stars) identifies areas for improvement in future iterations, particularly regarding input validation and dependency management.
+
+\subsection{Discussion and Lessons Learned}
+
+While the architecture achieves the main goals, the analysis revealed specific potential bottlenecks. The restocking mechanism is currently implemented as a single Internal Goods Provider; in a real-world scenario, this would represent a single point of failure and a performance bottleneck.
+
+Furthermore, the complexity of managing a global state across many microservices is significant. While ksqlDB provided powerful observability, constructing queries to join streams from asynchronous topics (e.g., linking order-start with pizza-done) required precise timestamp synchronization, which was a significant implementation challenge.
+
+The containerized event-driven architecture provided several benefits during development. Docker and Kafka simplified deployment and testing through consistent environments and infrastructure reusability. The event-driven pattern simplified debugging by providing explicit message traces through Kafka topics, enabling post-mortem analysis of production flows. Additionally, containerization enabled parallel development, allowing team members to independently develop and test machine services before integration. The resulting implementation offers high flexibility; adding a new machine requires no changes to the existing workflow, confirming the architectural benefits of decoupling.
+
+\subsection{Recommended System Improvements}
+\label{sec:rsi}
+
+Based on the identified bottlenecks and architectural analysis, we recommend horizontal scaling as the primary improvement strategy for production deployment. This approach aligns with multiple architectural quality tactics~\cite{bass2021software} and addresses the system's current limitations.
+
+\textbf{Rationale for Horizontal Scaling:}
+
+Horizontal scaling offers superior advantages over vertical scaling for this event-driven microservices architecture:
+
+\begin{itemize}
+    \item \textit{Fault Tolerance}: Deploying multiple instances of critical services eliminates single points of failure. Kafka consumer groups automatically redistribute workload to remaining instances if one fails, implementing the \textit{Redundant Spare} availability tactic.
+    
+    \item \textit{Elastic Scalability}: The containerized architecture enables dynamic scaling based on demand. Additional instances can be deployed during peak periods and decommissioned during low activity, implementing the \textit{Introduce Concurrency} performance tactic.
+    
+    \item \textit{Cost-Effectiveness}: Multiple commodity instances avoid expensive high-performance hardware investments, with cloud costs scaling linearly with load.
+\end{itemize}
+
+\textbf{Specific Implementation Recommendations:}
+
+\begin{enumerate}
+    \item \textit{Replicate Bottleneck Services}: Deploy 2-3 instances of Internal Goods Provider, Oven, Cheese Grater, and Vegetable Slicer (Section~\ref{subsec:pvb}). Kafka consumer groups implement \textit{Increase Resources} and \textit{Introduce Concurrency} tactics.
+    
+    \item \textit{Load Balancing}: Distribute restocking requests across Internal Goods Provider instances. Priority-based routing implements \textit{Prioritize Events} for critical requests.
+    
+    \item \textit{Container Orchestration}: Deploy Docker Swarm for automated scaling and health monitoring; Kubernetes planned for future iterations.
+\end{enumerate}
+
+These improvements strengthen availability (\textit{Redundant Spare}) and performance (\textit{Introduce Concurrency}, \textit{Increase Resources}) while maintaining the event-driven, microservices-based design philosophy.

@@ -1,0 +1,33 @@
+\section{Problem \& Approach}
+% Problem description
+% Research questions
+% EAST-ADL development methodology
+
+
+\subsection{Problem Statement}
+While the theoretical benefits of Event-Driven and Microservice architectures are well-established (as discussed in Section I), a critical gap remains regarding their practical validation. Implementing these architectural paradigms in real-world industrial settings entails high risks; migrating legacy systems to flexible, distributed architectures involves significant costs and can lead to severe production downtime during testing. Currently, there is a lack of accessible, high-fidelity testbeds that allow engineers to simulate distributed environments. Without these tools, validating Quality Attributes such as performance, availability, and integrability before committing to a physical deployment remains a significant challenge.
+
+To address these gaps and validate the proposed architecture, this study formulates the following Research Questions (RQs):
+
+\begin{itemize}
+    \item \textbf{RQ1:} How can a containerized, polyglot microservices architecture be designed to effectively mimic the heterogeneity and flexibility required by Industry 4.0 manufacturing lines?
+    \item \textbf{RQ2:} To what extent can formal verification (Model Checking) predict and prevent concurrency issues such as deadlocks in complex Event-Driven Architectures prior to implementation?
+    \item \textbf{RQ3:} Can a purely software-based simulation utilizing stream processing provide reliable, real-time observability and performance metrics (latency, throughput) comparable to physical instrumentation?
+\end{itemize}
+
+
+%ADD ADD
+\subsection{Proposed Approach}
+To address these challenges and answer the proposed research questions, this work adopts a hybrid System Engineering Methodology. We integrate the structural modeling framework of \textbf{EAST-ADL} \cite{Blom2013} with the decision-making process of \textbf{Attribute-Driven Design (ADD)}\cite{bass2021software}. 
+
+While EAST-ADL provides the necessary abstraction layers to organize the system complexity, ADD allows us to systematically select architectural patterns and tactics based on prioritized Quality Attributes (QAs). By following this combined approach, we refine the system from high-level features to concrete artifacts, ensuring traceability between non-functional requirements and architectural decisions.
+
+Based on this methodology, our solution relies on three core pillars:
+
+\begin{itemize} 
+    \item \textit{Attribute-Driven Architecture Design}: Following the EAST-ADL structure, we separate the system into \textit{Analysis Level} (abstract functional requirements) and \textit{Design Level} (technological implementation). Guided by the ADD iterations, we selected a Microservice-Oriented Architecture (MOA) combined with Event-Driven Architecture (EDA) as the primary patterns to satisfy the scenarios of performance and integrability. This ensures component decoupling and allows for heterogeneous polyglot services, mimicking real-world industrial constraints.
+    
+    \item \textit{Formal Verification}: Prior to implementation, we model the system's behavior using State Machines and verify critical properties (safety, liveness, and deadlock freedom) using UPPAAL Timed Automata. This guarantees that the architectural logic is sound and robust against concurrency issues.
+    
+    \item \textit{Containerized Testbed}: We implement the validated design using Docker to create a reproducible production line. This allows for the execution of controlled experiments to measure real-time metrics (latency, throughput) using stream processing technologies like KSQLDB, effectively serving as a \textit{virtual plant} for architectural validation. 
+\end{itemize}

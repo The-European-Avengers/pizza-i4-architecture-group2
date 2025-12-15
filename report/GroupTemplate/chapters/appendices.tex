@@ -1,0 +1,91 @@
+\clearpage
+\onecolumn
+\appendices
+
+\section{GitHub Repository Links}
+\label{git:links}
+\begin{itemize}
+    \item \textbf{Use Cases:} The use cases of this project are stated in our peer document (\href{https://github.com/The-European-Avengers/pizza-i4-architecture-group2/blob/master/Docs/Peer_doc_group_2\%20.md}{\underline{click here}}).
+    
+    \item \textbf{Functional and Non-Functional Requirements:} All the requirements including their prioritisation, measurable criterion and their timing constraints can be found (\href{https://github.com/The-European-Avengers/pizza-i4-architecture-group2/blob/master/Docs/RequirementsAndTraceabilityMatrix.md}{\underline{here}}).
+    
+    \item \textbf{State Machine Diagrams:} Complete state machine diagrams and detailed descriptions for all production line components are available in our \href{https://github.com/The-European-Avengers/pizza-i4-architecture-group2/blob/master/Docs/StateMachines.md}{\underline{GitHub repository}}.
+    
+    \item \textbf{Experiment Communication Architecture:} The complete communication diagram showing all component interactions via the Kafka message bus, including production flow, restocking mechanisms, and backpressure signaling, is available in our \href{https://github.com/The-European-Avengers/pizza-i4-architecture-group2/blob/master/Docs/ExperimentCommunicationArchitecture.md}{\underline{GitHub repository}}.
+\end{itemize}
+
+
+\section{Sigrid Code Quality Analysis}
+\label{app:sigrid}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{assets/sigrid.png}
+    \caption{Sigrid Software Quality Assessment Results (Nov 13 - Dec 13, 2025)}
+    \label{fig:sigrid-results}
+\end{figure}
+
+
+
+\section{Tables}
+
+\subsection{Validity Threats and Mitigation Strategies}
+\label{app:validity-table}
+
+\begin{table*}[h]
+\centering
+\caption{Validity Threats and Mitigation Strategies}
+\label{tab:validity-threats}
+\small
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{Validity Type} & \textbf{Threat} & \textbf{Mitigation / Limitation} \\ \hline
+Conclusion Validity 
+& Unreliable measurements 
+& Uniform timestamping protocol; ksqlDB aggregation \\ \hline
+
+Internal Validity 
+& Docker resource contention 
+& Isolated environment with fixed allocation \\ \hline
+
+Construct Validity 
+& Single metric focus 
+& Multiple latency dimensions measured \\ \hline
+
+External Validity 
+& Simulated environment with limited production scale
+& \textit{Limitation:} Results apply to containerized event-driven architectures; physical production lines require validation \\ \hline
+\end{tabularx}
+\end{table*}
+
+\newpage
+\subsection{Team Contribution Overview}
+
+\begin{table*}[h]
+\centering
+\begin{tabularx}{\textwidth}{
+|l|
+>{\arraybackslash}X|
+>{\arraybackslash}X|
+>{\arraybackslash}X|
+>{\arraybackslash}X|
+>{\arraybackslash}X|
+}
+\hline
+\textbf{Task} & \textbf{Jonathan} & \textbf{Jeremy} & \textbf{Artem} & \textbf{Miguel} & \textbf{Sagor} \\ \hline
+Requirements \& Use Cases & \checkmark & \checkmark & \checkmark & \checkmark & \\ \hline
+Feature Model & \checkmark & \checkmark & \checkmark & \checkmark & \\ \hline
+Analysis Model & \checkmark & \checkmark & \checkmark & \checkmark & \\ \hline
+Design Model & \checkmark & \checkmark & \checkmark & \checkmark & \\ \hline
+State Machines & \checkmark & \checkmark & \checkmark & \checkmark & \\ \hline
+First Pitch & Contributor \& Presenter & Contributor \& Presenter & Contributor & Contributor & \\ \hline
+Traceability Matrix & \checkmark & \checkmark & \checkmark & \checkmark & \\ \hline
+Exercise 8 & \checkmark & \checkmark & & & \\ \hline
+UPPAAL & & & Main Developer & Helper & \\ \hline
+Experiment & Kafka deployment, Order Dispatcher \& Internal Goods Provider & API Gateway, Customer microservice \& design DB & Kafka Initializer, Order Processing, Dough Machine, Dough Shaper, Cheese Grater & Meat Machine, Sauce Machine, Vegetable Slicer, Oven, Freezer, Packaging Robot, KsqlDB, API to retrieve data \& Data Analysis & \\ \hline
+Second Pitch & Contributor & Contributor & Contributor \& Presenter & Contributor \& Presenter & Contributor \\ \hline
+Report & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\ \hline
+\end{tabularx}
+\caption{Team Contribution Overview}
+\label{tab:contribution}
+\end{table*}

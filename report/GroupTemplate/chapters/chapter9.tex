@@ -1,0 +1,22 @@
+\section{Conclusion}
+
+This section summarizes the main contributions of this work and outlines directions for future research.
+
+\subsection{Summary of Contributions} 
+This paper presented the design, verification, and implementation of a Pizza Production Experiment, a testbed for validating Industry 4.0 architectures. Our key contributions are:
+
+\begin{itemize} 
+    \item \textit{A Polyglot Event-Driven Architecture (RQ1)}: We successfully demonstrated how heterogeneous services (C\#, Python, Go) can interoperate in a manufacturing context using Kafka as a unified message bus.
+    \item \textit{Formal Verification of Industrial Logic (RQ2)}: Using UPPAAL, we mathematically proved that the proposed distributed logic is free of deadlocks and satisfies safety constraints before writing a single line of code.
+    \item \textit{Real-Time Observability (RQ3)}: We implemented a monitoring layer using ksqlDB that allows for the precise measurement of production KPIs (latency, restocking time) in real-time, providing transparency often missing in legacy systems.
+\end{itemize}
+
+\subsection{Future Work}
+
+Future iterations of this work will focus on addressing the identified bottlenecks, expanding the system's capabilities, and addressing the remaining quality attributes:
+
+\begin{itemize} 
+    \item \textit{Horizontal Scaling}: Implementing a load balancer to distribute tasks among multiple instances of the Internal Goods Provider and production machines to eliminate the restocking queue bottleneck.
+    \item \textit{Fault Tolerance Testing}: Introducing "Chaos Engineering" (e.g., randomly killing containers) to empirically validate the self-healing capabilities of the Docker restart policies and the resilience of the Kafka consumer groups.
+\end{itemize}
+

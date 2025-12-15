@@ -1,0 +1,148 @@
+\section{Requirements \& Domain Analysis}
+This section provides an overview of the functional and non-functional requirements of the system. It begins by presenting representative use cases that illustrate core functionalities, followed by quality attribute scenarios that define critical non-functional requirements such as performance, availability, and integrability. Together, these elements form the foundation for understanding the system's operational context and design constraints.
+\subsection{Use Cases}
+Use cases describe the interactions between actors and the system to achieve specific goals. They serve as a blueprint for functional requirements and help ensure that the system meets user expectations. Out of a total of 16 use cases identified for this project, two representative examples are detailed below. These examples were selected because they cover essential aspects of the system: order processing and inventory management. The remaining use cases are documented in the appendix (see \ref{git:links}).
+
+The first use case (see Table \ref{tab:uc04}) focuses on processing customer orders and initiating the production workflow. The second use case (see Table \ref{tab:uc11}) addresses the replenishment of machine inventory when stock levels fall below predefined thresholds.
+\begin{table}[h]
+\centering
+\begin{tabularx}{\columnwidth}{|l|X|}
+\hline
+Use Case ID & UC04 \\ \hline
+Use Case & Process Pizza Order \\ \hline
+Actors & Coordinator (Software), Customer \\ \hline
+Preconditions & Order is accepted and validated; production line machines are operational. \\ \hline
+Steps & 1. Customer submits order (batch or custom).  \\
+& 2. The coordinator receives orders and publishes a prepare pizza event to the message bus.  \\
+& 3. Machine adapters subscribe to the event and initiate production sequence. \\ \hline
+Postconditions & Production sequence starts; order is logged in the system. \\ \hline
+\end{tabularx}
+\caption{Use Case 4: Process Pizza Order}
+\label{tab:uc04}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\columnwidth}{|l|X|}
+\hline
+Use Case ID & UC11 \\ \hline
+Use Case & Handle Restocking \\ \hline
+Actors & Procurement System, Supplier, Warehouse Operator \\ \hline
+Preconditions & Inventory levels have fallen below reorder thresholds. \\ \hline
+Steps & 1. The Procurement System automatically generates purchase orders for low-stock items. \\
+& 2. The system sends purchase orders to approved suppliers. \\  
+& 3. Supplier confirms order and provides delivery schedule. \\ 
+& 4. Warehouse Operator receives and inspects incoming deliveries. \\ 
+& 5. Inventory Management System updates stock levels upon receipt confirmation. \\ \hline
+Postconditions & Inventory is replenished and stock levels are updated in the system. \\ \hline
+\end{tabularx}
+\caption{Use Case 11: Handle Restocking}
+\label{tab:uc11}
+\end{table}
+
+\subsection{Key Functional Requirements}
+Functional requirements define the essential capabilities that the system must provide to fulfill its intended purpose. They are derived from the previously specified use cases and describe the system's responsibilities in concrete terms. These requirements ensure that the system can handle core operations such as automated pizza production, order management, and inventory replenishment.
+
+In total, 20 functional requirements have been identified for this project. Among these, 10 requirements are highlighted in Table \ref{tab:funcreq} because they directly align with the scope and objectives of the experiment. The remaining requirements are documented in the appendix for completeness (see Appendix \ref{git:links}).
+\begin{table}[h]
+\centering
+\begin{tabularx}{\columnwidth}{l X}
+\hline
+ID & Description \\ \hline
+FR1 & System shall produce pizzas from raw ingredients through an automated production line \\
+FR2 & System shall prepare and shape dough according to recipes \\
+FR3 & System shall apply selected sauce type on prepared dough base \\
+FR4 & System shall add toppings (cheese, vegetables, meats) per order specifications\\
+FR5 & System shall be able to bake pizza at specified temperature and duration \\
+FR6 & System shall be able to freeze pizza for preservation \\
+FR8 & System shall support a variety of sauce options (tomato, white, pesto, BBQ) \\
+FR10 & System shall pack a pizza in a box \\
+FR13 & System shall allow ordering multiple pizzas in single transaction \\ 
+FR20 & System shall be able to restock production machines with ingredients from warehouse \\ \hline
+\end{tabularx}
+\caption{Functional Requirements (Compact)}
+\label{tab:funcreq}
+\end{table}
+
+\subsection{Key Non-Functional Requirements}
+Non-functional requirements specify the quality attributes and constraints that the system must satisfy to ensure reliability, efficiency, and maintainability. Unlike functional requirements, which describe what the system should do, non-functional requirements define how well the system performs under various conditions. These requirements address aspects such as availability, performance, scalability, and integrability, ensuring that the system operates smoothly and meets user expectations beyond core functionality.
+
+In total, 11 non-functional requirements have been identified for this project. Of these, 4 requirements have been implemented and validated as part of the experiment, as shown in Table \ref{tab:nonfuncreq}. The remaining non-functional requirements are documented in the appendix together with the other functional requirements for completeness (see Appendix \ref{git:links}).
+\begin{table}[h]
+\centering
+\setlength{\tabcolsep}{6pt} % optional: tighten spacing
+\begin{tabularx}{\columnwidth}{@{}l
+  >{\hsize=.4\hsize\raggedright\arraybackslash}X
+  >{\hsize=1.6\hsize\raggedright\arraybackslash}X@{}}
+\toprule
+\hline
+ID & Quality Attribute & Requirement \\ \hline
+\midrule
+NFR1 & Availability & 99\% uptime (7.2 hours downtime/month max) \\
+NFR2 & Performance & Produce a pizza in under 30 seconds \\
+NFR3 & Throughput & Handle at least 100 concurrent orders \\
+NFR11 & Integrability & Simple integration of new machines in less than 3 person-days\\ \hline
+\bottomrule
+\end{tabularx}
+\caption{Non-Functional Requirements (Compact)}
+\label{tab:nonfuncreq}
+\end{table}
+
+\subsection{Quality Attribute Scenarios}
+While use cases capture \textit{functional requirements}, quality attribute scenarios define \textit{non-functional requirements} that influence system architecture and behavior under specific conditions. These scenarios provide a structured approach to specifying attributes such as performance, availability, and integrability, which are critical for ensuring reliability and scalability.
+
+The following tables present \textbf{three key quality attribute scenarios} that were implemented in the experiment (see Table~\ref{tab:nonfuncreq} for corresponding NFRs):
+\begin{itemize}
+    \item \textbf{Performance:} Ensures timely execution of production workflows.
+    \item \textbf{Availability:} Guarantees minimal downtime in case of failures.
+    \item \textbf{Integrability:} Facilitates seamless integration of new machines into the system.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\columnwidth}{|l|X|}
+\hline
+Source & Order Processor \\ \hline
+Stimulus & Start order request is issued \\ \hline
+Environment & Normal Operation \\ \hline
+Artifact & Production Line \\ \hline
+Response & The production line executes the pizza preparation workflow \\ \hline
+Response Measure & Less than 30 time units per pizza \\ \hline
+\end{tabularx}
+\caption{Performance Quality Attribute Scenario}
+\label{tab:perf}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\columnwidth}{|l|X|}
+\hline
+Source & Internal Software Error \\ \hline
+Stimulus & A container unexpectedly exits \\ \hline
+Environment & Normal Operation \\ \hline
+Artifact & Docker runtime \\ \hline
+Response & Docker’s restart policy (always or on-failure) restarts the container automatically \\ \hline
+Response Measure & Total system-wide downtime to be less than 7.2 hours per month \\ \hline
+\end{tabularx}
+\caption{Availability Quality Attribute Scenario}
+\label{tab:avai}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\columnwidth}{|l|X|}
+\hline
+Source & Developer adding a new machine to the system \\ \hline
+Stimulus & A new machine must be integrated and begin producing/consuming events \\ \hline
+Environment & During development \\ \hline
+Artifact & Machine integration subsystem (event-driven adapter layer) \\ \hline
+Response & Developer implements integration using predefined extension points \\ \hline
+Response Measure & Integration completed in less than 3 person-days with no changes to core production workflow \\ \hline
+\end{tabularx}
+\caption{Integrability Quality Attribute Scenario}
+\label{tab:inte}
+\end{table}
+% Performance (NFR2: <30s pizza production)
+% Availability (NFR1: 99% uptime)
+% Integrability (NFR11: modular design)
+% Key functional requirements overview

@@ -36,7 +36,7 @@ In this page how each member has contributed to the project is described. (you c
 | Task | Jonathan | Jeremy | Artem | Miguel | Sagor |
 |---|---|---|---|---|---|
 | Requirements & Use Cases |✓|✓|✓|✓||
-| Feature Tree |✓|✓|✓|✓||
+| Feature Model |✓|✓|✓|✓||
 | Design Model |✓|✓|✓|✓||
 | Analysis Model |✓|✓|✓|✓||
 | State Machines |✓|✓|✓|✓||

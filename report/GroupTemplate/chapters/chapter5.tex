@@ -1,0 +1,103 @@
+\section{Architecture Development}
+\label{sec:arch&dev}
+
+This section presents the architectural development process followed throughout the project. Beginning with the construction of the feature model, the architecture is progressively refined through the analysis and design levels, ultimately ensuring full alignment between requirements and architectural decisions. The section concludes with a traceability matrix linking all requirements to the respective architectural elements.
+
+\subsection{Feature Model}
+
+Following the identification of functional and non-functional requirements, a feature model was developed to formalise the functional scope of the system. The model establishes a hierarchical representation of system capabilities, enabling a clear overview of mandatory functionalities and optional extensions. 
+
+The feature model diagram delineates:
+
+\begin{itemize}
+    \item The hierarchical organisation of system capabilities, including core domains such as Production, Customer Interaction, and Warehouse.
+    \item The classification of features into mandatory (solid circle) and optional (empty circle) categories, ensuring that essential functionalities (e.g., Dough Preparation) are distinguished from optional or configurable capabilities (e.g. Calzone Mode).
+\end{itemize}
+
+The feature model provided a consolidated foundation for subsequent architectural phases by clarifying the boundaries of the system’s functional space.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{assets/feature-model.png}
+\caption{Feature Model Diagram}
+\label{fig:feature}
+\end{figure}
+
+\subsection{Analysis Level Architecture}
+
+The analysis-level architecture provides a technology-independent decomposition of the system and establishes what functionalities must be realised. This representation focuses on responsibilities, data flows, and subsystem interactions without presupposing implementation choices. 
+
+The system was decomposed into three principal subsystems:
+
+\begin{itemize}
+    \item Production Line – encompasses all machine-based processes involved in automated pizza preparation (Dough Machine, Sauces Machine, Cheese Grater, etc.), including dough shaping, sauce distribution, topping application, baking, freezing, and packaging.
+    \item Warehouse and Inventory Management – manages stock levels, usage monitoring, restocking processes, and integration with suppliers. The Internal Goods Provider acts as an interface to the production line.
+    \item Web Interface – supports customer-facing operations (UI, Customer, Payment) and internal management (Authentication, Analytics, System Management). The API Gateway serves as the single entry point for all external interactions.
+\end{itemize}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=15cm]{assets/analysis-level.png}
+\caption{Analysis Level Diagram}
+\label{fig:analysis}
+\end{figure*}
+
+\subsection{Design Level Architecture}
+
+The design-level architecture refines the analysis model by incorporating implementation-oriented decisions, including technologies, integration mechanisms, and architectural patterns. This model represents the architecture as intended for development and operational deployment.
+
+\subsubsection{Architectural Patterns}
+
+Two primary architectural paradigms guided the design:
+\begin{itemize}
+    \item Event-driven architecture, leveraging Kafka as the message bus to support asynchronous workflows, horizontal scalability, and fault isolation.
+    \item Microservices architecture, promoting modularity, independent deployability, and enhanced maintainability. For example, each component of the web interface corresponds to one microservice
+\end{itemize}
+\subsubsection{Technology Decisions}
+One of the project requirements defined the needed of using different programming languages and databases. Hence our system is designed to be able to support different technologies.
+
+\textbf{Programming languages}\\
+The programming languages were selected based on team familiarity and suitability for specific system components:
+
+\begin{itemize}
+    \item \textit{C\#}: Order Processing and core business logic, leveraging strong typing and enterprise ecosystem for high performance.
+    \item \textit{Python}: Analytics, Restocking Handler, and Warehouse services, utilizing extensive libraries and team experience for rapid development.
+    \item \textit{Go}: Production Line machines (Meat Machine, Packaging Robot), exploiting goroutines for high concurrency and efficient Kafka event handling.
+    \item \textit{TypeScript}: Web Interface Layer (UI, API Gateway, NestJS backend), enforcing type safety across frontend and backend.
+\end{itemize}
+
+\textbf{Databases}\\
+Database selection addresses distinct data requirements across the system:
+
+\begin{itemize}
+    \item \textit{PostgreSQL}: Relational data with transactional integrity for Inventory Management and Restocking.
+    \item \textit{MongoDB}: NoSQL document store for varied user profiles and order history without rigid schema.
+    \item \textit{Elasticsearch}: Search engine for fast indexing and real-time analysis of production line events.
+\end{itemize}
+
+The resulting design-level (Fig \ref{fig:design-level}) provides a concrete structural blueprint and establishes the technical rationale behind the final implementation. We decided to \textbf{reduce the scope} of this diagram to focus only on the experiment components. 
+
+\textbf{Explanation of the Design-Level Diagram}\\
+The design-level diagram illustrates the Event-Driven Architecture by mapping each functional component to an independently deployable service.
+
+\begin{itemize}
+    \item Kafka as the Central Message Bus: All services in the Internal Goods Provider, Order Processing, and the entire Production Line communicate primarily through Kafka Topics (e.g., \textit{order-done}, \textit{cheese-machine-done}).
+    \item Production Line Components: Each machine (e.g., Cheese, Meat Machine, Oven) is implemented containing a ProcessingService and dedicated Kafka Consumers and Producers.
+    \item Warehouse Integration: The Internal Goods Provider uses a \textit{KafkaClient} to publish restock-related events, which are consumed by the respective production machines.
+    \item Web Interface Layer: This layer uses an API Gateway to expose functionality via HTTPS, routing requests to internal services like \textit{Customer Interface} and \textit{Employee Interface}. It also interacts with Order Processing, which manages the order lifecycle.
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{assets/design-level.png}
+\caption{Design Level Diagram}
+\label{fig:design-level}
+\end{figure}
+
+\subsection{Traceability Matrix}
+
+To ensure systematic alignment between requirements and architectural decisions, a comprehensive traceability matrix was constructed. This matrix connects: Functional requirements to corresponding feature model elements, to their realisation within the analysis-level architecture, and to the specific components within the design-level architecture.
+
+This mapping guarantees that each requirement is explicitly addressed by the architecture and that all design elements are grounded in validated requirements. The expanded traceability tables, including mappings for both functional and non-functional requirements, are provided in the appendix for detailed consultation.
+
+%Include in the appendix and reference
