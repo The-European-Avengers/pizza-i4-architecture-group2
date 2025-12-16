@@ -14,9 +14,9 @@ on:
   # Environment Variables
 env:
   PACKAGE_REGISTRY_TO_USE: thmork
-  DOCKER_IMAGE_NAME: lowercase-name-dockerimage
-  PROJECT_NAME: ProjectName
-  GROUP_NUMBER: GroupNumber #I.e  Group02
+  DOCKER_IMAGE_NAME: pizzaproductionsystem-dockerimage
+  PROJECT_NAME: PizzaProductionSystem
+  GROUP_NUMBER: Group02 #I.e  Group02
 
 jobs:
   # Create artifact of repository source code to use for consistensy accross all jobs
