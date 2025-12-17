@@ -129,3 +129,134 @@ Each machine checks buffer availability (`buffer_count < MAX_PIZZA_BUFFER`) befo
 3. **Correctness**: Temperature requirements enforced, no resource violations
 4. **Throughput**: System supports concurrent production (3 pizzas)
 5. **Safety**: No deadlocks, no negative inventory
+
+## Queries
+
+This section lists the UPPAAL queries used for verification and validation.
+Each query is presented together with its original description, mirroring the intent and comments defined directly in the UPPAAL model.
+
+### Safety Queries
+
+* **Deadlock freedom**
+  `A[] not deadlock`
+  *Safety:* System never reaches deadlock state
+
+* **Correct operating temperatures**
+  `A[] ((oven.baking imply temp == TARGET_TEMP) and (freezer.freeze imply freezer_temp == FREEZE_TEMP))`
+  *Safety:* Baking and freezing only occur at target temperatures
+
+* **Global stock validity**
+  `A[] (stock_level < 0 imply false)`
+  *Safety:* Stock level never negative
+
+* **Production capacity limit**
+  `A[] (pizzas_in_production <= MAX_ORDERS_IN_SYSTEM)`
+  *Safety:* Pizza production never exceeds maximum capacity
+
+* **Machine stock validity**
+  `A[] (dough_stock >= 0 and sauce_stock >= 0 and cheese_stock >= 0 and meat_stock >= 0 and veg_stock >= 0)`
+  *Safety:* Machine stock levels never become negative
+
+* **Warehouse stock validity**
+  `A[] (dough_warehouse >= 0 and sauce_warehouse >= 0 and cheese_warehouse >= 0 and meat_warehouse >= 0 and veg_warehouse >= 0)`
+  *Safety:* Warehouse stock levels never become negative
+
+
+### Reachability Queries
+
+* **Oven operation**
+  `E<> oven.baking`
+  *Reachability:* Oven can reach baking state
+
+* **Packaging robot operation**
+  `E<> packagingRobot.operatePizza`
+  *Reachability:* Packaging robot can reach operating state
+
+* **Freezer operation**
+  `E<> freezer.freeze`
+  *Reachability:* Freezer can reach freezing state
+
+* **Internal goods supply**
+  `E<> internalGoodsProvider.provideDough`
+  *Reachability:* Goods provider can supply ingredients
+
+* **Machine restocking trigger**
+  `E<> doughMachine.restock`
+  *Reachability:* Dough machine can trigger restocking
+
+* **Warehouse supply request**
+  `E<> inventoryManager.requestDough`
+  *Reachability:* Warehouse can request external supplies
+
+* **Maximum production load**
+  `E<> (pizzas_in_production == MAX_ORDERS_IN_SYSTEM)`
+  *Reachability:* System can reach maximum production capacity
+
+* **Parallel cooking operations**
+  `E<> (oven.baking and freezer.freeze)`
+  *Reachability:* Oven and freezer can operate simultaneously
+
+* **Full buffer detection**
+  `E<> (dough_buffer_count == MAX_PIZZA_BUFFER)`
+  *Reachability:* Buffers can become full (bottleneck detection)
+
+
+### Capacity Queries
+
+* **Full production during operation**
+  `A<> (doughMachine.kneading imply pizzas_in_production == 3)`
+  *Capacity:* System reaches full production capacity during operation
+
+
+### Liveness Queries
+
+* **Restocking progression**
+  `E[] doughMachine.restock imply doughMachine.dispatch`
+  *Liveness:* Restocking state eventually leads to dispatch
+
+* **End-to-end order flow**
+  `E<> customer.turnOnMachines imply packagingRobot.operatePizza`
+  *Liveness:* Orders eventually reach packaging (end-to-end flow)
+
+* **Dough machine restocking completion**
+  `doughMachine.restock --> doughMachine.restocked`
+  *Liveness:* Dough machine restocking eventually completes
+
+* **Warehouse restocking completion**
+  `inventoryManager.requestDough --> inventoryManager.restockDough`
+  *Liveness:* Warehouse orders eventually arrive
+
+
+### Performance Queries
+
+* **Processing time constraints**
+
+  ```
+  A[] (
+    (doughShaper.shapingDough imply doughShaper.t <= 2) and
+    (doughMachine.kneading imply doughMachine.t <= 5) and
+    (sauceMachine.addToPizza imply sauceMachine.t <= 5) and
+    (meatSlicer.addToPizza imply meatSlicer.t <= 5) and
+    (cheeseGrater.addToPizza imply cheeseGrater.t <= 5)
+  )
+  ```
+
+  *Performance:* All ingredient processing steps must strictly adhere to their maximum time constraints (in time units),
+  across all possible execution paths of the system. This verifies the simultaneous compliance of all critical
+  topping and dough preparation stages (Dough Shaping ≤2, Kneading ≤5, and all topping additions ≤5) with the specified timing requirements.
+
+* **Oven utilization**
+  `E<> (oven.baking and oven_buffer_count > 0)`
+  *Performance:* Oven can be busy while pizzas wait (utilization check)
+
+* **Dough shaper bottleneck**
+  `E<> (raw_dough_buffer_count == MAX_PIZZA_BUFFER and dough_buffer_count == 0)`
+  *Performance:* Detects bottleneck at dough shaper
+
+* **Meat slicer bottleneck**
+  `E<> (meat_buffer_count == MAX_PIZZA_BUFFER and oven_buffer_count == 0)`
+  *Performance:* Detects bottleneck at vegetable slicer
+
+* **Cheese grater bottleneck**
+  `E<> (sauce_buffer_count == MAX_PIZZA_BUFFER and cheese_buffer_count == 0)`
+  *Performance:* Detects bottleneck at cheese grater
